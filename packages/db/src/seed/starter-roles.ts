@@ -17,12 +17,19 @@ export interface StarterRoleDef {
 export const STARTER_ROLES: StarterRoleDef[] = [
   {
     name: 'HR Admin',
-    description: 'Manages users and reads the audit log',
+    description: 'Manages users, departments and employees, and reads the audit log',
     grants: [
       { key: 'user.manage', scope: null },
       { key: 'audit.read', scope: null },
+      { key: 'department.read', scope: null },
+      { key: 'department.manage', scope: null },
+      { key: 'department.import', scope: null },
     ],
   },
-  { name: 'Finance Officer', description: 'Finance staff', grants: [] },
+  {
+    name: 'Finance Officer',
+    description: 'Finance staff',
+    grants: [{ key: 'department.read', scope: null }],
+  },
   { name: 'Employee', description: 'Baseline role for every staff member', grants: [] },
 ];

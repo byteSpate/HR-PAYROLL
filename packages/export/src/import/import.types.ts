@@ -24,6 +24,8 @@ export interface ColumnSpec {
    * that contradicts itself.
    */
   uniqueInFile?: boolean;
+  /** With uniqueInFile: "Sales" and "sales" count as the same value. */
+  caseInsensitive?: boolean;
   /** Shown in the guide. Defaults to "text". */
   type?: ColumnType;
   /** One plain sentence about what to write in this column. */

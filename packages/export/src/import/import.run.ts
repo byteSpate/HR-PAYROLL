@@ -79,9 +79,10 @@ function duplicateIssues(rows: ParsedRow[], columns: ColumnSpec[]): RowIssue[] {
       // Many rows legitimately have no serial - furniture, licences. Only a
       // repeated *non-empty* value is a contradiction.
       if (value === '') continue;
-      const at = seen.get(value) ?? [];
+      const id = column.caseInsensitive ? value.toLowerCase() : value;
+      const at = seen.get(id) ?? [];
       at.push(row.rowNumber);
-      seen.set(value, at);
+      seen.set(id, at);
     }
     for (const [value, at] of seen) {
       if (at.length < 2) continue;

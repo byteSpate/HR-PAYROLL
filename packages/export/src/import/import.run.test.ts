@@ -136,3 +136,14 @@ describe('runCommit', () => {
     });
   });
 });
+
+describe('caseInsensitive uniqueInFile', () => {
+  it('flags values that differ only by case when the column asks for it', async () => {
+    const spec = {
+      columns: [{ header: 'name', required: true, uniqueInFile: true, caseInsensitive: true }],
+      validateRow: (row: { rowNumber: number; values: Record<string, string> }) => ({ ok: true as const, value: row.values['name'] }),
+    };
+    const preview = await runPreview(Buffer.from('name\r\nSales\r\nsales\r\nOps'), 'x.csv', spec);
+    expect(preview.issues.map((i) => i.rowNumber)).toEqual([2, 3]);
+  });
+});

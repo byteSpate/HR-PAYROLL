@@ -1,8 +1,9 @@
 import { core } from './core/manifest.js';
+import { department } from './department/manifest.js';
 import type { ModuleManifest, Permission, PermissionDef, Scope } from './module.js';
 
 // Core first; later plans append their manifests here.
-export const modules: readonly ModuleManifest[] = [core];
+export const modules: readonly ModuleManifest[] = [core, department];
 
 function findCycle(byName: Map<string, ModuleManifest>): string[] {
   const state = new Map<string, 'visiting' | 'done'>();

@@ -22,10 +22,10 @@ describe('seedRoles', () => {
     const roles = await prisma.role.findMany({ where: { name: { in: names } }, include: { permissions: true } });
     expect(roles.map((r) => r.name).sort()).toEqual([...names].sort());
     const hr = roles.find((r) => r.name === 'HR Admin')!;
-    expect(hr.permissions.map((p) => [p.permissionKey, p.scope]).sort()).toEqual([
-      ['audit.read', null],
-      ['user.manage', null],
-    ]);
+    const hrDef = STARTER_ROLES.find((r) => r.name === 'HR Admin')!;
+    expect(hr.permissions.map((p) => [p.permissionKey, p.scope]).sort()).toEqual(
+      hrDef.grants.map((g) => [g.key, g.scope ? g.scope.toUpperCase() : null]).sort(),
+    );
   });
 
   it('does not touch a starter role an admin has edited', async () => {

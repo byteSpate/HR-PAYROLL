@@ -12,10 +12,12 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@erp/attachments": "workspace:*",
     "@erp/audit": "workspace:*",
     "@erp/auth": "workspace:*",
     "@erp/contracts": "workspace:*",
     "@erp/db": "workspace:*",
+    "@erp/export": "workspace:*",
     "@erp/utils": "workspace:*",
     "cookie-parser": "1.4.7",
     "cors": "2.8.6",

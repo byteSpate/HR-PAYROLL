@@ -187,6 +187,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@erp/attachments':
+        specifier: workspace:*
+        version: link:../../packages/attachments
       '@erp/audit':
         specifier: workspace:*
         version: link:../../packages/audit
@@ -199,6 +202,9 @@ importers:
       '@erp/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@erp/export':
+        specifier: workspace:*
+        version: link:../../packages/export
       '@erp/utils':
         specifier: workspace:*
         version: link:../../packages/utils
