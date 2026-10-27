@@ -11,4 +11,5 @@ allowBuilds:
   '@parcel/watcher': false
   '@prisma/engines': true
   bcrypt: true
+  esbuild: false
   prisma: true
