@@ -28,6 +28,6 @@ rolesRouter.patch('/:id', async (req, res) => {
 });
 
 rolesRouter.delete('/:id', async (req, res) => {
-  await service.deleteRole(req.params['id']!, req.user!.sub);
+  await service.deleteRole(req.params['id']!, caller(req));
   res.status(204).end();
 });

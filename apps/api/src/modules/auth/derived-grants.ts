@@ -6,8 +6,12 @@ export type GrantProvider = (db: Db, userId: string) => Promise<string[]>;
 
 const providers: GrantProvider[] = [];
 
-export function registerGrantProvider(provider: GrantProvider): void {
+/** Returns a function that unregisters the provider again (used by tests). */
+export function registerGrantProvider(provider: GrantProvider): () => void {
   providers.push(provider);
+  return () => {
+    providers.splice(providers.indexOf(provider), 1);
+  };
 }
 
 export async function derivedGrants(db: Db, userId: string): Promise<string[]> {

@@ -6,6 +6,7 @@ import { AppError } from '@erp/utils';
 import { z } from 'zod';
 import { writeAudit } from '../../audit.js';
 import { loadPublicUser } from '../auth/auth.service.js';
+import { loadActor } from './actor.js';
 import { assertCanActOn, assertMayGrant, type Caller } from './guards.js';
 
 const emailSchema = z.email();
@@ -52,7 +53,8 @@ export async function createUser(input: unknown, caller: Caller) {
   const passwordHash = await hashPassword(temporaryPassword);
 
   const id = await prisma.$transaction(async (tx) => {
-    const role = await resolveRole(tx, body.roleId, caller);
+    const actor = await loadActor(tx, caller.sub, 'user.manage');
+    const role = await resolveRole(tx, body.roleId, actor);
     if (await tx.user.findUnique({ where: { email }, select: { id: true } })) {
       throw new AppError(409, 'An account with that email already exists');
     }
@@ -76,15 +78,16 @@ export async function createUser(input: unknown, caller: Caller) {
 export async function setUserRole(userId: string, input: unknown, caller: Caller): Promise<PublicUser> {
   const { roleId } = updateUserRoleSchema.parse(input);
   await prisma.$transaction(async (tx) => {
+    const actor = await loadActor(tx, caller.sub, 'user.manage');
     const user = await tx.user.findUnique({
       where: { id: userId },
       select: { id: true, accessLevel: true, role: { select: { id: true, name: true } } },
     });
     if (!user) throw new AppError(404, 'User not found');
-    assertCanActOn(caller, user);
+    assertCanActOn(actor, user);
     if (user.accessLevel !== 'STANDARD') throw new AppError(409, 'Admins hold every permission and take no role');
 
-    const next = await resolveRole(tx, roleId, caller);
+    const next = await resolveRole(tx, roleId, actor);
     if ((next?.id ?? null) === (user.role?.id ?? null)) return;
 
     await tx.user.update({ where: { id: userId }, data: { roleId: next?.id ?? null } });
@@ -103,9 +106,10 @@ export async function setUserRole(userId: string, input: unknown, caller: Caller
 export async function setUserStatus(userId: string, input: unknown, caller: Caller): Promise<PublicUser> {
   const { isActive } = updateUserStatusSchema.parse(input);
   await prisma.$transaction(async (tx) => {
+    const actor = await loadActor(tx, caller.sub, 'user.manage');
     const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true, accessLevel: true } });
     if (!user) throw new AppError(404, 'User not found');
-    assertCanActOn(caller, user);
+    assertCanActOn(actor, user);
     if (user.isActive === isActive) return;
 
     await tx.user.update({ where: { id: userId }, data: { isActive } });

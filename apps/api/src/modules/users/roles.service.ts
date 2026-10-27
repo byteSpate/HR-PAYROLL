@@ -3,6 +3,7 @@ import { fromDbScope, prisma, toDbScope, type Tx } from '@erp/db';
 import type { Scope } from '@erp/auth';
 import { AppError } from '@erp/utils';
 import { writeAudit } from '../../audit.js';
+import { loadActor } from './actor.js';
 import { assertMayGrant, type Caller, type GrantRequest } from './guards.js';
 
 export interface RoleView {
@@ -96,8 +97,9 @@ export async function createRole(input: unknown, caller: Caller): Promise<RoleVi
   const body = roleSchema.parse(input);
   const name = cleanName(body.name);
   const id = await prisma.$transaction(async (tx) => {
+    const actor = await loadActor(tx, caller.sub, 'role.manage');
     const permissions = await checkedGrants(tx, body.permissions);
-    assertMayGrant(caller, permissions);
+    assertMayGrant(actor, permissions);
     await assertNameFree(tx, name);
     const role = await tx.role.create({
       data: {
@@ -122,12 +124,13 @@ export async function updateRole(id: string, input: unknown, caller: Caller): Pr
   const changedBy = caller.sub;
   const body = patchSchema.parse(input);
   await prisma.$transaction(async (tx) => {
+    const actor = await loadActor(tx, caller.sub, 'role.manage');
     const current = await view(tx, id);
     const permissions = body.permissions ? await checkedGrants(tx, body.permissions) : undefined;
     // Only grants new to the role count: a role editor may keep or drop what they do not hold.
     if (permissions) {
       const had = new Set(current.permissions.map(grantId));
-      assertMayGrant(caller, permissions.filter((g) => !had.has(grantId(g))));
+      assertMayGrant(actor, permissions.filter((g) => !had.has(grantId(g))));
     }
     const name = body.name === undefined ? undefined : cleanName(body.name);
 
@@ -165,8 +168,10 @@ export async function updateRole(id: string, input: unknown, caller: Caller): Pr
   return view(prisma, id);
 }
 
-export async function deleteRole(id: string, changedBy: string): Promise<void> {
+export async function deleteRole(id: string, caller: Caller): Promise<void> {
+  const changedBy = caller.sub;
   await prisma.$transaction(async (tx) => {
+    await loadActor(tx, changedBy, 'role.manage');
     const role = await view(tx, id);
     if (role.userCount > 0) throw new AppError(409, 'Role is assigned to users');
     await tx.role.delete({ where: { id } });

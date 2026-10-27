@@ -5,9 +5,11 @@ import { ensureTestSuperAdmin } from '../../test-utils/access.js';
 import { loadPublicUser } from './auth.service.js';
 import { registerGrantProvider } from './derived-grants.js';
 
+const unregister: (() => void)[] = [];
 const email = `zztest8-svc-${Date.now()}@example.com`;
 
 afterEach(async () => {
+  unregister.splice(0).forEach((fn) => fn());
   await prisma.user.deleteMany({ where: { email } });
   await prisma.role.deleteMany({ where: { name: 'ZZTEST8_SVC' } });
   await prisma.permission.deleteMany({ where: { module: 'zztest8svc' } });
@@ -53,7 +55,7 @@ describe('loadPublicUser', () => {
 
   it('adds derived grants from registered providers for STANDARD users', async () => {
     const { user } = await userWithRole();
-    registerGrantProvider(async (_db, userId) => (userId === user.id ? ['zztest8svc.b:team'] : []));
+    unregister.push(registerGrantProvider(async (_db, userId) => (userId === user.id ? ['zztest8svc.b:team'] : [])));
     const pub = await loadPublicUser(prisma, user.id);
     expect(pub.grants).toEqual(['zztest8svc.a', 'zztest8svc.b:all', 'zztest8svc.b:team']);
   });

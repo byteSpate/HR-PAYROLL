@@ -4,6 +4,7 @@ import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { writeAudit } from '../../audit.js';
 import { loadPublicUser } from '../auth/auth.service.js';
+import { loadActor } from './actor.js';
 import { assertCanActOn, type Caller } from './guards.js';
 
 /**
@@ -14,13 +15,13 @@ import { assertCanActOn, type Caller } from './guards.js';
 export async function setAccessLevel(userId: string, input: unknown, caller: Caller): Promise<PublicUser> {
   const { accessLevel } = updateUserAccessLevelSchema.parse(input);
   await prisma.$transaction(async (tx) => {
-    const actor = await tx.user.findUnique({ where: { id: caller.sub }, select: { accessLevel: true, isActive: true } });
-    if (actor?.accessLevel !== 'SUPER_ADMIN' || !actor.isActive) {
+    const actor = await loadActor(tx, caller.sub, 'user.manage');
+    if (actor.accessLevel !== 'SUPER_ADMIN') {
       throw new AppError(403, 'Only the super admin can appoint or remove admins');
     }
     const target = await tx.user.findUnique({ where: { id: userId }, select: { id: true, accessLevel: true } });
     if (!target) throw new AppError(404, 'User not found');
-    assertCanActOn({ ...caller, accessLevel: actor.accessLevel }, target);
+    assertCanActOn(actor, target);
     if (target.accessLevel === accessLevel) return;
 
     // Admins hold everything, so a role would be meaningless; clearing keeps a later

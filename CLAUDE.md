@@ -57,7 +57,7 @@ Never run `prisma migrate dev`. It is interactive and fails in agent shells. Use
 1. Confirm `pnpm exec prisma migrate status` shows no drift.
 2. Edit the schema in `prisma/schema/`.
 3. `mkdir -p prisma/migrations/<timestamp>_<name>`, then `pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema --script --output prisma/migrations/<timestamp>_<name>/migration.sql`
-4. Read the generated SQL.
+4. Read the generated SQL. Keep the `one_super_admin` partial unique index: `migrate diff` will propose dropping it, so delete that line from the generated SQL.
 5. `pnpm db:deploy`, then `pnpm db:generate`.
 
 ## Deployment assumption

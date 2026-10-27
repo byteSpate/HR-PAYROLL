@@ -4,7 +4,7 @@ import { can, hashPassword, verifyAccessToken } from '@erp/auth';
 import { prisma } from '@erp/db';
 import { createApp } from '../../app.js';
 import { env } from '../../env.js';
-import { bearer, ensureTestSuperAdmin } from '../../test-utils/access.js';
+import { bearer, cleanActors, ensureTestSuperAdmin, makeActor } from '../../test-utils/access.js';
 
 const app = createApp();
 const PREFIX = 'zztest0al';
@@ -24,6 +24,7 @@ async function makeUser(accessLevel: 'ADMIN' | 'STANDARD' = 'STANDARD', withRole
 }
 
 async function clean() {
+  await cleanActors(PREFIX);
   const users = await prisma.user.findMany({ where: { email: { startsWith: PREFIX } }, select: { id: true } });
   const ids = users.map((u) => u.id);
   await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
@@ -70,7 +71,7 @@ describe('PATCH /api/users/:id/access-level', () => {
 
   it('an admin calling it gets 403 and nothing changes', async () => {
     const u = await makeUser('STANDARD');
-    const res = await patch(u.id, bearer('adm', 'ADMIN'), 'ADMIN');
+    const res = await patch(u.id, (await makeActor(PREFIX, 'ADMIN')).header, 'ADMIN');
     expect(res.status).toBe(403);
     expect((await prisma.user.findUniqueOrThrow({ where: { id: u.id } })).accessLevel).toBe('STANDARD');
   });

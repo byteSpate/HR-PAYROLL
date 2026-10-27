@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { hashPassword } from '@erp/auth';
 import { prisma } from '@erp/db';
 import { createApp } from '../../app.js';
-import { bearer, ensureTestSuperAdmin } from '../../test-utils/access.js';
+import { bearer, cleanActors, ensureTestSuperAdmin, makeActor } from '../../test-utils/access.js';
 
 const app = createApp();
 const PREFIX = 'zztest9u';
@@ -11,7 +11,8 @@ const ROLE = `${PREFIX.toUpperCase()}_ROLE`;
 const ROLE_B = `${PREFIX.toUpperCase()}_ROLE_B`;
 const PERM = 'zztest9u.read';
 
-const userManager = (...extra: string[]) => bearer('actor', 'STANDARD', ['user.manage', ...extra]);
+const userManager = async (...extra: string[]) => (await makeActor(PREFIX, 'STANDARD', ['user.manage', ...extra])).header;
+const adminActor = async () => (await makeActor(PREFIX, 'ADMIN')).header;
 
 let seq = 0;
 async function makeUser(opts: { role?: string | null; accessLevel?: 'ADMIN' | 'STANDARD'; isActive?: boolean } = {}) {
@@ -32,6 +33,7 @@ const auditRows = (entityId: string) => prisma.auditLog.findMany({ where: { enti
 const roleIdOf = async (name: string) => (await prisma.role.findUniqueOrThrow({ where: { name } })).id;
 
 async function clean() {
+  await cleanActors(PREFIX);
   const users = await prisma.user.findMany({ where: { email: { startsWith: PREFIX } }, select: { id: true } });
   const ids = users.map((u) => u.id);
   await prisma.auditLog.deleteMany({ where: { entityId: { in: ids } } });
@@ -50,7 +52,7 @@ afterEach(clean);
 
 describe('permission gate', () => {
   it('403 without user.manage on every users route', async () => {
-    const h = bearer('actor', 'STANDARD', ['role.manage']);
+    const h = (await makeActor(PREFIX, 'STANDARD', ['role.manage'])).header;
     const calls = [
       request(app).get('/api/users').set(h),
       request(app).get('/api/users/role-options').set(h),
@@ -63,14 +65,14 @@ describe('permission gate', () => {
   });
 
   it('the old multi-role endpoint is gone', async () => {
-    const res = await request(app).patch('/api/users/x/roles').set(userManager()).send({ roleIds: [] });
+    const res = await request(app).patch('/api/users/x/roles').set(await userManager()).send({ roleIds: [] });
     expect(res.status).toBe(404);
   });
 });
 
 describe('GET /api/users/role-options', () => {
   it('200 with user.manage, id and name only, ordered by name', async () => {
-    const res = await request(app).get('/api/users/role-options').set(userManager());
+    const res = await request(app).get('/api/users/role-options').set(await userManager());
     expect(res.status).toBe(200);
     const names = res.body.map((r: { name: string }) => r.name);
     expect(names.indexOf(ROLE)).toBeLessThan(names.indexOf(ROLE_B));
@@ -82,11 +84,13 @@ describe('GET /api/users', () => {
   it('filters by q on email/displayName and orders by email', async () => {
     const a = await makeUser();
     const b = await makeUser();
-    const res = await request(app).get('/api/users').query({ q: PREFIX }).set(userManager());
+    const res = await request(app).get('/api/users').query({ q: PREFIX }).set(await userManager());
     expect(res.status).toBe(200);
-    expect(res.body.map((u: { email: string }) => u.email)).toEqual([a.email, b.email].sort());
+    // Actor accounts made for the request share the prefix; they are not under test here.
+    const emails = res.body.map((u: { email: string }) => u.email).filter((e: string) => !e.includes('-actor-'));
+    expect(emails).toEqual([a.email, b.email].sort());
     expect(res.body[0]).not.toHaveProperty('passwordHash');
-    const none = await request(app).get('/api/users').query({ q: `${PREFIX}-nomatch` }).set(userManager());
+    const none = await request(app).get('/api/users').query({ q: `${PREFIX}-nomatch` }).set(await userManager());
     expect(none.body).toEqual([]);
   });
 });
@@ -94,8 +98,9 @@ describe('GET /api/users', () => {
 describe('POST /api/users', () => {
   it('creates a STANDARD user with a temporary password and a role, and audits it', async () => {
     const roleId = await roleIdOf(ROLE);
+    const actor = await makeActor(PREFIX, 'STANDARD', ['user.manage']);
     const email = `${PREFIX}-new-${Date.now()}@example.com`;
-    const res = await request(app).post('/api/users').set(userManager()).send({ email, displayName: 'New Person', roleId });
+    const res = await request(app).post('/api/users').set(actor.header).send({ email, displayName: 'New Person', roleId });
     expect(res.status).toBe(201);
     expect(res.body.temporaryPassword.length).toBeGreaterThanOrEqual(12);
     expect(res.body.user).toMatchObject({ mustChangePassword: true, accessLevel: 'STANDARD', role: { name: ROLE } });
@@ -105,7 +110,7 @@ describe('POST /api/users', () => {
 
     const rows = await auditRows(res.body.user.id);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ entity: 'USER', action: 'CREATE', changedBy: 'actor' });
+    expect(rows[0]).toMatchObject({ entity: 'USER', action: 'CREATE', changedBy: actor.user.id });
     expect(JSON.stringify(rows[0])).not.toContain(res.body.temporaryPassword);
   });
 
@@ -113,7 +118,7 @@ describe('POST /api/users', () => {
     const email = `${PREFIX}-norole-${Date.now()}@example.com`;
     const res = await request(app)
       .post('/api/users')
-      .set(userManager())
+      .set(await userManager())
       .send({ email, displayName: 'No Role', accessLevel: 'SUPER_ADMIN' });
     expect(res.status).toBe(201);
     expect(res.body.user).toMatchObject({ accessLevel: 'STANDARD', role: null });
@@ -122,11 +127,11 @@ describe('POST /api/users', () => {
   it('409 for a duplicate email, 400 for an unknown role', async () => {
     const u = await makeUser();
     const roleId = await roleIdOf(ROLE);
-    const dup = await request(app).post('/api/users').set(userManager()).send({ email: u.email, displayName: 'X', roleId });
+    const dup = await request(app).post('/api/users').set(await userManager()).send({ email: u.email, displayName: 'X', roleId });
     expect(dup.status).toBe(409);
     const bad = await request(app)
       .post('/api/users')
-      .set(userManager())
+      .set(await userManager())
       .send({ email: `${PREFIX}-x@example.com`, displayName: 'X', roleId: 'nope' });
     expect(bad.status).toBe(400);
   });
@@ -135,10 +140,10 @@ describe('POST /api/users', () => {
 describe('PATCH /api/users/:id/role', () => {
   it('sets and clears the single role, one audit row each', async () => {
     const u = await makeUser();
-    const set = await request(app).patch(`/api/users/${u.id}/role`).set(userManager()).send({ roleId: await roleIdOf(ROLE_B) });
+    const set = await request(app).patch(`/api/users/${u.id}/role`).set(await userManager()).send({ roleId: await roleIdOf(ROLE_B) });
     expect(set.status).toBe(200);
     expect(set.body.role.name).toBe(ROLE_B);
-    const cleared = await request(app).patch(`/api/users/${u.id}/role`).set(userManager()).send({ roleId: null });
+    const cleared = await request(app).patch(`/api/users/${u.id}/role`).set(await userManager()).send({ roleId: null });
     expect(cleared.status).toBe(200);
     expect(cleared.body.role).toBeNull();
     const rows = await auditRows(u.id);
@@ -148,14 +153,14 @@ describe('PATCH /api/users/:id/role', () => {
 
   it('a role array is not accepted: 400', async () => {
     const u = await makeUser();
-    const res = await request(app).patch(`/api/users/${u.id}/role`).set(userManager()).send({ roleId: [await roleIdOf(ROLE)] });
+    const res = await request(app).patch(`/api/users/${u.id}/role`).set(await userManager()).send({ roleId: [await roleIdOf(ROLE)] });
     expect(res.status).toBe(400);
   });
 
   it('404 for an unknown user, 400 for an unknown role', async () => {
     const u = await makeUser();
-    expect((await request(app).patch('/api/users/nope/role').set(userManager()).send({ roleId: null })).status).toBe(404);
-    expect((await request(app).patch(`/api/users/${u.id}/role`).set(userManager()).send({ roleId: 'nope' })).status).toBe(400);
+    expect((await request(app).patch('/api/users/nope/role').set(await userManager()).send({ roleId: null })).status).toBe(404);
+    expect((await request(app).patch(`/api/users/${u.id}/role`).set(await userManager()).send({ roleId: 'nope' })).status).toBe(400);
   });
 
   it('an ADMIN takes no role: 409 for the super admin caller, 403 for an admin caller', async () => {
@@ -164,7 +169,7 @@ describe('PATCH /api/users/:id/role', () => {
     const roleId = await roleIdOf(ROLE);
     const asSuper = await request(app).patch(`/api/users/${target.id}/role`).set(bearer(sa.id, 'SUPER_ADMIN')).send({ roleId });
     expect(asSuper.status).toBe(409);
-    const asAdmin = await request(app).patch(`/api/users/${target.id}/role`).set(bearer('adm', 'ADMIN')).send({ roleId });
+    const asAdmin = await request(app).patch(`/api/users/${target.id}/role`).set(await adminActor()).send({ roleId });
     expect(asAdmin.status).toBe(403);
   });
 });
@@ -174,7 +179,7 @@ describe('PATCH /api/users/:id/status', () => {
     const u = await makeUser();
     const login = await request(app).post('/api/auth/login').send({ email: u.email, password: 'correct-horse-9' });
     expect(login.status).toBe(200);
-    const res = await request(app).patch(`/api/users/${u.id}/status`).set(userManager()).send({ isActive: false });
+    const res = await request(app).patch(`/api/users/${u.id}/status`).set(await userManager()).send({ isActive: false });
     expect(res.status).toBe(200);
     expect(res.body.isActive).toBe(false);
     expect(await prisma.refreshToken.count({ where: { userId: u.id, revokedAt: null } })).toBe(0);
@@ -193,13 +198,13 @@ describe('Review Focus 1: the super admin is untouchable', () => {
 
   it.each([
     ['the super admin on themselves', (id: string) => bearer(id, 'SUPER_ADMIN')],
-    ['an admin', () => bearer('adm', 'ADMIN')],
+    ['an admin', () => adminActor()],
     ['a user.manage holder', () => userManager()],
   ])('403 on every mutation of the super admin by %s', async (_who, header) => {
     const sa = await ensureTestSuperAdmin();
     const roleId = await roleIdOf(ROLE);
     for (const [, , path, body] of mutations(sa.id, roleId)) {
-      const res = await request(app).patch(path).set(header(sa.id)).send(body);
+      const res = await request(app).patch(path).set(await header(sa.id)).send(body);
       expect(res.status, path).toBe(403);
     }
     const after = await prisma.user.findUniqueOrThrow({ where: { id: sa.id } });
@@ -221,7 +226,7 @@ describe('Review Focus 2: admins and escalation', () => {
     const sa = await ensureTestSuperAdmin();
     const standard = await makeUser();
     const otherAdmin = await makeUser({ accessLevel: 'ADMIN' });
-    const asAdmin = bearer('adm', 'ADMIN');
+    const asAdmin = await adminActor();
 
     expect((await request(app).patch(`/api/users/${standard.id}/status`).set(asAdmin).send({ isActive: false })).status).toBe(200);
     expect((await request(app).patch(`/api/users/${otherAdmin.id}/status`).set(asAdmin).send({ isActive: false })).status).toBe(403);
@@ -235,7 +240,7 @@ describe('Review Focus 2: admins and escalation', () => {
 
   it('a user.manage holder cannot touch an admin', async () => {
     const admin = await makeUser({ accessLevel: 'ADMIN' });
-    const res = await request(app).patch(`/api/users/${admin.id}/status`).set(userManager()).send({ isActive: false });
+    const res = await request(app).patch(`/api/users/${admin.id}/status`).set(await userManager()).send({ isActive: false });
     expect(res.status).toBe(403);
   });
 
@@ -248,7 +253,7 @@ describe('Review Focus 2: admins and escalation', () => {
     it('403 for a role with a wider scope than the caller holds (PATCH and create)', async () => {
       const wide = await roleWith(PERM, 'ALL');
       const u = await makeUser();
-      const caller = userManager(`${PERM}:department`);
+      const caller = await userManager(`${PERM}:department`);
       const patch = await request(app).patch(`/api/users/${u.id}/role`).set(caller).send({ roleId: wide.id });
       expect(patch.status).toBe(403);
       expect(patch.body.error).toBe(GRANT);
@@ -262,22 +267,56 @@ describe('Review Focus 2: admins and escalation', () => {
     it('200 for a role whose scope the caller covers', async () => {
       const dept = await roleWith(PERM, 'DEPARTMENT');
       const u = await makeUser();
-      const res = await request(app).patch(`/api/users/${u.id}/role`).set(userManager(`${PERM}:all`)).send({ roleId: dept.id });
+      const res = await request(app).patch(`/api/users/${u.id}/role`).set(await userManager(`${PERM}:all`)).send({ roleId: dept.id });
       expect(res.status).toBe(200);
     });
 
     it('403 for a role carrying a permission the caller lacks outright', async () => {
       await prisma.rolePermission.create({ data: { roleId: await roleIdOf(ROLE_B), permissionKey: 'role.manage' } });
       const u = await makeUser();
-      const res = await request(app).patch(`/api/users/${u.id}/role`).set(userManager()).send({ roleId: await roleIdOf(ROLE_B) });
+      const res = await request(app).patch(`/api/users/${u.id}/role`).set(await userManager()).send({ roleId: await roleIdOf(ROLE_B) });
       expect(res.status).toBe(403);
     });
 
     it('an ADMIN may assign any role', async () => {
       const wide = await roleWith(PERM, 'ALL');
       const u = await makeUser();
-      const res = await request(app).patch(`/api/users/${u.id}/role`).set(bearer('adm', 'ADMIN')).send({ roleId: wide.id });
+      const res = await request(app).patch(`/api/users/${u.id}/role`).set(await adminActor()).send({ roleId: wide.id });
       expect(res.status).toBe(200);
     });
+  });
+});
+
+describe('stale tokens are not honoured (caller re-read from the database)', () => {
+  it('after the seat moves, the old super admin token cannot deactivate an admin', async () => {
+    const sa = await ensureTestSuperAdmin();
+    const next = await makeActor(PREFIX, 'ADMIN');
+    const victim = await makeUser({ accessLevel: 'ADMIN' });
+    const staleToken = bearer(sa.id, 'SUPER_ADMIN');
+    await prisma.user.update({ where: { id: sa.id }, data: { accessLevel: 'ADMIN' } });
+    await prisma.user.update({ where: { id: next.user.id }, data: { accessLevel: 'SUPER_ADMIN' } });
+    try {
+      const res = await request(app).patch(`/api/users/${victim.id}/status`).set(staleToken).send({ isActive: false });
+      expect(res.status).toBe(403);
+      expect((await prisma.user.findUniqueOrThrow({ where: { id: victim.id } })).isActive).toBe(true);
+    } finally {
+      await prisma.user.update({ where: { id: next.user.id }, data: { accessLevel: 'ADMIN' } });
+      await prisma.user.update({ where: { id: sa.id }, data: { accessLevel: 'SUPER_ADMIN' } });
+    }
+  });
+
+  it('a deactivated caller with a valid token gets 401', async () => {
+    const actor = await makeActor(PREFIX, 'STANDARD', ['user.manage']);
+    await prisma.user.update({ where: { id: actor.user.id }, data: { isActive: false } });
+    expect((await request(app).get('/api/users').set(actor.header)).status).toBe(200); // reads are not mutations
+    const u = await makeUser();
+    expect((await request(app).patch(`/api/users/${u.id}/status`).set(actor.header).send({ isActive: false })).status).toBe(401);
+  });
+
+  it('a caller whose role lost user.manage gets 403 on mutations despite the token', async () => {
+    const actor = await makeActor(PREFIX, 'STANDARD', ['user.manage']);
+    await prisma.user.update({ where: { id: actor.user.id }, data: { roleId: null } });
+    const u = await makeUser();
+    expect((await request(app).patch(`/api/users/${u.id}/status`).set(actor.header).send({ isActive: false })).status).toBe(403);
   });
 });
