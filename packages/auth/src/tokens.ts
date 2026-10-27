@@ -41,5 +41,7 @@ export function refreshLifetimeMs(setting: string): number {
   if (!match) {
     throw new Error(`Invalid lifetime setting '${setting}': expected a number followed by s, m, h or d`);
   }
-  return Number(match[1]) * UNIT_MS[match[2] as keyof typeof UNIT_MS];
+  const ms = Number(match[1]) * UNIT_MS[match[2] as keyof typeof UNIT_MS];
+  if (ms <= 0) throw new Error(`Invalid lifetime setting '${setting}': must be greater than zero`);
+  return ms;
 }

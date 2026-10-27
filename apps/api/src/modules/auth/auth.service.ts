@@ -19,6 +19,9 @@ export interface SessionResult {
   user: PublicUser;
 }
 
+// Verified when the email is unknown so response time does not reveal which accounts exist.
+const DUMMY_HASH = hashPassword('dummy-password-for-timing');
+
 const INVALID_CREDENTIALS = 'Invalid email or password';
 
 export async function loadPublicUser(db: Db, userId: string): Promise<PublicUser> {
@@ -71,7 +74,8 @@ function accessTokenFor(user: PublicUser): string {
 export async function login(email: string, password: string, ctx: SessionContext): Promise<SessionResult> {
   const row = await prisma.user.findUnique({ where: { email } });
   // Same answer for unknown email, wrong password and inactive account, so none can be probed.
-  if (!row || !(await verifyPassword(password, row.passwordHash)) || !row.isActive) {
+  const passwordOk = await verifyPassword(password, row?.passwordHash ?? (await DUMMY_HASH));
+  if (!row || !passwordOk || !row.isActive) {
     throw new AppError(401, INVALID_CREDENTIALS);
   }
   const user = await loadPublicUser(prisma, row.id);

@@ -116,7 +116,15 @@ export function setUnauthenticatedListener(listener: (() => void) | null) {
   unauthenticatedListener = listener;
 }
 
+// A production build silently talking to localhost would fail confusingly, so require the URL there.
+function resolveBaseUrl(): string {
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (url) return url;
+  if (process.env.NODE_ENV === 'production') throw new Error('NEXT_PUBLIC_API_URL is required in production');
+  return 'http://localhost:4000/api';
+}
+
 export const api = createApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api',
+  baseUrl: resolveBaseUrl(),
   onUnauthenticated: () => unauthenticatedListener?.(),
 });

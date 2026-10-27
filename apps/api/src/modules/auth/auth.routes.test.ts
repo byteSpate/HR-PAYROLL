@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { hashPassword } from '@erp/auth';
 import { prisma } from '@erp/db';
 import { createApp } from '../../app.js';
+import { resetRateLimits } from '../../middleware/rate-limit.js';
 
 const app = createApp();
 const PASSWORD = 'correct-horse-9';
@@ -31,6 +32,7 @@ const login = (email: string, password = PASSWORD) => request(app).post('/api/au
 const cookieOf = (res: request.Response) => (res.headers['set-cookie'] as unknown as string[]).map((c) => c.split(';')[0]!);
 
 beforeEach(async () => {
+  resetRateLimits();
   await prisma.permission.createMany({ data: PERMS.map((key) => ({ key, label: key, module: 'zztest8' })) });
   await prisma.role.create({
     data: { name: 'ZZTEST8_A', permissions: { create: [{ permissionKey: PERMS[0]! }] } },
@@ -200,5 +202,27 @@ describe('POST /api/auth/change-password', () => {
     expect((await request(app).post('/api/auth/refresh').set('Cookie', cookieOf(a))).status).toBe(200);
     expect((await login(u.email)).status).toBe(401);
     expect((await login(u.email, 'brand-new-pass-1')).status).toBe(200);
+  });
+});
+
+describe('email case', () => {
+  it('logs in regardless of case and surrounding whitespace', async () => {
+    const email = `zztest8-Mixed${Date.now()}@Example.com`;
+    emails.push(email.toLowerCase());
+    await prisma.user.create({
+      data: { email: email.toLowerCase(), passwordHash: await hashPassword(PASSWORD) },
+    });
+    expect((await login(email.toUpperCase())).status).toBe(200);
+    expect((await login(` ${email.toLowerCase()} `)).status).toBe(200);
+  });
+});
+
+describe('rate limits', () => {
+  it('answers 429 with Retry-After on the 11th login attempt in the window', async () => {
+    for (let i = 0; i < 10; i++) expect((await login('zztest8-nobody@example.com', 'x')).status).toBe(401);
+    const res = await login('zztest8-nobody@example.com', 'x');
+    expect(res.status).toBe(429);
+    expect(res.body).toEqual({ error: 'Too many attempts, try again later' });
+    expect(Number(res.headers['retry-after'])).toBeGreaterThan(0);
   });
 });

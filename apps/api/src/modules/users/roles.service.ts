@@ -13,6 +13,11 @@ export interface RoleView {
   userCount: number;
 }
 
+export interface Caller {
+  id: string;
+  permissions: string[];
+}
+
 const patchSchema = roleSchema.partial();
 
 async function view(db: Tx | typeof prisma, id: string): Promise<RoleView> {
@@ -66,11 +71,18 @@ async function assertNameFree(tx: Tx, name: string, exceptId?: string) {
   if (clash && clash.id !== exceptId) throw new AppError(409, 'A role with that name already exists');
 }
 
-export async function createRole(input: unknown, changedBy: string): Promise<RoleView> {
+// Without this a role.manage holder could add user.manage to a role they hold and escalate.
+function assertMayAdd(added: string[], held: string[]) {
+  if (added.some((k) => !held.includes(k))) throw new AppError(403, 'Cannot add permissions you do not hold');
+}
+
+export async function createRole(input: unknown, caller: Caller): Promise<RoleView> {
+  const changedBy = caller.id;
   const body = roleSchema.parse(input);
   const name = cleanName(body.name);
   const id = await prisma.$transaction(async (tx) => {
     const permissions = await checkedPermissions(tx, body.permissions);
+    assertMayAdd(permissions, caller.permissions);
     await assertNameFree(tx, name);
     const role = await tx.role.create({
       data: {
@@ -91,11 +103,13 @@ export async function createRole(input: unknown, changedBy: string): Promise<Rol
   return view(prisma, id);
 }
 
-export async function updateRole(id: string, input: unknown, changedBy: string): Promise<RoleView> {
+export async function updateRole(id: string, input: unknown, caller: Caller): Promise<RoleView> {
+  const changedBy = caller.id;
   const body = patchSchema.parse(input);
   await prisma.$transaction(async (tx) => {
     const current = await view(tx, id);
     const permissions = body.permissions ? await checkedPermissions(tx, body.permissions) : undefined;
+    if (permissions) assertMayAdd(permissions.filter((k) => !current.permissions.includes(k)), caller.permissions);
     const name = body.name === undefined ? undefined : cleanName(body.name);
 
     const nameChanged = name !== undefined && name !== current.name;

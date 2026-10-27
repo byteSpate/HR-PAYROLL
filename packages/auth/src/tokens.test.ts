@@ -34,6 +34,10 @@ describe('refreshLifetimeMs', () => {
     expect(refreshLifetimeMs('45s')).toBe(45_000);
   });
 
+  it('throws on a zero lifetime', () => {
+    expect(() => refreshLifetimeMs('0d')).toThrow();
+  });
+
   it('throws on an unrecognised setting', () => {
     expect(() => refreshLifetimeMs('x')).toThrow();
   });

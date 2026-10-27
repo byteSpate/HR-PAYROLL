@@ -25,8 +25,9 @@ async function seedRoles(): Promise<void> {
 }
 
 async function seedFirstAdmin(): Promise<void> {
-  const email = process.env['SEED_ADMIN_EMAIL'];
-  if (!email) return;
+  const rawEmail = process.env['SEED_ADMIN_EMAIL'];
+  if (!rawEmail) return;
+  const email = rawEmail.trim().toLowerCase();
   const password = process.env['SEED_ADMIN_PASSWORD'];
   if (!password) throw new Error('SEED_ADMIN_PASSWORD is required when SEED_ADMIN_EMAIL is set');
 

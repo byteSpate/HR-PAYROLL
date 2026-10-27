@@ -11,7 +11,8 @@ const NAME = `${PREFIX.toUpperCase()}_ROLE`;
 const NAME_2 = `${PREFIX.toUpperCase()}_RENAMED`;
 
 const token = (permissions: string[]) => signAccessToken({ sub: 'actor', permissions }, env.JWT_ACCESS_SECRET, '5m');
-const roleAdmin = () => ({ Authorization: `Bearer ${token(['role.manage'])}` });
+// Holds the permissions the tests hand out: a role editor may only add permissions it holds itself.
+const roleAdmin = () => ({ Authorization: `Bearer ${token(['role.manage', 'audit.read', 'user.manage'])}` });
 
 async function clean() {
   const roles = await prisma.role.findMany({ where: { name: { startsWith: PREFIX.toUpperCase() } }, select: { id: true } });
@@ -133,5 +134,28 @@ describe('DELETE /api/roles/:id', () => {
 
   it('404 for an unknown role', async () => {
     expect((await request(app).delete('/api/roles/nope').set(roleAdmin())).status).toBe(404);
+  });
+});
+
+describe('permission escalation', () => {
+  const as = (permissions: string[]) => ({ Authorization: `Bearer ${token(permissions)}` });
+
+  it('403 when creating a role with a permission the caller lacks', async () => {
+    const res = await request(app).post('/api/roles').set(as(['role.manage'])).send({ name: NAME, permissions: ['user.manage'] });
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe('Cannot add permissions you do not hold');
+  });
+
+  it('403 when adding a permission the caller lacks, 200 when the caller holds it', async () => {
+    const { id } = await createRole();
+    const body = { permissions: ['audit.read', 'user.manage'] };
+    expect((await request(app).patch(`/api/roles/${id}`).set(as(['role.manage'])).send(body)).status).toBe(403);
+    expect((await request(app).patch(`/api/roles/${id}`).set(as(['role.manage', 'user.manage'])).send(body)).status).toBe(200);
+  });
+
+  it('allows removing a permission the caller does not hold', async () => {
+    const { id } = await createRole(['audit.read', 'user.manage']);
+    const res = await request(app).patch(`/api/roles/${id}`).set(as(['role.manage', 'audit.read'])).send({ permissions: ['audit.read'] });
+    expect(res.status).toBe(200);
   });
 });

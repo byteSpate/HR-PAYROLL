@@ -32,9 +32,13 @@ Never run `prisma migrate dev`. It is interactive and fails in agent shells. Use
 
 1. Confirm `pnpm exec prisma migrate status` shows no drift.
 2. Edit the schema in `prisma/schema/`.
-3. `pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema --script --output prisma/migrations/<timestamp>_<name>/migration.sql`
+3. `mkdir -p prisma/migrations/<timestamp>_<name>`, then `pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema --script --output prisma/migrations/<timestamp>_<name>/migration.sql`
 4. Read the generated SQL.
 5. `pnpm db:deploy`, then `pnpm db:generate`.
+
+## Deployment assumption
+
+The API must be served from the same host as the web app (or proxied under a path of it). The refresh cookie is host-only and `SameSite=Lax`, so a cross-domain API would not receive it. Cross-domain support is a later change.
 
 ## Module rules
 

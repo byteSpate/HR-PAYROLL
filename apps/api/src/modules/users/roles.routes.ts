@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import * as service from './roles.service.js';
@@ -6,6 +6,8 @@ import * as service from './roles.service.js';
 export const rolesRouter = Router();
 
 rolesRouter.use(requireAuth, requirePermission('role.manage'));
+
+const caller = (req: Request) => ({ id: req.user!.sub, permissions: req.user!.permissions });
 
 rolesRouter.get('/', async (_req, res) => {
   res.json(await service.listRoles());
@@ -17,11 +19,11 @@ rolesRouter.get('/permissions', async (_req, res) => {
 });
 
 rolesRouter.post('/', async (req, res) => {
-  res.status(201).json(await service.createRole(req.body, req.user!.sub));
+  res.status(201).json(await service.createRole(req.body, caller(req)));
 });
 
 rolesRouter.patch('/:id', async (req, res) => {
-  res.json(await service.updateRole(req.params['id']!, req.body, req.user!.sub));
+  res.json(await service.updateRole(req.params['id']!, req.body, caller(req)));
 });
 
 rolesRouter.delete('/:id', async (req, res) => {

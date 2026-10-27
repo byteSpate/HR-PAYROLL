@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
 export const loginSchema = z.object({
-  email: z.email(),
+  // Emails are stored lowercase, so lookups must be case- and whitespace-insensitive.
+  email: z.string().trim().toLowerCase().pipe(z.email()),
   password: z.string().min(1),
 });
 
 export const createUserSchema = z.object({
-  email: z.string(),
+  email: z.string().trim().toLowerCase(),
   displayName: z.string(),
   roleIds: z.array(z.string()).min(1),
 });

@@ -27,4 +27,6 @@ pnpm db:seed          # create system roles and the first admin
 pnpm dev              # API on http://localhost:4000, web on http://localhost:3000
 ```
 
+**Deployment:** serve the API from the same host as the web app (or proxy it under a path of it). The refresh cookie is host-only and `SameSite=Lax`, so a cross-domain API would not receive it; cross-domain support is a later change. `NEXT_PUBLIC_API_URL` is required in production builds.
+
 The dev database listens on port 5433 because 5432 is often taken by another local Postgres. Stop it with `pnpm services:down`.
