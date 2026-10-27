@@ -193,6 +193,9 @@ importers:
       '@erp/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@erp/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       '@erp/utils':
         specifier: workspace:*
         version: link:../../packages/utils
