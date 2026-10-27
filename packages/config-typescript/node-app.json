@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "declaration": false,
+    "declarationMap": false,
+    "outDir": "${configDir}/dist",
+    "rootDir": "${configDir}/src"
+  },
+  "include": ["${configDir}/src"],
+  "exclude": ["${configDir}/src/**/*.spec.ts", "${configDir}/src/**/*.test.ts"]
+}

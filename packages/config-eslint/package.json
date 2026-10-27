@@ -1,0 +1,13 @@
+{
+  "name": "@erp/config-eslint",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "@eslint/js": "9.39.5",
+    "typescript-eslint": "8.71.1"
+  }
+}
