@@ -11,7 +11,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test --concurrency=1",
     "format": "prettier --write .",
     "db:generate": "pnpm --filter @erp/db db:generate",
     "db:deploy": "pnpm --filter @erp/db db:deploy",

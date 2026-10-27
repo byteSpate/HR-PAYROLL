@@ -8,6 +8,8 @@ process.env['DATABASE_URL'] = process.env['DATABASE_URL_TEST'] ?? '';
 export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
+    // Files share one database, so they must not interleave.
+    fileParallelism: false,
     env: {
       JWT_ACCESS_SECRET: 'test-access-secret-0123456789',
       JWT_REFRESH_SECRET: 'test-refresh-secret-0123456789',

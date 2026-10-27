@@ -14,7 +14,7 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^test"],
       "outputs": ["coverage/**"],
       "passThroughEnv": ["DATABASE_URL", "JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"]
     },

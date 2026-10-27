@@ -20,12 +20,11 @@ export interface Caller {
 
 const patchSchema = roleSchema.partial();
 
-async function view(db: Tx | typeof prisma, id: string): Promise<RoleView> {
-  const role = await db.role.findUnique({
-    where: { id },
-    include: { permissions: true, _count: { select: { users: true } } },
-  });
-  if (!role) throw new AppError(404, 'Role not found');
+const roleInclude = { permissions: true, _count: { select: { users: true } } } as const;
+
+type RoleRow = Awaited<ReturnType<typeof prisma.role.findMany<{ include: typeof roleInclude }>>>[number];
+
+function toView(role: RoleRow): RoleView {
   return {
     id: role.id,
     name: role.name,
@@ -36,9 +35,16 @@ async function view(db: Tx | typeof prisma, id: string): Promise<RoleView> {
   };
 }
 
+async function view(db: Tx | typeof prisma, id: string): Promise<RoleView> {
+  const role = await db.role.findUnique({ where: { id }, include: roleInclude });
+  if (!role) throw new AppError(404, 'Role not found');
+  return toView(role);
+}
+
+// One read, so a role deleted concurrently cannot 404 the whole list.
 export async function listRoles(): Promise<RoleView[]> {
-  const roles = await prisma.role.findMany({ select: { id: true }, orderBy: { name: 'asc' } });
-  return Promise.all(roles.map((r) => view(prisma, r.id)));
+  const roles = await prisma.role.findMany({ include: roleInclude, orderBy: { name: 'asc' } });
+  return roles.map(toView);
 }
 
 export async function listPermissionGroups() {

@@ -6,4 +6,4 @@ import { defineConfig } from 'vitest/config';
 config({ path: fileURLToPath(new URL('../db/.env', import.meta.url)) });
 process.env['DATABASE_URL'] = process.env['DATABASE_URL_TEST'] ?? '';
 
-export default defineConfig({ test: { include: ['src/**/*.test.ts'] } });
+export default defineConfig({ test: { include: ['src/**/*.test.ts'], fileParallelism: false } });
