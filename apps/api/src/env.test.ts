@@ -20,3 +20,31 @@ describe('envSchema token lifetimes', () => {
     expect(envSchema.safeParse({ ...base, [key]: value }).success).toBe(false);
   });
 });
+
+describe('envSchema Cloudinary settings', () => {
+  it('accepts none of them (file storage off)', () => {
+    expect(envSchema.safeParse(base).success).toBe(true);
+  });
+
+  it('treats blank values from a copied .env.example as unset', () => {
+    const r = envSchema.safeParse({ ...base, CLOUDINARY_CLOUD_NAME: '', CLOUDINARY_API_KEY: '', CLOUDINARY_API_SECRET: '' });
+    expect(r.success).toBe(true);
+    expect(r.data?.CLOUDINARY_CLOUD_NAME).toBeUndefined();
+  });
+
+  it('accepts all three', () => {
+    const r = envSchema.safeParse({
+      ...base,
+      CLOUDINARY_CLOUD_NAME: 'c',
+      CLOUDINARY_API_KEY: 'k',
+      CLOUDINARY_API_SECRET: 's',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it('rejects a partial set, naming the missing setting', () => {
+    const r = envSchema.safeParse({ ...base, CLOUDINARY_CLOUD_NAME: 'c', CLOUDINARY_API_KEY: 'k' });
+    expect(r.success).toBe(false);
+    expect(JSON.stringify(r.error?.issues)).toContain('CLOUDINARY_API_SECRET');
+  });
+});
