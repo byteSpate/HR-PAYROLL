@@ -8,6 +8,7 @@ export type AuditAction =
   | 'REJECT'
   | 'CANCEL'
   | 'IMPORT'
+  | 'EXPORT'
   | 'EXIT'
   | 'ACTIVATE'
   | 'DEACTIVATE';
