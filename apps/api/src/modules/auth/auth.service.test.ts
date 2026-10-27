@@ -60,6 +60,25 @@ describe('loadPublicUser', () => {
     expect(pub.grants).toEqual(['zztest8svc.a', 'zztest8svc.b:all', 'zztest8svc.b:team']);
   });
 
+  it('does not consult grant providers for admins', async () => {
+    const { user } = await userWithRole();
+    await prisma.user.update({ where: { id: user.id }, data: { accessLevel: 'ADMIN' } });
+    let calls = 0;
+    unregister.push(
+      registerGrantProvider(async () => {
+        calls += 1;
+        return ['zztest8svc.b:team'];
+      }),
+    );
+    expect((await loadPublicUser(prisma, user.id)).grants).toEqual([]);
+    expect(calls).toBe(0);
+  });
+
+  it('returns only role grants when no provider adds anything', async () => {
+    const { user } = await userWithRole();
+    expect((await loadPublicUser(prisma, user.id)).grants).toEqual(['zztest8svc.a', 'zztest8svc.b:all']);
+  });
+
   it('throws 404 for an unknown user', async () => {
     await expect(loadPublicUser(prisma, '00000000-0000-0000-0000-000000000000')).rejects.toMatchObject({ status: 404 });
   });
