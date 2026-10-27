@@ -2,6 +2,30 @@
 
 Turborepo + pnpm monorepo for a modular ERP. The design spec is `docs/superpowers/specs/2026-10-27-erp-monorepo-design.md` (§4 layout, §4.2 rules, §6 permissions, §7 events). Read it before adding a module.
 
+## Git workflow
+
+Full guide: [docs/GIT_WORKFLOW.md](docs/GIT_WORKFLOW.md). In short:
+
+- **`main`** = deployable only (release PRs from `dev`, hotfixes). **`dev`** = integration branch. Never commit directly to either.
+- Work branch per task from `dev`: `<type>/<task-id>-<slug>`. Types: `feat fix refactor test docs chore hotfix`.
+- Commits: Conventional Commits `type(scope): subject`, imperative, at most 72 characters, plain ASCII punctuation only.
+- PR into `dev` on `origin`, human review, **squash merge**, delete the branch on both remotes. Releases: PR `dev` -> `main`, merge commit, tag `vX.Y.Z`. Every PR states its deploy impact (`Deploy impact: none` when there is none).
+- **No AI attribution in commits or PRs** (no `Co-Authored-By: Claude`, no "Generated with Claude Code", no session link). `.claude/settings.json` sets `attribution` to empty; do not override it.
+
+## Git: always push to both remotes
+
+| Remote   | URL                                         | Role   |
+| -------- | ------------------------------------------- | ------ |
+| `origin` | https://github.com/byteSpate/HR-PAYROLL.git | Main   |
+| `reza`   | https://github.com/rezaulrht/HRMS-ERP.git   | Backup |
+
+```bash
+git push origin <branch> && git push reza <branch>
+```
+
+- Never force-push `main` or `dev`. If a remote rejects a push, fetch and investigate instead.
+- Fresh clone: `git remote add reza https://github.com/rezaulrht/HRMS-ERP.git`.
+
 ## Layout
 
 - `apps/api`: Express 5 API. `src/app.ts` builds the app; `src/modules/<module>/` holds a module's routes, controllers and services; `src/modules/index.ts` exports `apiMounts`; `src/middleware/` is shared.
