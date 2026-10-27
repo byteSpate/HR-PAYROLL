@@ -4,10 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./rules/module-deps": "./rules/module-deps.js"
   },
   "dependencies": {
     "@eslint/js": "9.39.5",
     "typescript-eslint": "8.71.1"
+  },
+  "scripts": {
+    "test": "vitest run"
   }
 }

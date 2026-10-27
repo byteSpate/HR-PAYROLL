@@ -3,6 +3,10 @@
 
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import moduleDeps from './rules/module-deps.js';
+
+// Apps enable it with: plugins: { erp }, rules: { 'erp/module-deps': ['error', { modules }] }
+export const erp = { rules: { 'module-deps': moduleDeps } };
 
 export default tseslint.config(
   {
