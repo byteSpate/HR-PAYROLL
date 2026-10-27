@@ -1,8 +1,9 @@
 import { config } from 'dotenv';
 import { defineConfig } from 'vitest/config';
 
-// Auth tests use the dev database: load its URL from packages/db/.env (not committed).
+// Tests use the isolated test database: load its URL from packages/db/.env (not committed).
 config({ path: '../../packages/db/.env', quiet: true });
+process.env['DATABASE_URL'] = process.env['DATABASE_URL_TEST'] ?? '';
 
 export default defineConfig({
   test: {

@@ -16,6 +16,7 @@
     "db:generate": "pnpm --filter @erp/db db:generate",
     "db:deploy": "pnpm --filter @erp/db db:deploy",
     "db:seed": "pnpm --filter @erp/db db:seed",
+    "db:test:prepare": "pnpm --filter @erp/db db:test:prepare",
     "services:up": "docker compose -f docker/compose.dev.yaml up -d --wait",
     "services:down": "docker compose -f docker/compose.dev.yaml down"
   },

@@ -33,21 +33,6 @@ async function makeUser(roleNames: string[] = [ROLE], isActive = true) {
 const auditRows = (entityId: string) => prisma.auditLog.findMany({ where: { entityId } });
 const roleIdOf = async (name: string) => (await prisma.role.findUniqueOrThrow({ where: { name } })).id;
 
-// Seeded super admins (non-fixture) switched off for a test; restored in finally and in afterEach.
-let parked: string[] = [];
-async function parkOtherSuperAdmins() {
-  const others = await prisma.user.findMany({
-    where: { isActive: true, email: { not: { startsWith: PREFIX } }, roles: { some: { role: { name: 'SUPER_ADMIN' } } } },
-    select: { id: true },
-  });
-  parked.push(...others.map((u) => u.id));
-  await prisma.user.updateMany({ where: { id: { in: parked } }, data: { isActive: false } });
-}
-async function restoreParked() {
-  await prisma.user.updateMany({ where: { id: { in: parked } }, data: { isActive: true } });
-  parked = [];
-}
-
 async function clean() {
   const users = await prisma.user.findMany({ where: { email: { startsWith: PREFIX } }, select: { id: true } });
   const ids = users.map((u) => u.id);
@@ -62,7 +47,6 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await restoreParked();
   await clean();
 });
 
@@ -235,46 +219,30 @@ describe('privilege escalation', () => {
 });
 
 describe('last super admin (Review Focus 2)', () => {
-  // The dev DB already holds a seeded active super admin, so each test parks every non-fixture
-  // super admin first; the fixture alone then decides the count, whatever the DB contains.
+  // erp_test holds no seeded admin, so the fixtures alone decide the active super admin count.
   it('with one active super admin: removing SUPER_ADMIN -> 409, deactivating -> 409', async () => {
     const sole = await makeUser(['SUPER_ADMIN']);
-    try {
-      await parkOtherSuperAdmins();
-      const remove = await request(app).patch(`/api/users/${sole.id}/roles`).set(admin()).send({ roleIds: [] });
-      expect(remove.status).toBe(409);
-      expect(remove.body.error).toBe('At least one active super admin is required');
-      const deactivate = await request(app).patch(`/api/users/${sole.id}/status`).set(admin()).send({ isActive: false });
-      expect(deactivate.status).toBe(409);
-      const still = await prisma.user.findUniqueOrThrow({ where: { id: sole.id }, include: { roles: true } });
-      expect(still.isActive).toBe(true);
-      expect(still.roles).toHaveLength(1);
-    } finally {
-      await restoreParked();
-    }
+    const remove = await request(app).patch(`/api/users/${sole.id}/roles`).set(admin()).send({ roleIds: [] });
+    expect(remove.status).toBe(409);
+    expect(remove.body.error).toBe('At least one active super admin is required');
+    const deactivate = await request(app).patch(`/api/users/${sole.id}/status`).set(admin()).send({ isActive: false });
+    expect(deactivate.status).toBe(409);
+    const still = await prisma.user.findUniqueOrThrow({ where: { id: sole.id }, include: { roles: true } });
+    expect(still.isActive).toBe(true);
+    expect(still.roles).toHaveLength(1);
   });
 
   it('with two active super admins: removing one -> 200', async () => {
     const a = await makeUser(['SUPER_ADMIN']);
     await makeUser(['SUPER_ADMIN']);
-    try {
-      await parkOtherSuperAdmins();
-      const res = await request(app).patch(`/api/users/${a.id}/roles`).set(admin()).send({ roleIds: [] });
-      expect(res.status).toBe(200);
-    } finally {
-      await restoreParked();
-    }
+    const res = await request(app).patch(`/api/users/${a.id}/roles`).set(admin()).send({ roleIds: [] });
+    expect(res.status).toBe(200);
   });
 
   it('an inactive super admin does not count as a spare', async () => {
     const sole = await makeUser(['SUPER_ADMIN']);
     await makeUser(['SUPER_ADMIN'], false);
-    try {
-      await parkOtherSuperAdmins();
-      const res = await request(app).patch(`/api/users/${sole.id}/status`).set(admin()).send({ isActive: false });
-      expect(res.status).toBe(409);
-    } finally {
-      await restoreParked();
-    }
+    const res = await request(app).patch(`/api/users/${sole.id}/status`).set(admin()).send({ isActive: false });
+    expect(res.status).toBe(409);
   });
 });

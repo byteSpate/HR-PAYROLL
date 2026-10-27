@@ -3,26 +3,7 @@ import { hashPassword } from '@erp/auth';
 import { allPermissions } from '@erp/contracts';
 import { prisma } from '../src/client.js';
 import { syncPermissions } from '../src/seed/sync-permissions.js';
-import { SYSTEM_ROLES } from '../src/seed/system-roles.js';
-
-async function seedRoles(): Promise<void> {
-  const keys = (await prisma.permission.findMany({ select: { key: true } })).map((p) => p.key);
-  for (const def of SYSTEM_ROLES) {
-    let role = await prisma.role.findUnique({ where: { name: def.name } });
-    const created = !role;
-    role ??= await prisma.role.create({
-      data: { name: def.name, description: def.description, isSystem: true },
-    });
-    // Only SUPER_ADMIN is re-granted on every run; other roles get grants once so admin edits survive.
-    if (def.permissions === 'ALL' || created) {
-      const grant = def.permissions === 'ALL' ? keys : def.permissions;
-      await prisma.rolePermission.createMany({
-        data: grant.map((permissionKey) => ({ roleId: role.id, permissionKey })),
-        skipDuplicates: true,
-      });
-    }
-  }
-}
+import { seedRoles } from '../src/seed/seed-roles.js';
 
 async function seedFirstAdmin(): Promise<void> {
   const rawEmail = process.env['SEED_ADMIN_EMAIL'];
@@ -51,7 +32,7 @@ async function seedFirstAdmin(): Promise<void> {
 async function main(): Promise<void> {
   const { added, removed } = await syncPermissions(prisma, allPermissions());
   console.log('added:', added, 'removed:', removed);
-  await seedRoles();
+  await seedRoles(prisma);
   await seedFirstAdmin();
 }
 
