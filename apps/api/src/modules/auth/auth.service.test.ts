@@ -1,7 +1,9 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { hashPassword } from '@erp/auth';
 import { prisma } from '@erp/db';
+import { ensureTestSuperAdmin } from '../../test-utils/access.js';
 import { loadPublicUser } from './auth.service.js';
+import { registerGrantProvider } from './derived-grants.js';
 
 const email = `zztest8-svc-${Date.now()}@example.com`;
 
@@ -11,22 +13,49 @@ afterEach(async () => {
   await prisma.permission.deleteMany({ where: { module: 'zztest8svc' } });
 });
 
+async function userWithRole() {
+  await prisma.permission.createMany({
+    data: [
+      { key: 'zztest8svc.b', label: 'b', module: 'zztest8svc', scopes: ['OWN', 'ALL'] },
+      { key: 'zztest8svc.a', label: 'a', module: 'zztest8svc' },
+    ],
+  });
+  const role = await prisma.role.create({
+    data: {
+      name: 'ZZTEST8_SVC',
+      permissions: { create: [{ permissionKey: 'zztest8svc.b', scope: 'ALL' }, { permissionKey: 'zztest8svc.a' }] },
+    },
+  });
+  const user = await prisma.user.create({
+    data: { email, passwordHash: await hashPassword('whatever-123'), roleId: role.id },
+  });
+  return { role, user };
+}
+
 describe('loadPublicUser', () => {
-  it('returns roles and sorted effective permissions without the hash', async () => {
-    await prisma.permission.createMany({
-      data: ['zztest8svc.b', 'zztest8svc.a'].map((key) => ({ key, label: key, module: 'zztest8svc' })),
-    });
-    const role = await prisma.role.create({
-      data: { name: 'ZZTEST8_SVC', permissions: { create: [{ permissionKey: 'zztest8svc.b' }, { permissionKey: 'zztest8svc.a' }] } },
-    });
-    const u = await prisma.user.create({
-      data: { email, passwordHash: await hashPassword('whatever-123'), roles: { create: [{ roleId: role.id }] } },
-    });
-    const pub = await loadPublicUser(prisma, u.id);
-    expect(pub.permissions).toEqual(['zztest8svc.a', 'zztest8svc.b']);
-    expect(pub.roles).toEqual([{ id: role.id, name: 'ZZTEST8_SVC' }]);
+  it('returns the role and sorted grants without the hash', async () => {
+    const { role, user } = await userWithRole();
+    const pub = await loadPublicUser(prisma, user.id);
+    expect(pub.grants).toEqual(['zztest8svc.a', 'zztest8svc.b:all']);
+    expect(pub.role).toEqual({ id: role.id, name: 'ZZTEST8_SVC' });
+    expect(pub.accessLevel).toBe('STANDARD');
     expect(pub.displayName).toBe(email);
     expect(pub).not.toHaveProperty('passwordHash');
+  });
+
+  it('gives the super admin and admins an empty grant list even if a role is left behind', async () => {
+    const { user } = await userWithRole();
+    await prisma.user.update({ where: { id: user.id }, data: { accessLevel: 'ADMIN' } });
+    expect((await loadPublicUser(prisma, user.id)).grants).toEqual([]);
+    const sa = await ensureTestSuperAdmin();
+    expect(await loadPublicUser(prisma, sa.id)).toMatchObject({ accessLevel: 'SUPER_ADMIN', grants: [], role: null });
+  });
+
+  it('adds derived grants from registered providers for STANDARD users', async () => {
+    const { user } = await userWithRole();
+    registerGrantProvider(async (_db, userId) => (userId === user.id ? ['zztest8svc.b:team'] : []));
+    const pub = await loadPublicUser(prisma, user.id);
+    expect(pub.grants).toEqual(['zztest8svc.a', 'zztest8svc.b:all', 'zztest8svc.b:team']);
   });
 
   it('throws 404 for an unknown user', async () => {

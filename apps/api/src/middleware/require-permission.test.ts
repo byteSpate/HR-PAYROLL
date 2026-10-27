@@ -13,7 +13,8 @@ app.get('/guarded', requireAuth, requirePermission('a.b'), (_req, res) => {
 });
 app.use(errorHandler);
 
-const token = (permissions: string[]) => signAccessToken({ sub: 'u1', permissions }, env.JWT_ACCESS_SECRET, '5m');
+const token = (grants: string[], accessLevel: 'STANDARD' | 'ADMIN' = 'STANDARD') =>
+  signAccessToken({ sub: 'u1', accessLevel, grants }, env.JWT_ACCESS_SECRET, '5m');
 
 describe('requirePermission', () => {
   it('401 without a token', async () => {
@@ -21,12 +22,22 @@ describe('requirePermission', () => {
   });
 
   it('401 for a token signed with the wrong secret', async () => {
-    const bad = signAccessToken({ sub: 'u1', permissions: ['a.b'] }, 'another-secret-0123456789', '5m');
+    const bad = signAccessToken({ sub: 'u1', accessLevel: 'STANDARD', grants: ['a.b'] }, 'another-secret-0123456789', '5m');
     expect((await request(app).get('/guarded').set('Authorization', `Bearer ${bad}`)).status).toBe(401);
   });
 
   it('401 for a signed token with a malformed payload', async () => {
-    const bad = signAccessToken({ sub: 1, permissions: 'a.b' } as never, env.JWT_ACCESS_SECRET, '5m');
+    const bad = signAccessToken({ sub: 1, grants: 'a.b' } as never, env.JWT_ACCESS_SECRET, '5m');
+    expect((await request(app).get('/guarded').set('Authorization', `Bearer ${bad}`)).status).toBe(401);
+  });
+
+  it('401 for a signed token from the old shape (permissions, no accessLevel)', async () => {
+    const old = signAccessToken({ sub: 'u1', permissions: ['a.b'] } as never, env.JWT_ACCESS_SECRET, '5m');
+    expect((await request(app).get('/guarded').set('Authorization', `Bearer ${old}`)).status).toBe(401);
+  });
+
+  it('401 for an unknown access level', async () => {
+    const bad = signAccessToken({ sub: 'u1', accessLevel: 'ROOT', grants: [] } as never, env.JWT_ACCESS_SECRET, '5m');
     expect((await request(app).get('/guarded').set('Authorization', `Bearer ${bad}`)).status).toBe(401);
   });
 
@@ -34,6 +45,11 @@ describe('requirePermission', () => {
     const res = await request(app).get('/guarded').set('Authorization', `Bearer ${token(['x.y'])}`);
     expect(res.status).toBe(403);
     expect(res.body).toEqual({ error: 'Forbidden', permission: 'a.b' });
+  });
+
+  it('200 for an ADMIN with no grants, since admins hold everything', async () => {
+    const res = await request(app).get('/guarded').set('Authorization', `Bearer ${token([], 'ADMIN')}`);
+    expect(res.status).toBe(200);
   });
 
   it('200 when the permission is granted', async () => {

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { prisma } from '../client.js';
+import { fromDbScope } from '../scope.js';
 import { syncPermissions } from './sync-permissions.js';
 
 const X = { key: 'zztest7.x', label: 'X', module: 'zztest7' };
@@ -13,7 +14,9 @@ afterEach(async () => {
 describe('syncPermissions', () => {
   it('removes undeclared permissions and cascades their grants', async () => {
     // Other modules' real permissions must not be reported, so keep them declared.
-    const existing = (await prisma.permission.findMany()).filter((p) => p.module !== 'zztest7');
+    const existing = (await prisma.permission.findMany())
+      .filter((p) => p.module !== 'zztest7')
+      .map(({ scopes, ...p }) => ({ ...p, scopes: scopes.map((s) => fromDbScope(s)) }));
     await syncPermissions(prisma, [...existing, X, Y]);
     const role = await prisma.role.create({
       data: {

@@ -1,5 +1,5 @@
 import { core } from './core/manifest.js';
-import type { ModuleManifest, Permission } from './module.js';
+import type { ModuleManifest, Permission, PermissionDef, Scope } from './module.js';
 
 // Core first; later plans append their manifests here.
 export const modules: readonly ModuleManifest[] = [core];
@@ -63,16 +63,29 @@ export function resolveModuleOrder(ms: readonly ModuleManifest[]): ModuleManifes
   return ordered;
 }
 
-export function allPermissions(
-  ms: readonly ModuleManifest[] = modules,
-): { key: Permission; label: string; module: string }[] {
+export interface DeclaredPermission {
+  key: Permission;
+  label: string;
+  module: string;
+  /** Empty for a plain on/off permission. */
+  scopes: readonly Scope[];
+  managerDefault: boolean;
+}
+
+export function allPermissions(ms: readonly ModuleManifest[] = modules): DeclaredPermission[] {
   const seen = new Set<string>();
-  const out: { key: Permission; label: string; module: string }[] = [];
+  const out: DeclaredPermission[] = [];
   for (const m of ms) {
-    for (const [key, label] of Object.entries(m.permissions) as [Permission, string][]) {
+    for (const [key, def] of Object.entries(m.permissions) as [Permission, PermissionDef][]) {
       if (seen.has(key)) throw new Error(`duplicate permission '${key}'`);
       seen.add(key);
-      out.push({ key, label, module: m.name });
+      out.push({
+        key,
+        label: def.label,
+        module: m.name,
+        scopes: def.scopes ?? [],
+        managerDefault: def.managerDefault ?? false,
+      });
     }
   }
   return out;

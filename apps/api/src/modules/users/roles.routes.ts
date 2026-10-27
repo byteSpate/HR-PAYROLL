@@ -1,13 +1,14 @@
 import { Router, type Request } from 'express';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
+import type { Caller } from './guards.js';
 import * as service from './roles.service.js';
 
 export const rolesRouter = Router();
 
 rolesRouter.use(requireAuth, requirePermission('role.manage'));
 
-const caller = (req: Request) => ({ id: req.user!.sub, permissions: req.user!.permissions });
+const caller = (req: Request): Caller => req.user!;
 
 rolesRouter.get('/', async (_req, res) => {
   res.json(await service.listRoles());

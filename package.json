@@ -17,6 +17,8 @@
     "db:deploy": "pnpm --filter @erp/db db:deploy",
     "db:seed": "pnpm --filter @erp/db db:seed",
     "db:test:prepare": "pnpm --filter @erp/db db:test:prepare",
+    "admin:transfer": "pnpm --filter @erp/db admin:transfer",
+    "admin:reset-password": "pnpm --filter @erp/db admin:reset-password",
     "services:up": "docker compose -f docker/compose.dev.yaml up -d --wait",
     "services:down": "docker compose -f docker/compose.dev.yaml down"
   },

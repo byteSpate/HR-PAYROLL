@@ -73,6 +73,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 - Reads of another module's tables through the shared Prisma client are fine. Writes to another module's data go through its service functions, which accept an optional transaction client so callers can stay atomic.
 - Loose coupling goes through events: `emit(tx, type, payload)` inside the caller's transaction, with event types listed in the manifest's `events`. Nothing delivers them yet.
 - A capability needed by two or more modules goes into a shared package, not a copy.
+- Permissions are declared as `{ label, scopes?, managerDefault? }` (no `scopes` means on/off). Access is `can(ctx, 'key' | 'key:scope')` from `@erp/auth`; a user is `SUPER_ADMIN` (one, DB-enforced; moved only by `pnpm admin:transfer <email>`, password reset by `pnpm admin:reset-password`), `ADMIN` (holds everything) or `STANDARD` (one role).
 - Permission keys are `area.action` strings declared in each manifest. Keys must be unique across modules (`allPermissions` throws on duplicates). The API guards routes with `requirePermission('<key>')`.
 - Code is the source of truth for permissions: `db:seed` deletes permission rows that no manifest declares.
 
@@ -82,7 +83,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 2. Schema: `packages/db/prisma/schema/<module>.prisma`, then the migration recipe above.
 3. API: `apps/api/src/modules/<module>/` (routes, controller, service). Mount the router in `apiMounts` in `apps/api/src/modules/index.ts`.
 4. Web: `apps/web/modules/<module>/` for components, hooks and API client. Pages go in `apps/web/app/(app)/<route>/`, kept thin.
-5. Grants: add the new permissions to `packages/db/src/seed/system-roles.ts`. SUPER_ADMIN receives every permission on each seed run. Other roles receive their listed grants only when first created, so existing databases need the grants added by hand.
+5. Grants: add starter grants to `packages/db/src/seed/starter-roles.ts`. SUPER_ADMIN and ADMIN users hold every permission implicitly. Starter roles are created only when no role of that name exists, so existing databases need the grants added by hand.
 
 ## Conventions
 

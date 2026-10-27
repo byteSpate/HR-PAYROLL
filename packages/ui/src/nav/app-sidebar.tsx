@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { RiArrowRightSLine } from '@remixicon/react';
 import type { NavGroup } from '@erp/contracts';
+import type { AccessContext } from '@erp/auth/permissions';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../components/collapsible';
 import {
   Sidebar,
@@ -21,13 +22,13 @@ import { NavIcon } from './icons';
 
 export function AppSidebar({
   groups,
-  permissions,
+  access,
 }: {
   groups: NavGroup[];
-  permissions: readonly string[];
+  access: AccessContext;
 }) {
   const pathname = usePathname();
-  const visible = filterNav(groups, permissions, pathname);
+  const visible = filterNav(groups, access, pathname);
 
   return (
     <Sidebar>

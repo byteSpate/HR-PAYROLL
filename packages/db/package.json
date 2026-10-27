@@ -17,7 +17,9 @@
     "db:generate": "prisma generate",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:test:prepare": "tsx scripts/prepare-test-db.ts"
+    "db:test:prepare": "tsx scripts/prepare-test-db.ts",
+    "admin:transfer": "tsx scripts/admin-transfer.ts",
+    "admin:reset-password": "tsx scripts/admin-reset-password.ts"
   },
   "dependencies": {
     "@erp/auth": "workspace:*",

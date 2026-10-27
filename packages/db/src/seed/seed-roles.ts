@@ -1,21 +1,23 @@
 import type { Db } from '../client.js';
-import { SYSTEM_ROLES } from './system-roles.js';
+import { toDbScope } from '../scope.js';
+import { STARTER_ROLES } from './starter-roles.js';
 
+// A role is created only when no role of that name exists, so edits and deletions-by-rename
+// made by admins survive every deploy. Re-running is a no-op.
 export async function seedRoles(db: Db): Promise<void> {
-  const keys = (await db.permission.findMany({ select: { key: true } })).map((p) => p.key);
-  for (const def of SYSTEM_ROLES) {
-    let role = await db.role.findUnique({ where: { name: def.name } });
-    const created = !role;
-    role ??= await db.role.create({
-      data: { name: def.name, description: def.description, isSystem: true },
+  for (const def of STARTER_ROLES) {
+    if (await db.role.findUnique({ where: { name: def.name }, select: { id: true } })) continue;
+    await db.role.create({
+      data: {
+        name: def.name,
+        description: def.description,
+        permissions: {
+          create: def.grants.map((g) => ({
+            permissionKey: g.key,
+            scope: g.scope ? toDbScope(g.scope) : null,
+          })),
+        },
+      },
     });
-    // Only SUPER_ADMIN is re-granted on every run; other roles get grants once so admin edits survive.
-    if (def.permissions === 'ALL' || created) {
-      const grant = def.permissions === 'ALL' ? keys : def.permissions;
-      await db.rolePermission.createMany({
-        data: grant.map((permissionKey) => ({ roleId: role.id, permissionKey })),
-        skipDuplicates: true,
-      });
-    }
   }
 }

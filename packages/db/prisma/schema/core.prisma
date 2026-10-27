@@ -1,3 +1,16 @@
+enum AccessLevel {
+  SUPER_ADMIN
+  ADMIN
+  STANDARD
+}
+
+enum Scope {
+  OWN
+  TEAM
+  DEPARTMENT
+  ALL
+}
+
 model User {
   id                  String               @id @default(uuid())
   email               String               @unique
@@ -9,7 +22,12 @@ model User {
   displayName         String?
   /// Packed "publicId:version".
   avatarUrl           String?
-  roles               UserRole[]
+  // Exactly one SUPER_ADMIN is enforced by the one_super_admin partial unique
+  // index, which Prisma cannot express; see the access_model migration.
+  accessLevel         AccessLevel          @default(STANDARD)
+  // Only STANDARD users hold a role; ADMIN and SUPER_ADMIN hold everything.
+  roleId              String?
+  role                Role?                @relation(fields: [roleId], references: [id], onDelete: Restrict)
   refreshTokens       RefreshToken[]
   passwordResetTokens PasswordResetToken[]
   createdAt           DateTime             @default(now())
@@ -20,36 +38,30 @@ model Role {
   id          String           @id @default(uuid())
   name        String           @unique
   description String?
-  isSystem    Boolean          @default(false)
   permissions RolePermission[]
-  users       UserRole[]
+  users       User[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 }
 
 model Permission {
-  key   String           @id
-  label String
+  key    String           @id
+  label  String
   module String
-  roles RolePermission[]
+  // Scopes the manifest declares for this permission; empty means plain on/off.
+  scopes Scope[]
+  roles  RolePermission[]
 }
 
 model RolePermission {
   roleId        String
   permissionKey String
+  // Null for an on/off permission.
+  scope         Scope?
   role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
 
   @@id([roleId, permissionKey])
-}
-
-model UserRole {
-  userId String
-  roleId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
-
-  @@id([userId, roleId])
 }
 
 model RefreshToken {

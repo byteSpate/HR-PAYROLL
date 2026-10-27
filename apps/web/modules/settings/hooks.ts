@@ -22,8 +22,8 @@ function useInvalidating<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>, 
 }
 
 export const useCreateUser = () => useInvalidating(api.createUser, [KEYS.users]);
-export const useSetUserRoles = () =>
-  useInvalidating(({ id, roleIds }: { id: string; roleIds: string[] }) => api.setUserRoles(id, roleIds), [KEYS.users]);
+export const useSetUserRole = () =>
+  useInvalidating(({ id, roleId }: { id: string; roleId: string | null }) => api.setUserRole(id, roleId), [KEYS.users]);
 export const useSetUserStatus = () =>
   useInvalidating(({ id, isActive }: { id: string; isActive: boolean }) => api.setUserStatus(id, isActive), [KEYS.users]);
 export const useCreateRole = () => useInvalidating(api.createRole, [KEYS.roles, KEYS.users]);

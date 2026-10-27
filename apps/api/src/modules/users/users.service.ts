@@ -1,17 +1,12 @@
 import { generateTemporaryPassword, hashPassword } from '@erp/auth';
 import type { PublicUser } from '@erp/contracts/core';
-import { createUserSchema, updateUserRolesSchema, updateUserStatusSchema } from '@erp/contracts/core';
-import { prisma, type Tx } from '@erp/db';
+import { createUserSchema, updateUserRoleSchema, updateUserStatusSchema } from '@erp/contracts/core';
+import { fromDbScope, prisma, type Tx } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { z } from 'zod';
 import { writeAudit } from '../../audit.js';
 import { loadPublicUser } from '../auth/auth.service.js';
-import { assertNotLastSuperAdmin, SUPER_ADMIN } from './last-admin.js';
-
-interface Caller {
-  id: string;
-  permissions: readonly string[];
-}
+import { assertCanActOn, assertMayGrant, type Caller } from './guards.js';
 
 const emailSchema = z.email();
 
@@ -31,31 +26,19 @@ export function listRoleOptions() {
   return prisma.role.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } });
 }
 
-// Resolves ids to roles (400 on any unknown id) and says whether SUPER_ADMIN is among them.
-async function resolveRoles(tx: Tx, roleIds: string[]) {
-  const unique = [...new Set(roleIds)];
-  const roles = await tx.role.findMany({ where: { id: { in: unique } }, select: { id: true, name: true } });
-  if (roles.length !== unique.length) throw new AppError(400, 'Unknown role id');
-  return roles;
-}
-
-// Without this a user.manage holder could hand out a role carrying role.manage, then make themselves SUPER_ADMIN.
-async function assertMayGrant(tx: Tx, added: { id: string }[], caller: Caller) {
-  if (added.length === 0) return;
-  const grants = await tx.rolePermission.findMany({
-    where: { roleId: { in: added.map((r) => r.id) } },
-    select: { permissionKey: true },
+// Null clears the role. The role's grants must all be ones the caller may hand out.
+async function resolveRole(tx: Tx, roleId: string | null | undefined, caller: Caller) {
+  if (!roleId) return null;
+  const role = await tx.role.findUnique({
+    where: { id: roleId },
+    select: { id: true, name: true, permissions: { select: { permissionKey: true, scope: true } } },
   });
-  if (grants.some((g) => !caller.permissions.includes(g.permissionKey))) {
-    throw new AppError(403, 'Cannot grant a role with permissions you do not hold');
-  }
-}
-
-// Handing out (or taking away) the top role is a role-administration act, not just user admin.
-function assertMayTouchSuperAdmin(caller: Caller) {
-  if (!caller.permissions.includes('role.manage')) {
-    throw new AppError(403, 'Forbidden', 'role.manage');
-  }
+  if (!role) throw new AppError(400, 'Unknown role id');
+  assertMayGrant(
+    caller,
+    role.permissions.map((p) => ({ permissionKey: p.permissionKey, scope: p.scope ? fromDbScope(p.scope) : null })),
+  );
+  return role;
 }
 
 export async function createUser(input: unknown, caller: Caller) {
@@ -69,68 +52,49 @@ export async function createUser(input: unknown, caller: Caller) {
   const passwordHash = await hashPassword(temporaryPassword);
 
   const id = await prisma.$transaction(async (tx) => {
-    const roles = await resolveRoles(tx, body.roleIds);
-    if (roles.some((r) => r.name === SUPER_ADMIN)) assertMayTouchSuperAdmin(caller);
-    await assertMayGrant(tx, roles, caller);
+    const role = await resolveRole(tx, body.roleId, caller);
     if (await tx.user.findUnique({ where: { email }, select: { id: true } })) {
       throw new AppError(409, 'An account with that email already exists');
     }
+    // Always STANDARD: admins are appointed by the super admin through the access-level endpoint.
     const user = await tx.user.create({
-      data: {
-        email,
-        displayName,
-        passwordHash,
-        mustChangePassword: true,
-        roles: { create: roles.map((r) => ({ roleId: r.id })) },
-      },
+      data: { email, displayName, passwordHash, mustChangePassword: true, accessLevel: 'STANDARD', roleId: role?.id ?? null },
     });
     // The temporary password is deliberately absent from the audit row.
     await writeAudit(tx, {
       entity: 'USER',
       entityId: user.id,
       action: 'CREATE',
-      changedBy: caller.id,
-      after: { email, displayName, roles: roles.map((r) => r.name).sort() },
+      changedBy: caller.sub,
+      after: { email, displayName, role: role?.name ?? null },
     });
     return user.id;
   });
   return { user: await loadPublicUser(prisma, id), temporaryPassword };
 }
 
-export async function updateUserRoles(userId: string, input: unknown, caller: Caller): Promise<PublicUser> {
-  const { roleIds } = updateUserRolesSchema.parse(input);
+export async function setUserRole(userId: string, input: unknown, caller: Caller): Promise<PublicUser> {
+  const { roleId } = updateUserRoleSchema.parse(input);
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.findUnique({
       where: { id: userId },
-      select: { roles: { select: { role: { select: { id: true, name: true } } } } },
+      select: { id: true, accessLevel: true, role: { select: { id: true, name: true } } },
     });
     if (!user) throw new AppError(404, 'User not found');
-    const next = await resolveRoles(tx, roleIds);
-    const current = user.roles.map((r) => r.role);
+    assertCanActOn(caller, user);
+    if (user.accessLevel !== 'STANDARD') throw new AppError(409, 'Admins hold every permission and take no role');
 
-    const nextIds = new Set(next.map((r) => r.id));
-    const currentIds = new Set(current.map((r) => r.id));
-    const removed = current.filter((r) => !nextIds.has(r.id));
-    const added = next.filter((r) => !currentIds.has(r.id));
-    if (removed.length === 0 && added.length === 0) return;
+    const next = await resolveRole(tx, roleId, caller);
+    if ((next?.id ?? null) === (user.role?.id ?? null)) return;
 
-    const removesSuperAdmin = removed.some((r) => r.name === SUPER_ADMIN);
-    // Also covers a no-op-looking edit of an existing super admin: touching one needs role.manage.
-    if (current.some((r) => r.name === SUPER_ADMIN) || added.some((r) => r.name === SUPER_ADMIN)) {
-      assertMayTouchSuperAdmin(caller);
-    }
-    await assertMayGrant(tx, added, caller);
-    await assertNotLastSuperAdmin(tx, { userId, removesSuperAdmin });
-
-    await tx.userRole.deleteMany({ where: { userId, roleId: { in: removed.map((r) => r.id) } } });
-    await tx.userRole.createMany({ data: added.map((r) => ({ userId, roleId: r.id })) });
+    await tx.user.update({ where: { id: userId }, data: { roleId: next?.id ?? null } });
     await writeAudit(tx, {
       entity: 'USER',
       entityId: userId,
       action: 'UPDATE',
-      changedBy: caller.id,
-      before: { roles: current.map((r) => r.name).sort() },
-      after: { roles: next.map((r) => r.name).sort() },
+      changedBy: caller.sub,
+      before: { role: user.role?.name ?? null },
+      after: { role: next?.name ?? null },
     });
   });
   return loadPublicUser(prisma, userId);
@@ -139,15 +103,11 @@ export async function updateUserRoles(userId: string, input: unknown, caller: Ca
 export async function setUserStatus(userId: string, input: unknown, caller: Caller): Promise<PublicUser> {
   const { isActive } = updateUserStatusSchema.parse(input);
   await prisma.$transaction(async (tx) => {
-    const user = await tx.user.findUnique({
-      where: { id: userId },
-      select: { isActive: true, roles: { select: { role: { select: { name: true } } } } },
-    });
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true, accessLevel: true } });
     if (!user) throw new AppError(404, 'User not found');
-    if (user.roles.some((r) => r.role.name === SUPER_ADMIN)) assertMayTouchSuperAdmin(caller);
+    assertCanActOn(caller, user);
     if (user.isActive === isActive) return;
 
-    await assertNotLastSuperAdmin(tx, { userId, deactivates: !isActive });
     await tx.user.update({ where: { id: userId }, data: { isActive } });
     // Without this the refresh cookie would keep minting access tokens for a locked-out account.
     if (!isActive) {
@@ -157,7 +117,7 @@ export async function setUserStatus(userId: string, input: unknown, caller: Call
       entity: 'USER',
       entityId: userId,
       action: 'UPDATE',
-      changedBy: caller.id,
+      changedBy: caller.sub,
       before: { isActive: user.isActive },
       after: { isActive },
     });

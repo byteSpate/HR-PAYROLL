@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { defineModule } from './module.js';
+import { defineModule, type ModuleManifest, type Scope } from './module.js';
 import { allPermissions, resolveModuleOrder } from './registry.js';
 
-const mod = (name: string, deps: string[] = [], permissions: Record<string, string> = {}) =>
-  defineModule({ name, deps, permissions, nav: [], events: [] });
+const mod = (name: string, deps: string[] = [], permissions: Record<string, { label: string; scopes?: readonly Scope[] }> = {}) =>
+  defineModule({ name, deps, permissions: permissions as ModuleManifest['permissions'], nav: [], events: [] });
 
 describe('resolveModuleOrder', () => {
   it('puts dependencies first', () => {
@@ -28,9 +28,17 @@ describe('allPermissions', () => {
     );
   });
 
+  it('carries declared scopes and defaults to on/off', () => {
+    const perms = allPermissions([
+      mod('a', [], { 'p.x': { label: 'X', scopes: ['own', 'all'] }, 'p.y': { label: 'Y' } }),
+    ]);
+    expect(perms.find((p) => p.key === 'p.x')?.scopes).toEqual(['own', 'all']);
+    expect(perms.find((p) => p.key === 'p.y')?.scopes).toEqual([]);
+  });
+
   it('throws on a duplicate key across modules', () => {
     expect(() =>
-      allPermissions([mod('a', [], { 'p.x': 'X' }), mod('b', [], { 'p.x': 'X' })]),
+      allPermissions([mod('a', [], { 'p.x': { label: 'X' } }), mod('b', [], { 'p.x': { label: 'X' } })]),
     ).toThrow("duplicate permission 'p.x'");
   });
 });

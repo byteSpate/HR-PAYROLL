@@ -67,11 +67,11 @@ export function UsersTable() {
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {user.roles.map((r) => (
-                      <Badge key={r.id} variant="secondary">
-                        {r.name}
-                      </Badge>
-                    ))}
+                    {user.accessLevel === 'STANDARD' ? (
+                      user.role ? <Badge variant="secondary">{user.role.name}</Badge> : null
+                    ) : (
+                      <Badge variant="outline">{user.accessLevel === 'SUPER_ADMIN' ? 'Super admin' : 'Admin'}</Badge>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -79,7 +79,7 @@ export function UsersTable() {
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-2">
-                    <EditUserRoles user={user} />
+                    {user.accessLevel === 'STANDARD' ? <EditUserRoles user={user} /> : null}
                     <Button
                       variant={user.isActive ? 'destructive' : 'outline'}
                       size="sm"
