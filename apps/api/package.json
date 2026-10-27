@@ -1,0 +1,39 @@
+{
+  "name": "@erp/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@erp/auth": "workspace:*",
+    "@erp/contracts": "workspace:*",
+    "@erp/db": "workspace:*",
+    "@erp/utils": "workspace:*",
+    "cookie-parser": "1.4.7",
+    "cors": "2.8.6",
+    "dotenv": "17.4.2",
+    "express": "5.2.1",
+    "helmet": "8.3.0",
+    "morgan": "1.11.0",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@erp/config-eslint": "workspace:*",
+    "@erp/config-typescript": "workspace:*",
+    "@types/cookie-parser": "1.4.10",
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "@types/morgan": "1.9.10",
+    "@types/node": "26.1.1",
+    "@types/supertest": "7.2.1",
+    "supertest": "7.2.2",
+    "tsx": "4.23.1"
+  }
+}

@@ -1,0 +1,118 @@
+model User {
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  passwordHash        String
+  isActive            Boolean              @default(true)
+  mustChangePassword  Boolean              @default(false)
+  // Identity for an account with no Employee row, which would otherwise show
+  // as a raw email address. Staff names live on Employee (Plan 2).
+  displayName         String?
+  /// Packed "publicId:version".
+  avatarUrl           String?
+  roles               UserRole[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model Role {
+  id          String           @id @default(uuid())
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false)
+  permissions RolePermission[]
+  users       UserRole[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model Permission {
+  key   String           @id
+  label String
+  module String
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId        String
+  permissionKey String
+  role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission    Permission @relation(fields: [permissionKey], references: [key], onDelete: Cascade)
+
+  @@id([roleId, permissionKey])
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role   @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  // Rotation replaces the row on every refresh, so `id` identifies a token
+  // and nothing identifies a *session*; sessionId is carried forward onto the
+  // replacement row, along with startedAt and userAgent.
+  sessionId  String   @default(uuid())
+  /// When the session began, not when this token was written.
+  startedAt  DateTime @default(now())
+  /// Bumped on every rotation.
+  lastUsedAt DateTime @default(now())
+  /// Frozen at login.
+  userAgent  String?
+  /// Updated on rotation, unlike userAgent.
+  ipAddress  String?
+
+  @@index([userId, sessionId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  entity    String
+  entityId  String
+  action    String
+  changedBy String?
+  changedAt DateTime @default(now())
+  // Only the fields that changed, not whole snapshots.
+  before    Json?
+  after     Json?
+  note      String?
+
+  @@index([entity, entityId, changedAt])
+  @@index([entity, entityId])
+  @@index([changedAt])
+}
+
+model OutboxEvent {
+  id          String    @id @default(uuid())
+  type        String
+  payload     Json
+  createdAt   DateTime  @default(now())
+  availableAt DateTime  @default(now())
+  deliveredAt DateTime?
+  attempts    Int       @default(0)
+  lastError   String?
+
+  @@index([deliveredAt, availableAt])
+}

@@ -1,0 +1,10 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../../src/generated/prisma"
+  // The package is ESM ("type": "module"), unlike HR-MNG-V1's CJS server.
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}

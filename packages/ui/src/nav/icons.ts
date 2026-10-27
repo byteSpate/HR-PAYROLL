@@ -1,0 +1,23 @@
+import { createElement, type ComponentType } from 'react';
+import {
+  RiCircleLine,
+  RiDashboardLine,
+  RiSettings3Line,
+  RiShieldUserLine,
+  RiUserLine,
+} from '@remixicon/react';
+
+type IconComponent = ComponentType<{ className?: string }>;
+
+// Explicit registry (not `import *`) so the bundle only carries icons modules actually name.
+// Add an entry here when a module manifest introduces a new icon name.
+const ICONS: Record<string, IconComponent> = {
+  RiDashboardLine,
+  RiSettings3Line,
+  RiShieldUserLine,
+  RiUserLine,
+};
+
+export function NavIcon({ name, className }: { name: string; className?: string }) {
+  return createElement(ICONS[name] ?? RiCircleLine, { className });
+}

@@ -1,0 +1,252 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@source "../**/*.{ts,tsx}";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.905 0.182 98.111);
+    --chart-2: oklch(0.795 0.184 86.047);
+    --chart-3: oklch(0.681 0.162 75.834);
+    --chart-4: oklch(0.554 0.135 66.442);
+    --chart-5: oklch(0.476 0.114 61.907);
+    --radius: 0.45rem;
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.905 0.182 98.111);
+    --chart-2: oklch(0.795 0.184 86.047);
+    --chart-3: oklch(0.681 0.162 75.834);
+    --chart-4: oklch(0.554 0.135 66.442);
+    --chart-5: oklch(0.476 0.114 61.907);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+    --font-sans: var(--font-sans);
+    --font-heading: var(--font-heading);
+    --font-bengali: var(--font-bengali);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --color-foreground: var(--foreground);
+    --color-background: var(--background);
+    --radius-sm: calc(var(--radius) * 0.6);
+    --radius-md: calc(var(--radius) * 0.8);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) * 1.4);
+    --radius-2xl: calc(var(--radius) * 1.8);
+    --radius-3xl: calc(var(--radius) * 2.2);
+    --radius-4xl: calc(var(--radius) * 2.6);
+
+    /* The built-in CSS easings are too weak to read as intentional. These are
+       the strong variants: `ease-out-quint` for anything entering or reacting
+       to a press, `ease-in-out-quint` for anything travelling across the
+       screen. Never `ease-in` on a UI element — it delays the first frame,
+       which is the exact moment the user is watching most closely. */
+    --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-in-out-quint: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    /* Thin scrollbars that match the app (owner, 2026-10-07). The browser's
+       own bar is thick and grey and clashes with the cards. One colour, a
+       grey-blue at half strength, so it reads on a white panel and on the dark
+       sidebar alike. The track is clear. A phone and a tablet draw their own
+       thin bar that fades away, so these lines change nothing there. */
+    scrollbar-width: thin;
+    scrollbar-color: rgb(95 107 124 / 0.45) transparent;
+    }
+  /* Safari before 18.2 ignores the two lines above, so it gets the same look
+     here. Chrome and Firefox stop at the lines above and skip this block. */
+  @supports not (scrollbar-width: thin) {
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+      }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+      }
+    ::-webkit-scrollbar-thumb {
+      background-color: rgb(95 107 124 / 0.45);
+      border-radius: 9999px;
+      border: 2px solid transparent;
+      background-clip: content-box;
+      }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: rgb(95 107 124 / 0.7);
+      }
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+      }
+    }
+  body {
+    @apply bg-background text-foreground;
+    }
+  html {
+    @apply font-sans;
+    }
+}
+
+/* ── Entrance motion ──────────────────────────────────────────────────────
+   Two classes, both under the 300ms ceiling a UI animation has before it
+   starts reading as slow. `.rise-in` is for a card or row arriving; the
+   caller sets `animation-delay` per item to stagger a grid, and is expected
+   to cap that delay so a hundred-row list never keeps anyone waiting.
+
+   Deliberately keyframes rather than transitions: these fire once, on mount,
+   and are never interrupted or retargeted. Transitions are the right tool
+   for the interactive states below, not for a one-shot entrance. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    /* 0.985, not 0 — nothing in the real world appears out of nothing. */
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.rise-in {
+  animation: rise-in 260ms var(--ease-out-quint) both;
+}
+
+.fade-in {
+  animation: fade-in 200ms var(--ease-out-quint) both;
+}
+
+/* ── Click burst ──────────────────────────────────────────────────────────
+   A one-shot particle thrown outward from a click — the Sales Hub door and
+   its way-back button. `--tx`/`--ty` are per-particle, set inline by the
+   caller (a handful of points around a circle, not a random scatter — a
+   random spread reads as noise, a ring reads as a burst).
+
+   Keyframes, not a transition, for the same reason as the entrance motion
+   above: this fires once, per click, and is never interrupted or
+   retargeted. 0.35, not 0, at the far end — same "nothing appears from
+   nothing" logic as `rise-in`, applied to a particle disappearing instead
+   of arriving. */
+@keyframes pop-particle {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  to {
+    opacity: 0;
+    transform: translate(var(--tx), var(--ty)) scale(0.35) rotate(70deg);
+  }
+}
+
+.pop-particle {
+  animation: pop-particle 520ms var(--ease-out-quint) both;
+}
+
+/* Reduced motion means fewer and gentler animations, not zero. The fade
+   stays — it still explains that content arrived — and the movement, which
+   is the part that causes motion sickness, is what goes. The delay override
+   is `!important` because the stagger is set inline, per item. */
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: fade-in 200ms ease both;
+  }
+
+  .rise-in,
+  .fade-in {
+    animation-delay: 0ms !important;
+  }
+
+  /* Pure decorative motion with nothing to explain — unlike rise-in/fade-in,
+     which still mark that content arrived, a burst carries no information,
+     so it is suppressed entirely rather than reduced to a fade. */
+  .pop-particle {
+    animation: none;
+    opacity: 0;
+  }
+}

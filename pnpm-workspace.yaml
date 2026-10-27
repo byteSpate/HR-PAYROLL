@@ -1,0 +1,17 @@
+packages:
+  - apps/*
+  - packages/*
+
+# Exact versions in package.json; the lockfile is authoritative.
+# pnpm's minimumReleaseAge supply-chain check stays on: pick an older release rather than adding exclusions.
+savePrefix: ''
+
+# Only these packages may run install scripts (pnpm blocks all others).
+allowBuilds:
+  '@parcel/watcher': false
+  '@prisma/engines': true
+  bcrypt: true
+  esbuild: false
+  prisma: true
+  sharp: false
+  unrs-resolver: false

@@ -1,0 +1,27 @@
+{
+  "name": "@erp/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./permissions": { "types": "./dist/permissions.d.ts", "default": "./dist/permissions.js" }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "bcrypt": "6.0.0",
+    "jsonwebtoken": "9.0.3"
+  },
+  "devDependencies": {
+    "@erp/config-eslint": "workspace:*",
+    "@erp/config-typescript": "workspace:*",
+    "@types/bcrypt": "6.0.0",
+    "@types/jsonwebtoken": "9.0.10",
+    "@types/node": "26.1.1"
+  }
+}

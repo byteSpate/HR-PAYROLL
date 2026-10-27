@@ -1,0 +1,4 @@
+@import '@erp/ui/styles/globals.css';
+/* Tailwind only scans this app by default; the shared components live in packages/ui. */
+@source "../../../packages/ui/src";
+@source "../";
