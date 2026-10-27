@@ -36,6 +36,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <div className="grid min-h-[100dvh] place-items-center text-sm text-muted-foreground">Loading…</div>;
   }
 
+  // Nothing else mounts until the temporary password is replaced, so no page or sidebar query fires meanwhile.
+  if (user.mustChangePassword) return <ChangePasswordDialog />;
+
   return (
     <SidebarProvider>
       <AppSidebar groups={navGroups} permissions={user.permissions} />
@@ -64,7 +67,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </header>
         <main className="p-4 md:p-6">{children}</main>
       </SidebarInset>
-      {user.mustChangePassword ? <ChangePasswordDialog /> : null}
     </SidebarProvider>
   );
 }

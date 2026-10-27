@@ -2,11 +2,10 @@
 
 import { Checkbox } from '@erp/ui/components/checkbox';
 import { Label } from '@erp/ui/components/label';
-import { useRoles } from '../hooks';
+import { useRoleOptions } from '../hooks';
 
-// Listing roles needs role.manage on the API; for a caller without it the API error is shown as-is.
 export function RoleSelect({ value, onChange }: { value: string[]; onChange: (next: string[]) => void }) {
-  const { data, error, isPending } = useRoles();
+  const { data, error, isPending } = useRoleOptions();
 
   if (isPending) return <p className="text-sm text-muted-foreground">Loading roles…</p>;
   if (error) return <p className="text-sm text-destructive">{error.message}</p>;

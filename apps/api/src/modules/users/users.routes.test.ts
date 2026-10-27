@@ -71,11 +71,23 @@ describe('permission gate', () => {
     const h = { Authorization: `Bearer ${token(['role.manage'])}` };
     const calls = [
       request(app).get('/api/users').set(h),
+      request(app).get('/api/users/role-options').set(h),
       request(app).post('/api/users').set(h).send({}),
       request(app).patch('/api/users/x/roles').set(h).send({ roleIds: [] }),
       request(app).patch('/api/users/x/status').set(h).send({ isActive: false }),
     ];
     for (const res of await Promise.all(calls)) expect(res.status).toBe(403);
+  });
+});
+
+describe('GET /api/users/role-options', () => {
+  it('200 with user.manage, id and name only, ordered by name', async () => {
+    const res = await request(app).get('/api/users/role-options').set(userManager());
+    expect(res.status).toBe(200);
+    const names = res.body.map((r: { name: string }) => r.name);
+    expect(names.indexOf(ROLE)).toBeLessThan(names.indexOf(ROLE_B));
+    expect(names).toEqual(expect.arrayContaining([ROLE, ROLE_B]));
+    expect(Object.keys(res.body[0]).sort()).toEqual(['id', 'name']);
   });
 });
 

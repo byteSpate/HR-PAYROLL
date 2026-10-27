@@ -10,6 +10,11 @@ usersRouter.use(requireAuth, requirePermission('user.manage'));
 // requireAuth has run, so req.user is set.
 const caller = (req: Request) => ({ id: req.user!.sub, permissions: req.user!.permissions });
 
+// Registered before any '/:id' route. Lets user admins pick roles without holding role.manage.
+usersRouter.get('/role-options', async (_req, res) => {
+  res.json(await service.listRoleOptions());
+});
+
 usersRouter.get('/', async (req, res) => {
   const q = typeof req.query['q'] === 'string' ? req.query['q'] : undefined;
   res.json(await service.listUsers(q));

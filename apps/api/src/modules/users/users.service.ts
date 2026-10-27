@@ -27,6 +27,10 @@ export async function listUsers(q?: string): Promise<PublicUser[]> {
   return Promise.all(rows.map((r) => loadPublicUser(prisma, r.id)));
 }
 
+export function listRoleOptions() {
+  return prisma.role.findMany({ select: { id: true, name: true }, orderBy: { name: 'asc' } });
+}
+
 // Resolves ids to roles (400 on any unknown id) and says whether SUPER_ADMIN is among them.
 async function resolveRoles(tx: Tx, roleIds: string[]) {
   const unique = [...new Set(roleIds)];

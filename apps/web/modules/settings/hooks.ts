@@ -4,10 +4,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from './api';
 
 // Role changes alter what users show, so both lists are refreshed together.
-const KEYS = { users: ['users'], roles: ['roles'], permissions: ['permissions'] } as const;
+const KEYS = { users: ['users'], roles: ['roles'], roleOptions: ['roles', 'options'], permissions: ['permissions'] } as const;
 
 export const useUsers = (q: string) => useQuery({ queryKey: [...KEYS.users, q], queryFn: () => api.listUsers(q) });
 export const useRoles = () => useQuery({ queryKey: KEYS.roles, queryFn: api.listRoles, retry: false });
+export const useRoleOptions = () =>
+  useQuery({ queryKey: KEYS.roleOptions, queryFn: api.listRoleOptions, retry: false });
 export const usePermissionGroups = () =>
   useQuery({ queryKey: KEYS.permissions, queryFn: api.listPermissionGroups, retry: false });
 

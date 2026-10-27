@@ -27,6 +27,8 @@ export function CreateUserForm() {
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
 
   function onOpenChange(next: boolean) {
+    // The temporary password is shown once; only the explicit Done button may close the dialog then.
+    if (!next && temporaryPassword) return;
     setOpen(next);
     if (!next) {
       setEmail('');
@@ -36,6 +38,11 @@ export function CreateUserForm() {
       setTemporaryPassword(null);
       create.reset();
     }
+  }
+
+  function closeAfterPassword() {
+    setTemporaryPassword(null);
+    onOpenChange(false);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -51,12 +58,12 @@ export function CreateUserForm() {
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal={!!temporaryPassword}>
       <DialogTrigger render={<Button />}>
         <RiAddLine />
         New user
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent showCloseButton={!temporaryPassword}>
         {temporaryPassword ? (
           <>
             <DialogHeader>
@@ -66,7 +73,7 @@ export function CreateUserForm() {
               </DialogDescription>
             </DialogHeader>
             <code className="rounded-md bg-muted px-3 py-2 font-mono text-base select-all">{temporaryPassword}</code>
-            <Button onClick={() => onOpenChange(false)}>Done</Button>
+            <Button onClick={closeAfterPassword}>Done</Button>
           </>
         ) : (
           <>

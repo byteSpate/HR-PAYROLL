@@ -32,6 +32,8 @@ export const setUserRoles = (id: string, roleIds: string[]) =>
 export const setUserStatus = (id: string, isActive: boolean) =>
   api.request<PublicUser>(`/users/${id}/status`, { method: 'PATCH', body: { isActive } });
 
+// For the users page: needs only user.manage, unlike listRoles.
+export const listRoleOptions = () => api.request<{ id: string; name: string }[]>('/users/role-options');
 export const listRoles = () => api.request<RoleView[]>('/roles');
 export const listPermissionGroups = () => api.request<PermissionGroup[]>('/roles/permissions');
 export const createRole = (body: RoleInput) => api.request<RoleView>('/roles', { method: 'POST', body });
