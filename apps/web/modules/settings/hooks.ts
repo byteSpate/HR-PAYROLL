@@ -26,6 +26,11 @@ export const useSetUserRole = () =>
   useInvalidating(({ id, roleId }: { id: string; roleId: string | null }) => api.setUserRole(id, roleId), [KEYS.users]);
 export const useSetUserStatus = () =>
   useInvalidating(({ id, isActive }: { id: string; isActive: boolean }) => api.setUserStatus(id, isActive), [KEYS.users]);
+export const useSetUserAccessLevel = () =>
+  useInvalidating(
+    ({ id, accessLevel }: { id: string; accessLevel: 'ADMIN' | 'STANDARD' }) => api.setUserAccessLevel(id, accessLevel),
+    [KEYS.users],
+  );
 export const useCreateRole = () => useInvalidating(api.createRole, [KEYS.roles, KEYS.users]);
 export const useUpdateRole = () =>
   useInvalidating(({ id, ...body }: api.RoleInput & { id: string }) => api.updateRole(id, body), [KEYS.roles, KEYS.users]);

@@ -6,11 +6,22 @@ import { Badge } from '@erp/ui/components/badge';
 import { Button } from '@erp/ui/components/button';
 import { Input } from '@erp/ui/components/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@erp/ui/components/table';
-import { useSetUserStatus, useUsers } from '../hooks';
+import type { PublicUser } from '@erp/contracts/core';
+import { useSession } from '@/lib/session';
+import { useSetUserAccessLevel, useSetUserStatus, useUsers } from '../hooks';
 import { CreateUserForm } from './create-user-form';
 import { EditUserRoles } from './edit-user-roles';
 
+function accessLabel(user: PublicUser): string | null {
+  if (user.accessLevel === 'SUPER_ADMIN') return 'Super admin';
+  if (user.accessLevel === 'ADMIN') return 'Admin';
+  return user.role?.name ?? null;
+}
+
 export function UsersTable() {
+  const { user: viewer } = useSession();
+  const isSuperAdmin = viewer?.accessLevel === 'SUPER_ADMIN';
+  const setAccess = useSetUserAccessLevel();
   const [search, setSearch] = useState('');
   const q = useDeferredValue(search.trim());
   const { data, error, isPending } = useUsers(q);
@@ -19,6 +30,14 @@ export function UsersTable() {
   async function toggle(id: string, isActive: boolean) {
     try {
       await setStatus.mutateAsync({ id, isActive });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not update the user.');
+    }
+  }
+
+  async function changeAccess(id: string, accessLevel: 'ADMIN' | 'STANDARD') {
+    try {
+      await setAccess.mutateAsync({ id, accessLevel });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Could not update the user.');
     }
@@ -48,7 +67,7 @@ export function UsersTable() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Roles</TableHead>
+              <TableHead>Access</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -66,29 +85,40 @@ export function UsersTable() {
                 <TableCell className="font-medium">{user.displayName}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {user.accessLevel === 'STANDARD' ? (
-                      user.role ? <Badge variant="secondary">{user.role.name}</Badge> : null
-                    ) : (
-                      <Badge variant="outline">{user.accessLevel === 'SUPER_ADMIN' ? 'Super admin' : 'Admin'}</Badge>
-                    )}
-                  </div>
+                  {accessLabel(user) ? (
+                    <Badge variant={user.accessLevel === 'STANDARD' ? 'secondary' : 'outline'}>{accessLabel(user)}</Badge>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">No role</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant={user.isActive ? 'default' : 'outline'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>
                 </TableCell>
                 <TableCell>
-                  <div className="flex justify-end gap-2">
-                    {user.accessLevel === 'STANDARD' ? <EditUserRoles user={user} /> : null}
-                    <Button
-                      variant={user.isActive ? 'destructive' : 'outline'}
-                      size="sm"
-                      disabled={setStatus.isPending}
-                      onClick={() => toggle(user.id, !user.isActive)}
-                    >
-                      {user.isActive ? 'Deactivate' : 'Activate'}
-                    </Button>
-                  </div>
+                  {/* The super admin row never has actions; admin rows only for the super admin. */}
+                  {user.accessLevel === 'SUPER_ADMIN' || (user.accessLevel === 'ADMIN' && !isSuperAdmin) ? null : (
+                    <div className="flex justify-end gap-2">
+                      {user.accessLevel === 'STANDARD' ? <EditUserRoles user={user} /> : null}
+                      {isSuperAdmin ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={setAccess.isPending}
+                          onClick={() => changeAccess(user.id, user.accessLevel === 'ADMIN' ? 'STANDARD' : 'ADMIN')}
+                        >
+                          {user.accessLevel === 'ADMIN' ? 'Remove admin' : 'Make admin'}
+                        </Button>
+                      ) : null}
+                      <Button
+                        variant={user.isActive ? 'destructive' : 'outline'}
+                        size="sm"
+                        disabled={setStatus.isPending}
+                        onClick={() => toggle(user.id, !user.isActive)}
+                      >
+                        {user.isActive ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             ))}

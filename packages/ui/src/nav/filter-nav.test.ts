@@ -40,6 +40,12 @@ describe('filterNav', () => {
     expect(labels({ accessLevel: 'ADMIN', grants: [] })).toEqual(['A', 'B']);
   });
 
+  it('shows a team-scoped item to a holder of a wider scope', () => {
+    const groups = [group('HR', [item('People', '/people', 'employee.read:team')])];
+    const [visible] = filterNav(groups, standard('employee.read:department'), '/');
+    expect(visible?.items.map((i) => i.label)).toEqual(['People']);
+  });
+
   it('always shows items with a null permission', () => {
     const groups = [group('Home', [item('Dash', '/dash', null)])];
     expect(filterNav(groups, standard(), '/')).toHaveLength(1);
