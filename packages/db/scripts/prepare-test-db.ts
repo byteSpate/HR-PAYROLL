@@ -39,9 +39,12 @@ const { prisma } = await import('../src/client.js');
 const { allPermissions } = await import('@erp/contracts');
 const { syncPermissions } = await import('../src/seed/sync-permissions.js');
 const { seedRoles } = await import('../src/seed/seed-roles.js');
+const { grantNewPermissions } = await import('../src/seed/grant-new-permissions.js');
+const { STARTER_ROLES } = await import('../src/seed/starter-roles.js');
 try {
-  await syncPermissions(prisma, allPermissions());
+  const { added } = await syncPermissions(prisma, allPermissions());
   await seedRoles(prisma);
+  await grantNewPermissions(prisma, added, STARTER_ROLES);
   console.log(`${dbName} ready (no users)`);
 } finally {
   await prisma.$disconnect();
