@@ -1,0 +1,5 @@
+{
+  "extends": "@erp/config-typescript/nextjs.json",
+  "compilerOptions": { "plugins": [], "incremental": false },
+  "include": ["src"]
+}
