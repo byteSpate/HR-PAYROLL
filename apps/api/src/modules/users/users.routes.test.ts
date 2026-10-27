@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { hashPassword, signAccessToken } from '@erp/auth';
+import { allPermissions } from '@erp/contracts';
 import { prisma } from '@erp/db';
 import { createApp } from '../../app.js';
 import { env } from '../../env.js';
@@ -11,7 +12,8 @@ const ROLE = `${PREFIX.toUpperCase()}_ROLE`;
 const ROLE_B = `${PREFIX.toUpperCase()}_ROLE_B`;
 
 const token = (permissions: string[]) => signAccessToken({ sub: 'actor', permissions }, env.JWT_ACCESS_SECRET, '5m');
-const admin = () => ({ Authorization: `Bearer ${token(['user.manage', 'role.manage'])}` });
+// Holds every permission, so it may grant any role (SUPER_ADMIN included).
+const admin = () => ({ Authorization: `Bearer ${token(allPermissions().map((p) => p.key))}` });
 const userManager = () => ({ Authorization: `Bearer ${token(['user.manage'])}` });
 
 let seq = 0;
@@ -176,6 +178,47 @@ describe('PATCH /api/users/:id/status', () => {
     const rows = await auditRows(u.id);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ entity: 'USER', action: 'UPDATE' });
+  });
+});
+
+describe('privilege escalation', () => {
+  const GRANT = 'Cannot grant a role with permissions you do not hold';
+  async function roleWithPerm(permissionKey: string) {
+    return prisma.role.update({
+      where: { name: ROLE_B },
+      data: { permissions: { create: [{ permissionKey }] } },
+    });
+  }
+
+  it('adding a role with a permission the caller lacks -> 403 (create and PATCH)', async () => {
+    const heavy = await roleWithPerm('role.manage');
+    const u = await makeUser();
+    const patch = await request(app).patch(`/api/users/${u.id}/roles`).set(userManager()).send({ roleIds: [heavy.id] });
+    expect(patch.status).toBe(403);
+    expect(patch.body.error).toBe(GRANT);
+    const create = await request(app)
+      .post('/api/users')
+      .set(userManager())
+      .send({ email: `${PREFIX}-esc-${Date.now()}@example.com`, displayName: 'X', roleIds: [heavy.id] });
+    expect(create.status).toBe(403);
+    expect(create.body.error).toBe(GRANT);
+  });
+
+  it('a caller holding every permission of the role may add it', async () => {
+    const heavy = await roleWithPerm('role.manage');
+    const u = await makeUser();
+    const res = await request(app).patch(`/api/users/${u.id}/roles`).set(admin()).send({ roleIds: [heavy.id] });
+    expect(res.status).toBe(200);
+  });
+
+  it('user.manage alone cannot deactivate or change roles of a SUPER_ADMIN', async () => {
+    const sa = await makeUser(['SUPER_ADMIN']);
+    const status = await request(app).patch(`/api/users/${sa.id}/status`).set(userManager()).send({ isActive: false });
+    expect(status.status).toBe(403);
+    const roles = await request(app).patch(`/api/users/${sa.id}/roles`).set(userManager()).send({ roleIds: [] });
+    expect(roles.status).toBe(403);
+    const keep = await prisma.user.findUniqueOrThrow({ where: { id: sa.id } });
+    expect(keep.isActive).toBe(true);
   });
 });
 

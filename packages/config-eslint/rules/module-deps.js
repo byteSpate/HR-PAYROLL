@@ -25,6 +25,7 @@ export default {
               properties: {
                 name: { type: 'string' },
                 deps: { type: 'array', items: { type: 'string' } },
+                folders: { type: 'array', items: { type: 'string' } },
               },
               required: ['name', 'deps'],
             },
@@ -36,7 +37,16 @@ export default {
     ],
   },
   create(context) {
-    const own = moduleOf(context.filename);
+    // A module may span several folders (e.g. core = auth + users); unlisted folders map to themselves.
+    const folderToModule = new Map();
+    for (const m of context.options[0].modules) {
+      for (const f of m.folders ?? [m.name]) folderToModule.set(f, m.name);
+    }
+    const moduleName = (filePath) => {
+      const folder = moduleOf(filePath);
+      return folder === null ? null : (folderToModule.get(folder) ?? folder);
+    };
+    const own = moduleName(context.filename);
     if (!own) return {};
     const manifest = context.options[0].modules.find((m) => m.name === own);
     const allowed = new Set(manifest?.deps ?? []);
@@ -44,7 +54,7 @@ export default {
     function check(node) {
       const source = node.source?.value;
       if (typeof source !== 'string' || !source.startsWith('.')) return;
-      const target = moduleOf(path.resolve(path.dirname(context.filename), source) + '/');
+      const target = moduleName(path.resolve(path.dirname(context.filename), source) + '/');
       if (!target || target === own || allowed.has(target)) return;
       context.report({
         node,

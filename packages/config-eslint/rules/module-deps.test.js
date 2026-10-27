@@ -8,6 +8,9 @@ RuleTester.it = it;
 RuleTester.itOnly = it.only;
 
 const options = [{ modules: [{ name: 'a', deps: [] }, { name: 'b', deps: ['a'] }, { name: 'c', deps: [] }] }];
+const multi = [
+  { modules: [{ name: 'a', deps: [], folders: ['a1', 'a2'] }, { name: 'c', deps: [] }] },
+];
 const tester = new RuleTester({ languageOptions: { ecmaVersion: 2022, sourceType: 'module' } });
 
 const api = (m, f = 'x.ts') => `/repo/apps/api/src/modules/${m}/${f}`;
@@ -23,8 +26,15 @@ tester.run('module-deps', rule, {
     { code: "import x from 'zod'", filename: api('c'), options },
     { code: "import x from '../a/a.service'", filename: '/repo/apps/api/src/main.ts', options },
     { code: "import x from '../a/a.component'", filename: web('b'), options },
+    { code: "import x from '../a2/y'", filename: api('a1'), options: multi },
   ],
   invalid: [
+    {
+      code: "import x from '../a2/y'",
+      filename: api('c'),
+      options: multi,
+      errors: [{ message: "module 'c' imports 'a' which is not in its deps" }],
+    },
     {
       code: "import x from '../a/a.service'",
       filename: api('c'),
