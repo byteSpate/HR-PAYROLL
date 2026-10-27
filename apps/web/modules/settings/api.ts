@@ -53,3 +53,17 @@ export const deleteRole = (id: string) => api.request<void>(`/roles/${id}`, { me
 
 export const changePassword = (body: { currentPassword: string; newPassword: string }) =>
   api.request<{ success: true; user: PublicUser }>('/auth/change-password', { method: 'POST', body });
+
+export interface AuditRow {
+  id: string;
+  entity: string;
+  entityId: string;
+  action: string;
+  changedAt: string;
+  actorEmail: string | null;
+  before: unknown;
+  after: unknown;
+}
+
+export const listAudit = (cursor: string | null) =>
+  api.request<{ items: AuditRow[]; nextCursor: string | null }>(`/audit${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`);

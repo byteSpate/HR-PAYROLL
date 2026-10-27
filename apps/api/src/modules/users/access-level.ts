@@ -2,7 +2,7 @@ import { updateUserAccessLevelSchema } from '@erp/contracts/core';
 import type { PublicUser } from '@erp/contracts/core';
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
-import { writeAudit } from '../../audit.js';
+import { writeAudit } from '@erp/audit';
 import { loadPublicUser } from '../auth/auth.service.js';
 import { loadActor } from './actor.js';
 import { assertCanActOn, type Caller } from './guards.js';

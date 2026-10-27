@@ -2,7 +2,7 @@ import base, { erp } from '@erp/config-eslint';
 import { modules } from '@erp/contracts';
 
 // Folders under src/modules that belong to a manifest module (the rule otherwise maps folder name = module name).
-const folders = { core: ['auth', 'users'] };
+const folders = { core: ['auth', 'users', 'core-audit'] };
 
 export default [
   ...base,

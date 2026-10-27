@@ -28,6 +28,7 @@ export const core = defineModule({
           icon: 'RiShieldUserLine',
           permission: 'role.manage',
         },
+        { label: 'Activity Log', href: '/settings/activity', icon: 'RiHistoryLine', permission: 'audit.read' },
       ],
     },
   ],

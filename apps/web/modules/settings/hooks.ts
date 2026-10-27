@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as api from './api';
 
 // Role changes alter what users show, so both lists are refreshed together.
@@ -10,6 +10,13 @@ export const useUsers = (q: string) => useQuery({ queryKey: [...KEYS.users, q], 
 export const useRoles = () => useQuery({ queryKey: KEYS.roles, queryFn: api.listRoles, retry: false });
 export const useRoleOptions = () =>
   useQuery({ queryKey: KEYS.roleOptions, queryFn: api.listRoleOptions, retry: false });
+export const useAudit = () =>
+  useInfiniteQuery({
+    queryKey: ['audit'],
+    queryFn: ({ pageParam }) => api.listAudit(pageParam),
+    initialPageParam: null as string | null,
+    getNextPageParam: (last) => last.nextCursor,
+  });
 export const usePermissionGroups = () =>
   useQuery({ queryKey: KEYS.permissions, queryFn: api.listPermissionGroups, retry: false });
 

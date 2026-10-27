@@ -3,6 +3,7 @@ import {
   RiCircleLine,
   RiDashboardLine,
   RiSettings3Line,
+  RiHistoryLine,
   RiShieldUserLine,
   RiUserLine,
 } from '@remixicon/react';
@@ -14,6 +15,7 @@ type IconComponent = ComponentType<{ className?: string }>;
 const ICONS: Record<string, IconComponent> = {
   RiDashboardLine,
   RiSettings3Line,
+  RiHistoryLine,
   RiShieldUserLine,
   RiUserLine,
 };

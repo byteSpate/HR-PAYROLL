@@ -12,6 +12,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@erp/audit": "workspace:*",
     "@erp/auth": "workspace:*",
     "@erp/contracts": "workspace:*",
     "@erp/db": "workspace:*",

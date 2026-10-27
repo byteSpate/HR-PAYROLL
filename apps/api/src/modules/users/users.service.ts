@@ -4,7 +4,7 @@ import { createUserSchema, updateUserRoleSchema, updateUserStatusSchema } from '
 import { fromDbScope, prisma, type Tx } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { z } from 'zod';
-import { writeAudit } from '../../audit.js';
+import { writeAudit } from '@erp/audit';
 import { loadPublicUser } from '../auth/auth.service.js';
 import { loadActor } from './actor.js';
 import { assertCanActOn, assertMayGrant, type Caller } from './guards.js';

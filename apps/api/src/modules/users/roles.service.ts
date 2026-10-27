@@ -2,7 +2,7 @@ import { roleSchema } from '@erp/contracts/core';
 import { fromDbScope, prisma, toDbScope, type Tx } from '@erp/db';
 import type { Scope } from '@erp/auth';
 import { AppError } from '@erp/utils';
-import { writeAudit } from '../../audit.js';
+import { writeAudit } from '@erp/audit';
 import { loadActor } from './actor.js';
 import { assertMayGrant, type Caller, type GrantRequest } from './guards.js';
 
