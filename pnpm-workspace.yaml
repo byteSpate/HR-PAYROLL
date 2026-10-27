@@ -14,3 +14,4 @@ allowBuilds:
   esbuild: false
   prisma: true
   sharp: false
+  unrs-resolver: false
