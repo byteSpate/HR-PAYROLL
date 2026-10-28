@@ -6,6 +6,7 @@ import { AppShell } from '@erp/ui/shell';
 import { navGroups } from '@/lib/nav';
 import { loginPathFor } from '@/lib/return-to';
 import { useSession } from '@/lib/session';
+import { NotificationBell } from '@/modules/notification/components/notification-bell';
 import { ChangePasswordDialog } from '@/modules/settings/components/change-password-dialog';
 
 const ACCESS_LEVEL_LABEL = { SUPER_ADMIN: 'Super Admin', ADMIN: 'Admin' } as const;
@@ -37,6 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       identity={{ name: user.displayName, subtitle, email: user.email }}
       onSignOut={() => void signOut()}
       profileHref="/me"
+      headerSlot={<NotificationBell />}
     >
       {children}
     </AppShell>
