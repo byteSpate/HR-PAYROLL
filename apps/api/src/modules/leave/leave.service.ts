@@ -4,7 +4,7 @@ import { writeAudit } from '@erp/audit';
 import { dateOnly } from '@erp/contracts/attendance';
 import { prisma } from '@erp/db';
 import { emit } from '@erp/events';
-import { formatDateOnly, officeToday } from '@erp/export';
+import { officeToday } from '@erp/export';
 import { approverUserIds, notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';

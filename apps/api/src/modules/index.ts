@@ -6,6 +6,7 @@ import { authRouter } from './auth/auth.routes.js';
 import { auditRouter } from './core-audit/audit.routes.js';
 import { departmentRouter } from './department/department.routes.js';
 import { employeeRouter } from './employee/employee.routes.js';
+import { leaveRouter } from './leave/leave.routes.js';
 import { notificationRouter } from './notification/notification.routes.js';
 import { rolesRouter } from './users/roles.routes.js';
 import { usersRouter } from './users/users.routes.js';
@@ -19,6 +20,7 @@ export const apiMounts: [prefix: string, router: Router][] = [
   ['/departments', departmentRouter],
   ['/employees', employeeRouter],
   ['/notifications', notificationRouter],
+  ['/leave', leaveRouter],
   ['/attendance', attendanceMineRouter],
   ['/attendance', attendanceConfigRouter],
   ['/attendance', attendanceRouter],
