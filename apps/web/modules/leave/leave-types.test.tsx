@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { LeaveTypes } from './components/leave-types';
 import * as api from './api';
-vi.mock('./api', () => ({ types: vi.fn(), saveType: vi.fn(), deleteType: vi.fn() }));
+vi.mock('./api', () => ({ types: vi.fn(), saveType: vi.fn(), deleteType: vi.fn(), configEmployees: vi.fn(), adjustBalance: vi.fn() }));
 afterEach(cleanup);
 it('lists leave policies and offers a policy form', async () => {
   vi.mocked(api.types).mockResolvedValue([{ id: 't', name: 'Casual', isPaid: true }]);
@@ -26,4 +26,11 @@ it('lets HR configure leave eligibility and policy rules', async () => {
   await userEvent.selectOptions(screen.getByLabelText('Accrual basis'), 'NONE');
   await userEvent.click(screen.getByRole('button', { name: 'Add leave type' }));
   expect(api.saveType).toHaveBeenCalledWith(expect.objectContaining({ isPaid: false, countsHolidays: true, accrualBasis: 'NONE' }), undefined);
+});
+it('offers a balance adjustment with an employee and reason', async () => {
+  vi.mocked(api.types).mockResolvedValue([{ id: 't', name: 'Casual', isPaid: true }]);
+  vi.mocked(api.configEmployees).mockResolvedValue([{ id: 'e', fullName: 'Bilal', employeeCode: 'E1' }]);
+  render(<QueryClientProvider client={new QueryClient()}><LeaveTypes /></QueryClientProvider>);
+  expect(await screen.findByRole('option', { name: 'Bilal (E1)' })).toBeTruthy();
+  expect(screen.getByRole('button', { name: 'Adjust balance' })).toBeTruthy();
 });
