@@ -6,7 +6,8 @@ import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import { decideAttendance, listAttendance, scopeForViewer, toApprovalItem } from './attendance.approval.js';
 import { dateOnly } from '@erp/contracts/attendance';
-import { exportReport, getReport } from './attendance.report.js';
+import { writeAudit } from '@erp/audit';
+import { getAttendanceReport, reportFilename, reportToCsv } from './attendance.report.js';
 import { getAuditTrail, getEmployeeAttendance } from './attendance.history.js';
 import { getDailySummary, getMonthlySummary } from './attendance.summary.js';
 import { correctAttendance, manualAttendance, regulariseAttendance } from './attendance.edit.js';
@@ -14,8 +15,36 @@ import { correctAttendance, manualAttendance, regulariseAttendance } from './att
 export const attendanceRouter = Router();
 attendanceRouter.use(requireAuth);
 const text = (value: unknown) => typeof value === 'string' ? value : undefined;
-attendanceRouter.get('/report/export', requirePermission('attendance.report'), exportReport);
-attendanceRouter.get('/report', requirePermission('attendance.report'), getReport);
+const reportQuerySchema = z.object({
+  from: dateOnly,
+  to: dateOnly,
+  granularity: z.enum(['summary', 'daily']).optional(),
+  employeeId: z.string().min(1).optional(),
+  format: z.enum(['json', 'csv', 'pdf']).optional(),
+});
+attendanceRouter.get('/report', requirePermission('attendance.report'), async (req, res) => {
+  const { format, ...query } = reportQuerySchema.parse(req.query);
+  // HR-MNG-V1 renders the PDF in a headless browser; that dependency is not installed here yet.
+  if (format === 'pdf') throw new AppError(501, 'PDF export is not available yet. Download the CSV instead.');
+  const report = await getAttendanceReport(req.user!, query);
+  if (format !== 'csv') {
+    res.json(report);
+    return;
+  }
+  await prisma.$transaction((tx) =>
+    writeAudit(tx, {
+      entity: 'ATTENDANCE_REPORT',
+      entityId: `${report.from}..${report.to}`,
+      action: 'EXPORT',
+      changedBy: req.user!.sub,
+      after: { granularity: report.granularity, headcount: report.headcount },
+    }),
+  );
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${reportFilename(report, 'csv')}"`);
+  // A BOM, so Excel opens the file as UTF-8: without it every Bengali name arrives as mojibake.
+  res.status(200).send(`\uFEFF${reportToCsv(report)}`);
+});
 // The derived views, read by the screens ported from HR-MNG-V1. Scope comes from the caller's attendance.read grant.
 attendanceRouter.get('/summary/daily', requirePermission('attendance.read'), async (req, res) => {
   const date = text(req.query['date']);

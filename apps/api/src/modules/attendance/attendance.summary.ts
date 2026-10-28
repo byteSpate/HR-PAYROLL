@@ -40,7 +40,7 @@ export const ROSTER_SELECT = {
 
 export type RosterEmployee = Pick<Employee, keyof typeof ROSTER_SELECT>
 
-const toRef = (e: RosterEmployee): EmployeeRef => ({
+export const toRef = (e: RosterEmployee): EmployeeRef => ({
   id: e.id,
   fullName: e.fullName,
   employeeCode: e.employeeCode,

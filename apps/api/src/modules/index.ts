@@ -1,6 +1,4 @@
 import type { Router } from 'express';
-import { setLeaveDaysFor } from './attendance/attendance.report.js';
-import { leaveDaysFor } from './leave/leave.grid.js';
 import { attendanceRouter } from './attendance/attendance.routes.js';
 import { attendanceMineRouter } from './attendance/attendance.mine.routes.js';
 import { attendanceConfigRouter } from './attendance/config.routes.js';
@@ -13,7 +11,6 @@ import { notificationRouter } from './notification/notification.routes.js';
 import { rolesRouter } from './users/roles.routes.js';
 import { usersRouter } from './users/users.routes.js';
 
-setLeaveDaysFor(leaveDaysFor);
 
 // Each module registers its router here (filled by later tasks); prefixes are relative to /api.
 export const apiMounts: [prefix: string, router: Router][] = [
