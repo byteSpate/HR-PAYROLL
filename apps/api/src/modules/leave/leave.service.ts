@@ -10,6 +10,7 @@ import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
 import { scopeForViewer } from '../attendance/attendance.approval.js';
 import { shiftFor } from '../attendance/attendance.punch.js';
+import { computeEarnedAccrual } from './leave.accrual.js';
 import { countChargedDays } from './leave.dates.js';
 import { computeEntitlement } from './leave.policy.js';
 
@@ -35,13 +36,14 @@ export async function applyForLeave(userId: string, input: unknown) {
   const holidays = await prisma.holiday.findMany({ where: { date: { gte: start, lte: end } } });
   const chargedDays = countChargedDays({ start, end, startSession: body.startSession, endSession: body.endSession, countsHolidays: type.countsHolidays, weeklyOffDays: shift.weeklyOffDays, holidays: holidays.filter(h => h.type !== 'WORKING_DAY').map(h => h.date), workingDayOverrides: holidays.filter(h => h.type === 'WORKING_DAY').map(h => h.date) });
   if (chargedDays <= 0) throw new AppError(400, 'No chargeable leave days');
+  const earned = type.accrualBasis === 'EARNED' ? await computeEarnedAccrual(employee, officeToday(), type.minServiceMonths, type.maxAccrual) : 0;
   return prisma.$transaction(async tx => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${employee.id}))`;
     const overlaps = await tx.leaveRequest.findMany({ where: { employeeId: employee.id, status: { in: ['PENDING', 'APPROVED'] }, startDate: { lte: end }, endDate: { gte: start } } });
     if (overlaps.some(row => halfIndex(start, body.startSession) <= halfIndex(row.endDate, row.endSession) && halfIndex(end, body.endSession) >= halfIndex(row.startDate, row.startSession))) throw new AppError(409, 'Leave overlaps an existing request');
     const year = start.getUTCFullYear();
     if (type.isPaid) {
-      const quota = type.accrualBasis === 'PER_EVENT' ? type.annualQuota : type.accrualBasis === 'PRO_RATED' ? computeEntitlement(type.annualQuota, employee.joiningDate, year) : 0;
+      const quota = type.accrualBasis === 'PER_EVENT' ? type.annualQuota : type.accrualBasis === 'PRO_RATED' ? computeEntitlement(type.annualQuota, employee.joiningDate, year) : earned;
       const balance = await tx.leaveBalance.upsert({ where: { employeeId_leaveTypeId_year: { employeeId: employee.id, leaveTypeId: type.id, year } }, create: { employeeId: employee.id, leaveTypeId: type.id, year, accrued: quota, balance: quota }, update: {} });
       const pending = await tx.leaveRequest.aggregate({ where: { employeeId: employee.id, leaveTypeId: type.id, status: 'PENDING', startDate: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } }, _sum: { chargedDays: true } });
       if (balance.balance - (pending._sum.chargedDays ?? 0) < chargedDays) throw new AppError(409, 'Insufficient leave balance');
