@@ -51,6 +51,7 @@ git push origin <branch> && git push reza <branch>
 - Env files are copied from their `.env.example` and git-ignored: `packages/db/.env` (`DATABASE_URL`, `DATABASE_URL_TEST`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`), `apps/api/.env`, `apps/web/.env.local`.
 - Optional Cloudinary file storage: set all of `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `apps/api/.env` or none (uploads then answer 503 and avatars show initials).
 - Only `.env.example` files are committed. Never commit real secrets.
+- Shared dev login after `pnpm db:seed`: `admin@example.com` / `change-me-now` (the `.env.example` values). That password is public, so the seed refuses it when `NODE_ENV=production`.
 
 ## Migrations
 
