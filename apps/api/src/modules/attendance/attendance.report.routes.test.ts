@@ -10,6 +10,7 @@ let manager: Awaited<ReturnType<typeof makeActor>>;
 let users: Awaited<ReturnType<typeof makeActor>>[];
 let ids: string[];
 let departmentId: string;
+let leaveTypeId: string;
 beforeAll(async () => {
   manager = await makeActor(prefix, 'STANDARD', ['attendance.report:team']);
   users = await Promise.all([0, 1].map(() => makeActor(prefix, 'STANDARD')));
@@ -18,8 +19,12 @@ beforeAll(async () => {
   for (const [i, actor] of [manager, ...users].entries()) {
     ids.push((await prisma.employee.create({ data: { userId: actor.user.id, employeeCode: `${prefix}-${Date.now()}-${i}`, fullName: `Person ${i}`, designation: 'Engineer', departmentId, employmentType: 'FULL_TIME', joiningDate: new Date('2026-01-01T00:00:00Z'), reportingManagerId: i === 1 ? ids[0] : undefined } })).id);
   }
+  leaveTypeId = (await prisma.leaveType.create({ data: { code: `${prefix}-${Date.now()}`, name: `${prefix}-${Date.now()}`, annualQuota: 10, eligibleFor: ['FULL_TIME'] } })).id;
+  await prisma.leaveRequest.create({ data: { employeeId: ids[1]!, leaveTypeId, startDate: new Date('2026-03-02T00:00:00Z'), endDate: new Date('2026-03-02T00:00:00Z'), chargedDays: 1, status: 'APPROVED' } });
 });
 afterAll(async () => {
+  await prisma.leaveRequest.deleteMany({ where: { employeeId: { in: ids } } });
+  await prisma.leaveType.delete({ where: { id: leaveTypeId } });
   await prisma.auditLog.deleteMany({ where: { changedBy: manager.user.id, action: 'EXPORT' } });
   await prisma.employee.updateMany({ where: { id: { in: ids } }, data: { reportingManagerId: null } });
   await prisma.employee.deleteMany({ where: { id: { in: ids } } });
@@ -31,6 +36,7 @@ describe('attendance report routes', () => {
     const res = await request(app).get('/api/attendance/report?month=2026-03').set(manager.header);
     expect(res.status).toBe(200);
     expect(res.body.map((row: { employeeId: string }) => row.employeeId)).toEqual([ids[1]]);
+    expect(res.body[0].days.find((day: { date: string }) => day.date === '2026-03-02').status).toBe('leave');
     expect((await request(app).get('/api/attendance/report?month=2026-03').set(users[0]!.header)).status).toBe(403);
   });
   it('audits one export', async () => {
