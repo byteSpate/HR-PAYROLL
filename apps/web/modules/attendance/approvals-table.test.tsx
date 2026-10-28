@@ -20,3 +20,7 @@ it('does not retain selection after a decided row disappears', async () => {
   view.rerender(<ApprovalsTable rows={[]} onDecide={vi.fn()} />);
   expect((screen.getByRole('button', { name: 'Approve selected' }) as HTMLButtonElement).disabled).toBe(true);
 });
+it('shows exceptions so a manager can review the attendance', () => {
+  render(<ApprovalsTable rows={[{ id: 'one', name: 'Amina', date: '2026-03-01', exceptions: ['LATE', 'MISSING_CHECKOUT'] }]} onDecide={vi.fn()} />);
+  expect(screen.getByText('LATE, MISSING_CHECKOUT')).toBeTruthy();
+});
