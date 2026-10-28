@@ -251,6 +251,9 @@ importers:
       '@types/morgan':
         specifier: 1.9.10
         version: 1.9.10
+      '@types/multer':
+        specifier: 2.2.0
+        version: 2.2.0
       '@types/node':
         specifier: 26.1.1
         version: 26.1.1
