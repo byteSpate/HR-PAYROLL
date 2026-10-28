@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-vi.mock('../attendance/attendance.grid.js', () => ({ dailyGrid: vi.fn(async () => [{ days: Array.from({ length: 18 }, () => ({ status: 'present' })) }]) }));
+vi.mock('../attendance/attendance.grid.js', () => ({ dailyGrid: vi.fn(async (_scope: unknown, month: string) => [{ days: Array.from({ length: 18 }, (_, i) => ({ date: `${month}-${String(i + 1).padStart(2, '0')}`, status: 'present' })) }]) }));
 import { computeEarnedAccrual } from './leave.accrual.js';
 it('grants earned leave only after minimum service and counts worked days', async () => {
   const employee = { id: 'e', joiningDate: new Date('2025-01-01T00:00:00Z') };
