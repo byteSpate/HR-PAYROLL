@@ -29,6 +29,10 @@ describe('leave routes', () => {
   it('allows an employee to apply and see their own requests and balances', async () => {
     expect((await request(app).get('/api/leave/types')).status).toBe(401);
     expect((await request(app).get('/api/leave/types').set(user.header)).status).toBe(200);
+    expect((await request(app).get('/api/leave/config/employees').set(user.header)).status).toBe(403);
+    const options = await request(app).get('/api/leave/config/employees').set(admin.header);
+    expect(options.status).toBe(200);
+    expect(options.body.map((item: { id: string }) => item.id)).toContain(employeeId);
     const initialBalances = await request(app).get('/api/leave/balances/me').set(user.header);
     expect(initialBalances.body).toHaveLength(1);
     expect(initialBalances.body[0].balance).toBe(10);
