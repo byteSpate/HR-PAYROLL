@@ -29,7 +29,7 @@ afterEach(async () => {
   await prisma.notification.deleteMany({ where: { userId: { in: [manager.user.id, employee.user.id] } } });
   await prisma.auditLog.deleteMany({ where: { OR: [{ entity: 'LEAVE_REQUEST', entityId: { in: requests.map(r => r.id) } }, { entity: 'LEAVE_BALANCE', changedBy: manager.user.id }] } });
   await prisma.attendance.deleteMany({ where: { employeeId } });
-  await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'PRO_RATED', minServiceMonths: 0 } });
+  await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'PRO_RATED', minServiceMonths: 0, isPaid: true } });
   await prisma.leaveRequest.deleteMany({ where: { employeeId } });
   await prisma.leaveBalance.deleteMany({ where: { employeeId } });
 });
@@ -59,6 +59,16 @@ describe('leave requests', () => {
     await prisma.attendance.createMany({ data: Array.from({ length: 18 }, (_, i) => ({ employeeId, date: new Date(Date.UTC(2026, 2, i + 1)), checkIn: new Date(Date.UTC(2026, 2, i + 1, 3)) })) });
     const balances = await balancesFor(employeeId, 2026);
     expect(balances.find(balance => balance.leaveTypeId === typeId)?.balance).toBe(0);
+  });
+  it('prevents concurrent duplicate requests', async () => {
+    const results = await Promise.all([status(applyForLeave(employee.user.id, input())), status(applyForLeave(employee.user.id, input()))]);
+    expect(results.sort()).toEqual([0, 409]);
+    expect(await prisma.leaveRequest.count({ where: { employeeId } })).toBe(1);
+  });
+  it('allows unpaid leave beyond the balance and rejects forbidden backdating', async () => {
+    await prisma.leaveType.update({ where: { id: typeId }, data: { isPaid: false } });
+    expect((await applyForLeave(employee.user.id, input())).chargedDays).toBe(1);
+    expect(await status(applyForLeave(employee.user.id, { ...input(), startDate: '2026-01-05', endDate: '2026-01-05' }))).toBe(400);
   });
   it('rejects requests exceeding the paid balance', async () => {
     await prisma.leaveBalance.create({ data: { employeeId, leaveTypeId: typeId, year: 2027, accrued: 0.5, balance: 0.5 } });
