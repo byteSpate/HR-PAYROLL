@@ -1,4 +1,6 @@
 'use client';
+import { useState } from 'react';
+import { Button } from '@erp/ui/components/button';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '@erp/ui/page';
 import { DataTable, type DataColumn } from '@erp/ui/components/data-table';
@@ -13,9 +15,11 @@ const columns: DataColumn<api.AttendanceRow>[] = [
 ];
 export function MyAttendance() {
   const today = officeDate();
+  const [date, setDate] = useState(''); const [checkIn, setCheckIn] = useState(''); const [checkOut, setCheckOut] = useState(''); const [note, setNote] = useState('');
   const client = useQueryClient();
   const query = useQuery({ queryKey: ['my-attendance', today.slice(0, 7)], queryFn: () => api.myAttendance(today.slice(0, 7)) });
   const record = query.data?.find(r => r.date.slice(0, 10) === today) ?? null;
   const mutation = useMutation({ mutationFn: (action: 'check-in' | 'check-out') => api.punch(action), onSuccess: () => client.invalidateQueries({ queryKey: ['my-attendance'] }) });
-  return <><PageHeader kicker="My Space" title="My attendance" /><PunchCard record={record} busy={query.isPending || mutation.isPending} onPunch={() => mutation.mutate(record?.checkIn ? 'check-out' : 'check-in')} />{mutation.error && <p role="alert">{mutation.error.message}</p>}<div className="mt-6"><DataTable columns={columns} rows={query.data} rowKey={r => r.id} loading={query.isPending} error={query.error?.message} empty="No attendance records this month." /></div></>;
+  const correction = useMutation({ mutationFn: () => api.regularise({ date, ...(checkIn ? { checkIn } : {}), ...(checkOut ? { checkOut } : {}), note }), onSuccess: () => client.invalidateQueries({ queryKey: ['my-attendance'] }) });
+  return <><PageHeader kicker="My Space" title="My attendance" /><PunchCard record={record} busy={query.isPending || mutation.isPending} onPunch={() => mutation.mutate(record?.checkIn ? 'check-out' : 'check-in')} />{mutation.error && <p role="alert">{mutation.error.message}</p>}<div className="mt-6"><DataTable columns={columns} rows={query.data} rowKey={r => r.id} loading={query.isPending} error={query.error?.message} empty="No attendance records this month." /></div><form className="mt-6 space-y-3 rounded border border-line bg-white p-5" onSubmit={e => { e.preventDefault(); correction.mutate(); }}><h2 className="font-semibold">Request a correction</h2><label className="block">Date <input aria-label="Date to regularise" required type="date" value={date} onChange={e => setDate(e.target.value)} /></label><label className="block">Check in <input aria-label="Regularised check in" type="time" value={checkIn} onChange={e => setCheckIn(e.target.value)} /></label><label className="block">Check out <input aria-label="Regularised check out" type="time" value={checkOut} onChange={e => setCheckOut(e.target.value)} /></label><label className="block">Reason <input aria-label="Regularisation reason" required value={note} onChange={e => setNote(e.target.value)} className="rounded border p-2" /></label><Button type="submit" disabled={correction.isPending}>Request correction</Button>{correction.isSuccess && <p role="status">Correction submitted for review.</p>}{correction.error && <p role="alert">{correction.error.message}</p>}</form></>;
 }

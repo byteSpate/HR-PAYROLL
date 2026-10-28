@@ -19,3 +19,4 @@ export const importTemplate = (kind: ConfigKind, format: 'csv' | 'xlsx') => api.
 const importFile = (kind: ConfigKind, action: 'preview' | 'commit', file: File) => { const data = new FormData(); data.append('file', file); return api.request<import('@erp/ui/components/import-wizard').ImportPreviewResult>(`/attendance/${kind}/import/${action}`, { method: 'POST', body: data }); };
 export const importPreview = (kind: ConfigKind, file: File) => importFile(kind, 'preview', file);
 export const importCommit = (kind: ConfigKind, file: File) => importFile(kind, 'commit', file);
+export const regularise = (body: { date: string; checkIn?: string; checkOut?: string; note: string }) => api.request<void>('/attendance/regularise', { method: 'POST', body });
