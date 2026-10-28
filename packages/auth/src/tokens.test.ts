@@ -10,18 +10,18 @@ import {
 const SECRET = 'test-secret-that-is-long-enough';
 
 describe('access tokens', () => {
-  it('round-trips the subject and permissions', () => {
-    const token = signAccessToken({ sub: 'u1', permissions: ['a.b'] }, SECRET, '15m');
-    expect(verifyAccessToken(token, SECRET)).toMatchObject({ sub: 'u1', permissions: ['a.b'] });
+  it('round-trips the subject, level and grants', () => {
+    const token = signAccessToken({ sub: 'u1', accessLevel: 'STANDARD', grants: ['a.b:all'] }, SECRET, '15m');
+    expect(verifyAccessToken(token, SECRET)).toMatchObject({ sub: 'u1', accessLevel: 'STANDARD', grants: ['a.b:all'] });
   });
 
   it('throws when the secret does not match', () => {
-    const token = signAccessToken({ sub: 'u1', permissions: [] }, SECRET, '15m');
+    const token = signAccessToken({ sub: 'u1', accessLevel: 'ADMIN', grants: [] }, SECRET, '15m');
     expect(() => verifyAccessToken(token, 'another-secret-entirely')).toThrow();
   });
 
   it('throws on an expired token', () => {
-    const token = signAccessToken({ sub: 'u1', permissions: [] }, SECRET, '-1s');
+    const token = signAccessToken({ sub: 'u1', accessLevel: 'ADMIN', grants: [] }, SECRET, '-1s');
     expect(() => verifyAccessToken(token, SECRET)).toThrow();
   });
 });

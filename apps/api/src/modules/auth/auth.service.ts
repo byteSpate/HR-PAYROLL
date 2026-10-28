@@ -1,5 +1,4 @@
 import {
-  effectivePermissions,
   generateOpaqueToken,
   hashPassword,
   hashToken,
@@ -12,6 +11,8 @@ import { prisma, type Db } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { env } from '../../env.js';
 import type { SessionContext } from './auth.cookies.js';
+import { derivedGrants } from './derived-grants.js';
+import { grantStrings } from './grant-strings.js';
 
 export interface SessionResult {
   accessToken: string;
@@ -27,10 +28,14 @@ const INVALID_CREDENTIALS = 'Invalid email or password';
 export async function loadPublicUser(db: Db, userId: string): Promise<PublicUser> {
   const user = await db.user.findUnique({
     where: { id: userId },
-    include: { roles: { include: { role: { include: { permissions: true } } } } },
+    include: { role: { include: { permissions: true } } },
   });
   if (!user) throw new AppError(404, 'User not found');
-  const roles = user.roles.map((ur) => ur.role);
+  // ADMIN and SUPER_ADMIN hold everything by level, so they carry no grant list.
+  const holdsEverything = user.accessLevel !== 'STANDARD';
+  const grants = holdsEverything
+    ? []
+    : [...new Set([...grantStrings(user.role?.permissions ?? []), ...(await derivedGrants(db, userId))])].sort();
   return {
     id: user.id,
     email: user.email,
@@ -38,8 +43,9 @@ export async function loadPublicUser(db: Db, userId: string): Promise<PublicUser
     displayName: user.displayName ?? user.email,
     isActive: user.isActive,
     mustChangePassword: user.mustChangePassword,
-    roles: roles.map((r) => ({ id: r.id, name: r.name })),
-    permissions: effectivePermissions(roles),
+    accessLevel: user.accessLevel,
+    role: user.role ? { id: user.role.id, name: user.role.name } : null,
+    grants,
   };
 }
 
@@ -68,7 +74,11 @@ async function issueRefreshToken(db: Db, userId: string, ctx: SessionContext, co
 }
 
 function accessTokenFor(user: PublicUser): string {
-  return signAccessToken({ sub: user.id, permissions: user.permissions }, env.JWT_ACCESS_SECRET, env.JWT_ACCESS_EXPIRY);
+  return signAccessToken(
+    { sub: user.id, accessLevel: user.accessLevel, grants: user.grants },
+    env.JWT_ACCESS_SECRET,
+    env.JWT_ACCESS_EXPIRY,
+  );
 }
 
 export async function login(email: string, password: string, ctx: SessionContext): Promise<SessionResult> {
@@ -108,7 +118,7 @@ export async function refresh(rawToken: string, ctx: SessionContext): Promise<Se
     if (claimed.count !== 1) throw new AppError(401, 'Invalid refresh token');
     return issueRefreshToken(tx, stored.userId, ctx, stored);
   });
-  // Roles are re-read so permission changes apply within one access-token lifetime.
+  // The role is re-read so access changes apply within one access-token lifetime.
   const user = await loadPublicUser(prisma, stored.userId);
   return { accessToken: accessTokenFor(user), refreshToken, user };
 }

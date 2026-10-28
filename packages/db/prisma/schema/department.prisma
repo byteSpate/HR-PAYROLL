@@ -1,0 +1,8 @@
+model Department {
+  id        String     @id @default(uuid())
+  // Unique as typed; the service also refuses a case-insensitive duplicate ("Sales" vs "sales").
+  name      String     @unique
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  employees Employee[]
+}

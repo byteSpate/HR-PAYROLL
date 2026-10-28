@@ -7,7 +7,7 @@ import { roleSchema } from '@erp/contracts/core';
 import { Button } from '@erp/ui/components/button';
 import { Input } from '@erp/ui/components/input';
 import { Label } from '@erp/ui/components/label';
-import type { RoleView } from '../api';
+import type { RoleGrant, RoleView } from '../api';
 import { useCreateRole, useDeleteRole, useUpdateRole } from '../hooks';
 import { PermissionPicker } from './permission-picker';
 
@@ -18,7 +18,7 @@ export function RoleForm({ role }: { role?: RoleView }) {
   const remove = useDeleteRole();
   const [name, setName] = useState(role?.name ?? '');
   const [description, setDescription] = useState(role?.description ?? '');
-  const [permissions, setPermissions] = useState<string[]>(role?.permissions ?? []);
+  const [permissions, setPermissions] = useState<RoleGrant[]>(role?.permissions ?? []);
   const [error, setError] = useState<string | null>(null);
 
   const busy = create.isPending || update.isPending || remove.isPending;
@@ -76,7 +76,7 @@ export function RoleForm({ role }: { role?: RoleView }) {
         <Button type="button" variant="outline" onClick={() => router.push('/settings/roles')}>
           Cancel
         </Button>
-        {role && !role.isSystem ? (
+        {role ? (
           <Button type="button" variant="destructive" className="ml-auto" disabled={busy} onClick={onDelete}>
             Delete
           </Button>

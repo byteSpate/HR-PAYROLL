@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { Badge } from '@erp/ui/components/badge';
 import { buttonVariants } from '@erp/ui/components/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@erp/ui/components/table';
 import { cn } from '@erp/ui/lib/cn';
@@ -29,8 +28,7 @@ function RolesList() {
             <TableCell className="font-medium">
               <Link href={`/settings/roles/${role.id}`} className="underline-offset-4 hover:underline">
                 {role.name}
-              </Link>{' '}
-              {role.isSystem ? <Badge variant="outline">System</Badge> : null}
+              </Link>
             </TableCell>
             <TableCell>{role.description}</TableCell>
             <TableCell>{role.permissions.length}</TableCell>

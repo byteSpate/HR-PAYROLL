@@ -6,7 +6,10 @@ import { AppError } from '@erp/utils';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function errorHandler(err: unknown, _req: Request, res: Response, _next: NextFunction) {
   if (err instanceof AppError) {
-    return res.status(err.status).json({ error: err.message, ...(err.code ? { code: err.code } : {}) });
+    // Details go first so they can never replace the message or code.
+    return res
+      .status(err.status)
+      .json({ ...err.details, error: err.message, ...(err.code ? { code: err.code } : {}) });
   }
   // Handlers throw from schema.parse(); without this an input mistake would surface as a 500.
   if (err instanceof ZodError) {

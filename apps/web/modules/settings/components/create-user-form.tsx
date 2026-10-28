@@ -21,7 +21,7 @@ export function CreateUserForm() {
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [roleIds, setRoleIds] = useState<string[]>([]);
+  const [roleId, setRoleId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Held in component state only: the server never returns it again.
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function CreateUserForm() {
     if (!next) {
       setEmail('');
       setDisplayName('');
-      setRoleIds([]);
+      setRoleId(null);
       setError(null);
       setTemporaryPassword(null);
       create.reset();
@@ -48,9 +48,8 @@ export function CreateUserForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (roleIds.length === 0) return setError('Choose at least one role.');
     try {
-      const result = await create.mutateAsync({ email: email.trim(), displayName: displayName.trim(), roleIds });
+      const result = await create.mutateAsync({ email: email.trim(), displayName: displayName.trim(), roleId });
       setTemporaryPassword(result.temporaryPassword);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create the user.');
@@ -91,8 +90,8 @@ export function CreateUserForm() {
                 <Input id="nu-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
               </div>
               <div className="grid gap-1.5">
-                <span className="text-sm font-medium">Roles</span>
-                <RoleSelect value={roleIds} onChange={setRoleIds} />
+                <span className="text-sm font-medium">Role</span>
+                <RoleSelect value={roleId} onChange={setRoleId} />
               </div>
               {error ? (
                 <p role="alert" className="text-sm text-destructive">

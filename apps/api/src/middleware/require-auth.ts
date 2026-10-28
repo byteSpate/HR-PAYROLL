@@ -12,12 +12,20 @@ declare global {
   }
 }
 
+const ACCESS_LEVELS = new Set(['SUPER_ADMIN', 'ADMIN', 'STANDARD']);
+
 // verifyAccessToken only casts the decoded payload, so a validly signed token
 // with the wrong shape must be rejected here.
 function isValidPayload(p: unknown): p is AccessTokenPayload {
   if (typeof p !== 'object' || p === null) return false;
-  const { sub, permissions } = p as Record<string, unknown>;
-  return typeof sub === 'string' && Array.isArray(permissions);
+  const { sub, accessLevel, grants } = p as Record<string, unknown>;
+  return (
+    typeof sub === 'string' &&
+    typeof accessLevel === 'string' &&
+    ACCESS_LEVELS.has(accessLevel) &&
+    Array.isArray(grants) &&
+    grants.every((g) => typeof g === 'string')
+  );
 }
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {

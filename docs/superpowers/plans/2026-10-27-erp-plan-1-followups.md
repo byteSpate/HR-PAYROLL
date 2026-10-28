@@ -1,5 +1,7 @@
 # Plan 1 follow-ups
 
+Resolved in Plan 2: tests no longer touch the dev database or the seeded admin (isolated `erp_test`); newly declared permissions now reach existing starter roles on seed; the role-based last-admin model was replaced by one fixed super admin.
+
 Deferred findings from Plan 1 reviews, to triage while writing Plan 2. Rulings made during execution are listed last.
 
 ## Deferred minors

@@ -1,29 +1,33 @@
 import request from 'supertest';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { hashPassword } from '@erp/auth';
+import { hashPassword, verifyAccessToken } from '@erp/auth';
 import { prisma } from '@erp/db';
 import { createApp } from '../../app.js';
+import { env } from '../../env.js';
 import { resetRateLimits } from '../../middleware/rate-limit.js';
 
 const app = createApp();
 const PASSWORD = 'correct-horse-9';
 const PERMS = ['zztest8.read', 'zztest8.write'];
-const ROLE_NAMES = ['ZZTEST8_A', 'ZZTEST8_B'];
+const ROLE_NAMES = ['ZZTEST8_A'];
 
 let seq = 0;
 const emails: string[] = [];
 
-async function makeUser(opts: { roles?: string[]; isActive?: boolean; mustChangePassword?: boolean } = {}) {
+async function makeUser(
+  opts: { role?: string | null; accessLevel?: 'ADMIN' | 'STANDARD'; isActive?: boolean; mustChangePassword?: boolean } = {},
+) {
   const email = `zztest8-${Date.now()}-${seq++}@example.com`;
   emails.push(email);
-  const roles = await prisma.role.findMany({ where: { name: { in: opts.roles ?? ['ZZTEST8_A'] } } });
+  const role = opts.role === null ? null : await prisma.role.findUnique({ where: { name: opts.role ?? 'ZZTEST8_A' } });
   return prisma.user.create({
     data: {
       email,
       passwordHash: await hashPassword(PASSWORD),
       isActive: opts.isActive ?? true,
       mustChangePassword: opts.mustChangePassword ?? false,
-      roles: { create: roles.map((r) => ({ roleId: r.id })) },
+      accessLevel: opts.accessLevel ?? 'STANDARD',
+      roleId: role?.id ?? null,
     },
   });
 }
@@ -33,12 +37,15 @@ const cookieOf = (res: request.Response) => (res.headers['set-cookie'] as unknow
 
 beforeEach(async () => {
   resetRateLimits();
-  await prisma.permission.createMany({ data: PERMS.map((key) => ({ key, label: key, module: 'zztest8' })) });
-  await prisma.role.create({
-    data: { name: 'ZZTEST8_A', permissions: { create: [{ permissionKey: PERMS[0]! }] } },
+  await prisma.permission.create({
+    data: { key: PERMS[0]!, label: 'read', module: 'zztest8', scopes: ['OWN', 'TEAM', 'DEPARTMENT', 'ALL'] },
   });
+  await prisma.permission.create({ data: { key: PERMS[1]!, label: 'write', module: 'zztest8' } });
   await prisma.role.create({
-    data: { name: 'ZZTEST8_B', permissions: { create: [{ permissionKey: PERMS[1]! }] } },
+    data: {
+      name: 'ZZTEST8_A',
+      permissions: { create: [{ permissionKey: PERMS[0]!, scope: 'DEPARTMENT' }, { permissionKey: PERMS[1]! }] },
+    },
   });
 });
 
@@ -49,13 +56,20 @@ afterEach(async () => {
 });
 
 describe('POST /api/auth/login', () => {
-  it('logs in, returns the role permissions and sets an httpOnly refresh cookie', async () => {
+  it('logs in, returns the role grants and sets an httpOnly refresh cookie', async () => {
     const u = await makeUser();
     const res = await login(u.email);
     expect(res.status).toBe(200);
     expect(res.body.accessToken).toEqual(expect.any(String));
-    expect(res.body.user.permissions).toEqual([PERMS[0]]);
-    expect(res.body.user.roles.map((r: { name: string }) => r.name)).toEqual(['ZZTEST8_A']);
+    expect(res.body.user.grants).toEqual(['zztest8.read:department', 'zztest8.write']);
+    expect(res.body.user.accessLevel).toBe('STANDARD');
+    expect(res.body.user.role.name).toBe('ZZTEST8_A');
+    expect(res.body.user).not.toHaveProperty('roles');
+    expect(verifyAccessToken(res.body.accessToken, env.JWT_ACCESS_SECRET)).toMatchObject({
+      sub: u.id,
+      accessLevel: 'STANDARD',
+      grants: ['zztest8.read:department', 'zztest8.write'],
+    });
     expect(res.body.user).not.toHaveProperty('passwordHash');
     const cookie = (res.headers['set-cookie'] as unknown as string[]).join(';');
     expect(cookie).toContain('refreshToken=');
@@ -82,10 +96,17 @@ describe('POST /api/auth/login', () => {
     expect(res.body).toEqual({ error: 'Invalid email or password' });
   });
 
-  it('grants the union of permissions across two roles', async () => {
-    const u = await makeUser({ roles: ROLE_NAMES });
+  it('an ADMIN gets an empty grant list in both the token and the user', async () => {
+    const u = await makeUser({ accessLevel: 'ADMIN', role: null });
     const res = await login(u.email);
-    expect(res.body.user.permissions).toEqual(PERMS);
+    expect(res.body.user).toMatchObject({ accessLevel: 'ADMIN', role: null, grants: [] });
+    expect(verifyAccessToken(res.body.accessToken, env.JWT_ACCESS_SECRET)).toMatchObject({ accessLevel: 'ADMIN', grants: [] });
+  });
+
+  it('a STANDARD user without a role has no grants', async () => {
+    const u = await makeUser({ role: null });
+    const res = await login(u.email);
+    expect(res.body.user).toMatchObject({ accessLevel: 'STANDARD', role: null, grants: [] });
   });
 });
 
@@ -109,14 +130,15 @@ describe('POST /api/auth/refresh', () => {
     expect((await request(app).post('/api/auth/refresh')).status).toBe(401);
   });
 
-  it('reflects permissions removed from a role since login', async () => {
-    const u = await makeUser({ roles: ROLE_NAMES });
+  it('reflects grants removed from a role since login', async () => {
+    const u = await makeUser();
     const res = await login(u.email);
-    expect(res.body.user.permissions).toEqual(PERMS);
+    expect(res.body.user.grants).toHaveLength(2);
     await prisma.rolePermission.deleteMany({ where: { permissionKey: PERMS[1]! } });
     const refreshed = await request(app).post('/api/auth/refresh').set('Cookie', cookieOf(res));
     expect(refreshed.status).toBe(200);
-    expect(refreshed.body.user.permissions).toEqual([PERMS[0]]);
+    expect(refreshed.body.user.grants).toEqual(['zztest8.read:department']);
+    expect(verifyAccessToken(refreshed.body.accessToken, env.JWT_ACCESS_SECRET).grants).toEqual(['zztest8.read:department']);
   });
 
   it('401s and revokes the session when the user was deactivated', async () => {
@@ -151,7 +173,7 @@ describe('GET /api/auth/me', () => {
     const me = await request(app).get('/api/auth/me').set('Authorization', `Bearer ${body.accessToken}`);
     expect(me.status).toBe(200);
     expect(me.body.email).toBe(u.email);
-    expect(me.body.permissions).toEqual([PERMS[0]]);
+    expect(me.body.grants).toEqual(['zztest8.read:department', 'zztest8.write']);
   });
 });
 

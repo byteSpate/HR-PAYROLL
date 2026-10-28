@@ -1,9 +1,11 @@
 import { createHash, randomBytes } from 'node:crypto';
 import jwt from 'jsonwebtoken';
+import type { AccessContext } from './access.js';
 
-export interface AccessTokenPayload {
+export interface AccessTokenPayload extends AccessContext {
   sub: string;
-  permissions: string[];
+  /** Empty for SUPER_ADMIN and ADMIN, who hold everything by level. */
+  grants: string[];
 }
 
 // Pinned to HS256 so verification never accepts a token signed with another

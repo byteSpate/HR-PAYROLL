@@ -4,19 +4,21 @@ export const core = defineModule({
   name: 'core',
   deps: [],
   permissions: {
-    'user.manage': 'Manage users',
-    'role.manage': 'Manage roles and permissions',
-    'settings.manage': 'Manage settings',
-    'audit.read': 'Read audit log',
+    'user.manage': { label: 'Manage users' },
+    'role.manage': { label: 'Manage roles and permissions' },
+    'settings.manage': { label: 'Manage settings' },
+    'audit.read': { label: 'Read audit log' },
   },
   nav: [
     {
       label: 'Dashboard',
+      order: 0,
       icon: 'RiDashboardLine',
       items: [{ label: 'Overview', href: '/dashboard', icon: 'RiDashboardLine', permission: null }],
     },
     {
       label: 'Settings',
+      order: 900,
       icon: 'RiSettings3Line',
       items: [
         { label: 'Users', href: '/settings/users', icon: 'RiUserLine', permission: 'user.manage' },
@@ -26,6 +28,7 @@ export const core = defineModule({
           icon: 'RiShieldUserLine',
           permission: 'role.manage',
         },
+        { label: 'Activity Log', href: '/settings/activity', icon: 'RiHistoryLine', permission: 'audit.read' },
       ],
     },
   ],

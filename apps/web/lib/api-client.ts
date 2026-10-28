@@ -4,9 +4,16 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** The parsed JSON error body, for structured details such as an import's per-row issues. */
+    readonly body: Record<string, unknown> = {},
   ) {
     super(message);
   }
+}
+
+export interface DownloadedFile {
+  blob: Blob;
+  fileName: string;
 }
 
 export interface SessionPayload {
@@ -36,15 +43,19 @@ function withBrowserLock<T>(fn: () => Promise<T>): Promise<T> {
   return locks ? (locks.request('erp-session-renewal', () => fn()) as Promise<T>) : fn();
 }
 
-async function readError(res: Response): Promise<string> {
+async function readError(res: Response): Promise<ApiError> {
+  let body: Record<string, unknown> = {};
   try {
-    const body = (await res.json()) as { error?: unknown };
-    if (typeof body.error === 'string') return body.error;
+    body = (await res.json()) as Record<string, unknown>;
   } catch {
     // Non-JSON error body: fall through to the generic message.
   }
-  return `Request failed (${res.status})`;
+  const message = typeof body['error'] === 'string' ? body['error'] : `Request failed (${res.status})`;
+  return new ApiError(res.status, message, body);
 }
+
+const fileNameOf = (res: Response, fallback: string) =>
+  /filename="([^"]+)"/.exec(res.headers.get('content-disposition') ?? '')?.[1] ?? fallback;
 
 export function createApiClient({ baseUrl, onUnauthenticated, fetchImpl }: ApiClientOptions) {
   const doFetch: typeof fetch = (...args) => (fetchImpl ?? fetch)(...args);
@@ -75,17 +86,19 @@ export function createApiClient({ baseUrl, onUnauthenticated, fetchImpl }: ApiCl
 
   async function send(path: string, { method = 'GET', body }: RequestOptions): Promise<Response> {
     const headers = new Headers();
-    if (body !== undefined) headers.set('content-type', 'application/json');
+    // FormData carries its own multipart boundary, which only the browser can set.
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    if (body !== undefined && !isForm) headers.set('content-type', 'application/json');
     if (accessToken) headers.set('authorization', `Bearer ${accessToken}`);
     return doFetch(`${baseUrl}${path}`, {
       method,
       headers,
       credentials: 'include',
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
     });
   }
 
-  async function request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+  async function sendWithRefresh(path: string, options: RequestOptions): Promise<Response> {
     let res = await send(path, options);
 
     if (res.status === 401 && !options.skipRefresh) {
@@ -97,12 +110,24 @@ export function createApiClient({ baseUrl, onUnauthenticated, fetchImpl }: ApiCl
       }
     }
 
-    if (!res.ok) throw new ApiError(res.status, await readError(res));
+    if (!res.ok) throw await readError(res);
+    return res;
+  }
+
+  async function request<T = unknown>(path: string, options: RequestOptions = {}): Promise<T> {
+    const res = await sendWithRefresh(path, options);
     return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
+  }
+
+  /** For exports and templates: the file plus the name the server chose for it. */
+  async function download(path: string): Promise<DownloadedFile> {
+    const res = await sendWithRefresh(path, {});
+    return { blob: await res.blob(), fileName: fileNameOf(res, 'download') };
   }
 
   return {
     request,
+    download,
     refresh,
     setAccessToken(token: string | null) {
       accessToken = token;

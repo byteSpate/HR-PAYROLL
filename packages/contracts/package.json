@@ -4,8 +4,22 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-    "./core": { "types": "./dist/core/index.d.ts", "default": "./dist/core/index.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "default": "./dist/core/index.js"
+    },
+    "./department": {
+      "types": "./dist/department/index.d.ts",
+      "default": "./dist/department/index.js"
+    },
+    "./employee": {
+      "types": "./dist/employee/index.d.ts",
+      "default": "./dist/employee/index.js"
+    }
   },
   "scripts": {
     "build": "tsc",

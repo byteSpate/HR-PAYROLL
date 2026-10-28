@@ -78,4 +78,36 @@ describe('createApiClient', () => {
     expect(init.credentials).toBe('include');
     expect(init.body).toBe('{"a":1}');
   });
+
+  it('sends FormData as-is so the browser sets the multipart boundary', async () => {
+    const fetchImpl = vi.fn(async () => json(201, { ok: true }));
+    const client = createApiClient({ baseUrl: 'http://api/api', onUnauthenticated: vi.fn(), fetchImpl: fetchImpl as never });
+    const form = new FormData();
+    form.append('name', 'x');
+    await client.request('/upload', { method: 'POST', body: form });
+    const init = (fetchImpl.mock.calls[0] as unknown as [string, RequestInit])[1];
+    expect(init.body).toBe(form);
+    expect(new Headers(init.headers).get('content-type')).toBeNull();
+  });
+
+  it('keeps the error body on ApiError so callers can read structured details', async () => {
+    const fetchImpl = vi.fn(async () => json(400, { error: '1 row(s) have errors', issues: [{ rowNumber: 2 }] }));
+    const client = createApiClient({ baseUrl: 'http://api/api', onUnauthenticated: vi.fn(), fetchImpl: fetchImpl as never });
+    const err = await client.request('/x').catch((e: unknown) => e);
+    expect(err).toMatchObject({ status: 400, message: '1 row(s) have errors', body: { issues: [{ rowNumber: 2 }] } });
+  });
+
+  it('downloads a file with the name from Content-Disposition', async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response('a,b', {
+          status: 200,
+          headers: { 'content-disposition': 'attachment; filename="departments-2026-10-28.csv"', 'content-type': 'text/csv' },
+        }),
+    );
+    const client = createApiClient({ baseUrl: 'http://api/api', onUnauthenticated: vi.fn(), fetchImpl: fetchImpl as never });
+    const file = await client.download('/departments/export?format=csv');
+    expect(file.fileName).toBe('departments-2026-10-28.csv');
+    expect(await file.blob.text()).toBe('a,b');
+  });
 });

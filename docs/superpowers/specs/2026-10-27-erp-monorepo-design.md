@@ -35,7 +35,7 @@ feature used by several modules (approvals, attachments, exports…) exists once
 - Accounting: `accounting`, `posting`, `statements`, `receivables`, `supplier`,
   `supplierBill`, `vatCode`, `cost`, `depreciation`, and
   client `lib/` helpers for bills, invoices, quotes, VAT, payments, costing.
-- Per-client module enable/disable. Deferred; the structure must allow it later.
+- Per-client module enable/disable. Not part of the app (user decision).
 - Multi-tenancy.
 - Migrating live data from the `HR-MNG-V1` database.
 
@@ -131,9 +131,7 @@ hooks), `api.ts` (typed client using contracts). Pages under
    recoveries collected **in the same transaction**. That must stay atomic.
 2. Each module declares the modules it depends on (my call: a `deps` list in
    `@erp/contracts/<module>/module.ts`). Importing an undeclared module is a lint
-   error, and the dependency graph must stay acyclic. A module whose dependency
-   isn't present can't run, so the graph also feeds the later per-client module
-   selection.
+   error, and the dependency graph must stay acyclic.
 3. Reads of a dependency's tables via the shared Prisma client are fine. Writes to
    a dependency's data go through that module's service functions, not raw
    queries on its tables, so its business rules still apply. Service functions
@@ -180,20 +178,32 @@ Reports live in their owning module (Attendance → Reports, Expenses → Expens
 
 - Each module declares permissions in `@erp/contracts/<module>/permissions.ts`,
   e.g. `leave.request.create`, `leave.request.approve`, `payroll.run.process`.
-- DB: `Role`, `Permission`, `RolePermission`, `UserRole` tables. Roles are
-  editable bundles; permissions are synced from code on deploy/seed.
-- **A user can hold several roles**; their effective permissions are the union
-  (user decision).
-- **Manager powers are derived, not assigned** (user decision): anyone with
-  direct reports gets team-scoped permissions (approve team leave/attendance/
-  expenses, view team) for those reports only. `REPORTING_MANAGER` is therefore
-  not a seeded role.
-- Seed `SUPER_ADMIN`, `HR_ADMIN`, `FINANCE_OFFICER`, `EMPLOYEE` with permission
-  sets reproducing today's access; every user gets `EMPLOYEE`.
-- Scoped access ("own records", "my team", "all") stays as policy logic in the
-  service layer, as today.
-- API: `requirePermission('leave.request.approve')` middleware.
-  Web: `<Can permission="…">` and nav filtering using the same strings.
+- **Access levels** (user decision, revised 2026-10-27, replaces the earlier
+  SUPER_ADMIN role and multi-role design):
+  - `SUPER_ADMIN`: exactly one user, fixed (DB-enforced). Created by the seed,
+    holds every permission implicitly, cannot be deactivated, edited or demoted
+    through the app. Only the super admin appoints or removes admins. Ownership
+    changes only through a server-side CLI command.
+  - `ADMIN`: any number. Hold every permission implicitly, including those of
+    modules added later. Cannot act on the super admin or other admins, and
+    cannot appoint admins.
+  - `STANDARD`: everyone else; exactly **one role** each (user decision).
+- **Roles** are editable bundles of grants; starter roles HR Admin, Finance
+  Officer and Employee are seeded and fully editable. Permissions are synced
+  from code on deploy/seed. A grantor can only hand out grants (permission and
+  scope) they hold themselves.
+- **Scopes** (my call, user delegated): a permission declares which scopes it
+  supports from `own < team < department < all`, or none (plain on/off).
+  A wider grant covers narrower ones. Grants are stored as permission + scope.
+  - `own` is implicit for every user with an employee record.
+  - `team` (direct reports) is implicit for anyone with active direct reports,
+    for permissions the manifest marks as manager defaults (user decision:
+    manager powers are derived, not assigned).
+  - `department` and `all` come only from the user's role.
+- One check answers both "may this user do X" and "on which records":
+  `can(user, key)` and `scopeFor(user, key)`, used by the API middleware, the
+  service layer's record filters, the web `<Can>` and nav filtering.
+- Per-client module enable/disable is not part of the app (user decision).
 - The old Sales Hub access flag is dropped.
 
 ## 7. Events (transactional outbox)

@@ -11,22 +11,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@erp/ui/components/dialog';
-import { useSetUserRoles } from '../hooks';
+import { useSetUserRole } from '../hooks';
 import { RoleSelect } from './role-select';
 
 export function EditUserRoles({ user }: { user: PublicUser }) {
-  const save = useSetUserRoles();
+  const save = useSetUserRole();
   const [open, setOpen] = useState(false);
-  const [roleIds, setRoleIds] = useState(user.roles.map((r) => r.id));
+  const [roleId, setRoleId] = useState<string | null>(user.role?.id ?? null);
   const [error, setError] = useState<string | null>(null);
 
   async function onSave() {
     setError(null);
     try {
-      await save.mutateAsync({ id: user.id, roleIds });
+      await save.mutateAsync({ id: user.id, roleId });
       setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not update roles.');
+      setError(err instanceof Error ? err.message : 'Could not update the role.');
     }
   }
 
@@ -36,7 +36,7 @@ export function EditUserRoles({ user }: { user: PublicUser }) {
       onOpenChange={(next) => {
         setOpen(next);
         if (next) {
-          setRoleIds(user.roles.map((r) => r.id));
+          setRoleId(user.role?.id ?? null);
           setError(null);
         }
       }}
@@ -44,17 +44,17 @@ export function EditUserRoles({ user }: { user: PublicUser }) {
       <DialogTrigger render={<Button variant="outline" size="sm" />}>Roles</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Roles for {user.displayName}</DialogTitle>
+          <DialogTitle>Role for {user.displayName}</DialogTitle>
           <DialogDescription>{user.email}</DialogDescription>
         </DialogHeader>
-        <RoleSelect value={roleIds} onChange={setRoleIds} />
+        <RoleSelect value={roleId} onChange={setRoleId} />
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}
           </p>
         ) : null}
         <Button onClick={onSave} disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : 'Save roles'}
+          {save.isPending ? 'Saving…' : 'Save role'}
         </Button>
       </DialogContent>
     </Dialog>

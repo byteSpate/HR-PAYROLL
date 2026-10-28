@@ -33,7 +33,7 @@ git push origin <branch> && git push reza <branch>
 - `packages/contracts`: module manifests in `src/<module>/`, the registry in `src/registry.ts`, Zod schemas.
 - `packages/db`: Prisma multi-file schema in `prisma/schema/*.prisma`, seed in `prisma/seed.ts` and `src/seed/`. The generated client goes to `src/generated` and is git-ignored.
 - `packages/events`: `emit(tx, type, payload)` writes outbox rows.
-- `packages/auth`, `packages/ui`, `packages/utils`, `packages/config-typescript`, `packages/config-eslint`: shared code.
+- `packages/auth`, `packages/ui`, `packages/utils`, `packages/audit`, `packages/export`, `packages/attachments`, `packages/config-typescript`, `packages/config-eslint`: shared code.
 - `apps/worker` (outbox delivery, cron jobs) is planned and not yet present.
 
 ## Root commands
@@ -42,12 +42,14 @@ git push origin <branch> && git push reza <branch>
 - `pnpm format`: Prettier over the repo.
 - `pnpm services:up` / `pnpm services:down`: start or stop the dev Postgres (Docker).
 - `pnpm db:generate`, `pnpm db:deploy`, `pnpm db:seed`: Prisma client, migrations, seed.
+- `pnpm db:test:prepare`: create, migrate and seed the separate `erp_test` database. Tests only ever use `DATABASE_URL_TEST` and run one file at a time (`pnpm test` runs packages serially) because they share it.
 - One package: `pnpm --filter @erp/<pkg> <script>`.
 
 ## Local database and env
 
 - Postgres 17 runs in Docker from `docker/compose.dev.yaml` on host port **5433**. Port 5432 is often used by another local Postgres, so every URL uses 5433.
-- Env files are copied from their `.env.example` and git-ignored: `packages/db/.env` (`DATABASE_URL`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`), `apps/api/.env`, `apps/web/.env.local`.
+- Env files are copied from their `.env.example` and git-ignored: `packages/db/.env` (`DATABASE_URL`, `DATABASE_URL_TEST`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`), `apps/api/.env`, `apps/web/.env.local`.
+- Optional Cloudinary file storage: set all of `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `apps/api/.env` or none (uploads then answer 503 and avatars show initials).
 - Only `.env.example` files are committed. Never commit real secrets.
 
 ## Migrations
@@ -57,7 +59,7 @@ Never run `prisma migrate dev`. It is interactive and fails in agent shells. Use
 1. Confirm `pnpm exec prisma migrate status` shows no drift.
 2. Edit the schema in `prisma/schema/`.
 3. `mkdir -p prisma/migrations/<timestamp>_<name>`, then `pnpm exec prisma migrate diff --from-config-datasource --to-schema prisma/schema --script --output prisma/migrations/<timestamp>_<name>/migration.sql`
-4. Read the generated SQL.
+4. Read the generated SQL. Keep the `one_super_admin` partial unique index: `migrate diff` will propose dropping it, so delete that line from the generated SQL.
 5. `pnpm db:deploy`, then `pnpm db:generate`.
 
 ## Deployment assumption
@@ -72,9 +74,14 @@ The API must be served from the same host as the web app (or proxied under a pat
 - The dependency graph must stay acyclic. `resolveModuleOrder` throws at API boot on a cycle or an unknown dependency.
 - Reads of another module's tables through the shared Prisma client are fine. Writes to another module's data go through its service functions, which accept an optional transaction client so callers can stay atomic.
 - Loose coupling goes through events: `emit(tx, type, payload)` inside the caller's transaction, with event types listed in the manifest's `events`. Nothing delivers them yet.
-- A capability needed by two or more modules goes into a shared package, not a copy.
+- A capability needed by two or more modules goes into a shared package, not a copy. Shared kits: `@erp/audit` (`writeAudit`, `diffFields`, `listAudit`), `@erp/export` (xlsx/csv export with an audit row, and the all-or-nothing import kit), `@erp/attachments` (storage, signed URLs, `uploadSingle`), and in `@erp/ui` `DataTable`, `ImportWizard`, `ExportMenu`.
+- Permissions are declared as `{ label, scopes?, managerDefault? }` (no `scopes` means on/off). Access is `can(ctx, 'key' | 'key:scope')` from `@erp/auth`; a user is `SUPER_ADMIN` (one, DB-enforced; moved only by `pnpm admin:transfer <email>`, password reset by `pnpm admin:reset-password`), `ADMIN` (holds everything) or `STANDARD` (one role).
 - Permission keys are `area.action` strings declared in each manifest. Keys must be unique across modules (`allPermissions` throws on duplicates). The API guards routes with `requirePermission('<key>')`.
-- Code is the source of truth for permissions: `db:seed` deletes permission rows that no manifest declares.
+- Code is the source of truth for permissions: `db:seed` deletes permission rows that no manifest declares, and grants newly declared ones to the starter roles that list them (admin edits to older grants are kept).
+- `team` scope is never stored: a grant provider (`apps/api/src/modules/auth/derived-grants.ts`, registered in `createApp`) adds `'<key>:team'` for every `managerDefault` permission to users with active direct reports. Mark a permission `managerDefault: true` to give managers team access to it.
+- Record filters follow the scope: `scopeFor(ctx, key)` returns the widest held scope; see `scopeWhere` and `reaches` in `apps/api/src/modules/employee` for the pattern (own record, direct reports, same department, everyone).
+- Mutations that change who can do what re-read the caller from the database (`loadActor` in `apps/api/src/modules/users/actor.ts`) instead of trusting the token.
+- `requirePermission` and `RequirePermission` accept a list meaning any-of.
 
 ## Add-a-module checklist
 
@@ -82,7 +89,8 @@ The API must be served from the same host as the web app (or proxied under a pat
 2. Schema: `packages/db/prisma/schema/<module>.prisma`, then the migration recipe above.
 3. API: `apps/api/src/modules/<module>/` (routes, controller, service). Mount the router in `apiMounts` in `apps/api/src/modules/index.ts`.
 4. Web: `apps/web/modules/<module>/` for components, hooks and API client. Pages go in `apps/web/app/(app)/<route>/`, kept thin.
-5. Grants: add the new permissions to `packages/db/src/seed/system-roles.ts`. SUPER_ADMIN receives every permission on each seed run. Other roles receive their listed grants only when first created, so existing databases need the grants added by hand.
+5. Grants: add starter grants to `packages/db/src/seed/starter-roles.ts`; the next `db:seed` grants them on existing databases too. SUPER_ADMIN and ADMIN users hold every permission implicitly.
+6. Icons: add each new Remix icon name used in the manifest to `packages/ui/src/nav/icons.ts`.
 
 ## Conventions
 
