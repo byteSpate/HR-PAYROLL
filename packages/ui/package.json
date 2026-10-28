@@ -8,6 +8,7 @@
     "./components/*": "./src/components/*.tsx",
     "./nav": "./src/nav/index.ts",
     "./shell": "./src/shell/index.ts",
+    "./page": "./src/page/index.ts",
     "./lib/cn": "./src/lib/cn.ts"
   },
   "scripts": {
