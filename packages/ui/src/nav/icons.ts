@@ -1,6 +1,10 @@
 import { createElement, type ComponentType } from 'react';
 import {
   RiCircleLine,
+  RiCalendarLine,
+  RiAddCircleLine,
+  RiFileListLine,
+  RiSettingsLine,
   RiIdCardLine,
   RiGroupLine,
   RiUserAddLine,
@@ -29,6 +33,10 @@ type IconComponent = ComponentType<{ className?: string }>;
 // Explicit registry (not `import *`) so the bundle only carries icons modules actually name.
 // Add an entry here when a module manifest introduces a new icon name.
 const ICONS: Record<string, IconComponent> = {
+  RiCalendarLine,
+  RiAddCircleLine,
+  RiFileListLine,
+  RiSettingsLine,
   RiIdCardLine,
   RiGroupLine,
   RiUserAddLine,
