@@ -1,5 +1,6 @@
 import { prisma } from '@erp/db';
 import { monthString } from '@erp/contracts/attendance';
+import { approverUserIds, notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import { computeIsEarlyOut, computeIsLate, elapsedHours, MAX_OPEN_SHIFT_HOURS, officeDateOf } from './attendance.time.js';
 import { effectiveShift } from './shift.service.js';
@@ -23,7 +24,12 @@ export async function checkIn(userId: string) {
   const date = officeDateOf(now);
   const shift = await shiftFor(employee.id, date);
   try {
-    return await prisma.attendance.create({ data: { employeeId: employee.id, date, checkIn: now, isLate: computeIsLate(now, shift) } });
+    return await prisma.$transaction(async tx => {
+      const row = await tx.attendance.create({ data: { employeeId: employee.id, date, checkIn: now, isLate: computeIsLate(now, shift) } });
+      const recipients = await approverUserIds(tx, employee.id, 'attendance.approve');
+      await notify(tx, recipients.map(id => ({ userId: id, type: 'attendance.pending', title: 'Attendance needs review', href: '/attendance/approvals', entity: 'ATTENDANCE', entityId: row.id })));
+      return row;
+    });
   } catch (error) {
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
       throw new AppError(409, 'Already checked in today');
