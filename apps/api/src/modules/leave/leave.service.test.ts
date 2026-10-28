@@ -74,6 +74,13 @@ describe('leave requests', () => {
     await prisma.leaveBalance.create({ data: { employeeId, leaveTypeId: typeId, year: 2027, accrued: 0.5, balance: 0.5 } });
     expect(await status(applyForLeave(employee.user.id, input()))).toBe(409);
   });
+  it('keeps the charged days fixed after a later holiday is added', async () => {
+    const row = await applyForLeave(employee.user.id, input());
+    await decideLeave(viewer(), row.id, 'APPROVED');
+    const holiday = await prisma.holiday.create({ data: { name: `${prefix}-${Date.now()}`, date: new Date('2027-01-04T00:00:00Z') } });
+    try { expect((await prisma.leaveRequest.findUniqueOrThrow({ where: { id: row.id } })).chargedDays).toBe(1); }
+    finally { await prisma.holiday.delete({ where: { id: holiday.id } }); }
+  });
   it('approves a report atomically, notifying and emitting an event', async () => {
     const row = await applyForLeave(employee.user.id, input());
     const result = await decideLeave(viewer(), row.id, 'APPROVED');
