@@ -4,6 +4,7 @@ import { useDeferredValue, useState } from 'react';
 import { toast } from 'sonner';
 import { ExportMenu } from '@erp/ui/components/export-menu';
 import { Input } from '@erp/ui/components/input';
+import { PageHeader } from '@erp/ui/page';
 import { saveDownload } from '@/lib/save-download';
 import { exportEmployees } from '@/modules/employee/api';
 import { EmployeeTable } from '@/modules/employee/components/employee-table';
@@ -17,7 +18,7 @@ export default function EmployeesPage() {
 
   return (
     <RequirePermission permission={['employee.read:department', 'employee.read.financial']}>
-      <h1 className="mb-4 font-heading text-2xl font-bold tracking-tight">Employees</h1>
+      <PageHeader kicker="Employees" title="Employee list" />
       <div className="mb-4 flex items-center justify-between gap-2">
         <Input placeholder="Search by name, code or email" value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
         <ExportMenu

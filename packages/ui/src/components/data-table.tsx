@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { RiArrowDownSLine, RiArrowUpSLine } from '@remixicon/react';
+import { EmptyState } from '../page/empty-state';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 
 export type SortValue = string | number | null | undefined;
@@ -47,7 +48,7 @@ export function DataTable<T>({ columns, rows, rowKey, loading, error, empty = 'N
 
   if (loading) return <p className="text-sm text-muted-foreground">Loading...</p>;
   if (error) return <p className="text-sm text-destructive">{error}</p>;
-  if (sorted.length === 0) return <p className="text-sm text-muted-foreground">{empty}</p>;
+  if (sorted.length === 0) return <EmptyState title={empty} />;
 
   const toggle = (key: string) =>
     setSort((s) => (s?.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));

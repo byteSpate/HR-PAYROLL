@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ImportWizard } from '@erp/ui/components/import-wizard';
+import { PageHeader } from '@erp/ui/page';
 import { saveDownload } from '@/lib/save-download';
 import { commitImport, importTemplate, previewImport } from '@/modules/department/api';
 import { useImportGuide } from '@/modules/department/hooks';
@@ -14,7 +15,7 @@ export default function ImportDepartmentsPage() {
 
   return (
     <RequirePermission permission="department.import">
-      <h1 className="mb-4 font-heading text-2xl font-bold tracking-tight">Import Departments</h1>
+      <PageHeader kicker="Departments" title="Import departments" />
       <ImportWizard
         guide={guide.data}
         downloadTemplate={(format) => void importTemplate(format).then(saveDownload, (e: Error) => toast.error(e.message))}
