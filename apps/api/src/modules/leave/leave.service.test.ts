@@ -87,6 +87,14 @@ describe('leave requests', () => {
     try { expect((await prisma.leaveRequest.findUniqueOrThrow({ where: { id: row.id } })).chargedDays).toBe(1); }
     finally { await prisma.holiday.delete({ where: { id: holiday.id } }); }
   });
+  it('does not overdraw when two pending requests are approved concurrently', async () => {
+    await prisma.leaveBalance.create({ data: { employeeId, leaveTypeId: typeId, year: 2027, accrued: 1, balance: 1 } });
+    const requests = await Promise.all(['2027-01-04', '2027-01-05'].map(day => prisma.leaveRequest.create({ data: { employeeId, leaveTypeId: typeId, startDate: new Date(`${day}T00:00:00Z`), endDate: new Date(`${day}T00:00:00Z`), chargedDays: 1 } })));
+    const results = await Promise.all(requests.map(row => status(decideLeave(viewer(), row.id, 'APPROVED'))));
+    expect(results.sort()).toEqual([0, 409]);
+    const balance = await prisma.leaveBalance.findUniqueOrThrow({ where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId: typeId, year: 2027 } } });
+    expect(balance).toMatchObject({ used: 1, balance: 0 });
+  });
   it('approves a report atomically, notifying and emitting an event', async () => {
     const row = await applyForLeave(employee.user.id, input());
     const result = await decideLeave(viewer(), row.id, 'APPROVED');

@@ -74,7 +74,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 - The dependency graph must stay acyclic. `resolveModuleOrder` throws at API boot on a cycle or an unknown dependency.
 - Reads of another module's tables through the shared Prisma client are fine. Writes to another module's data go through its service functions, which accept an optional transaction client so callers can stay atomic.
 - Loose coupling goes through events: `emit(tx, type, payload)` inside the caller's transaction, with event types listed in the manifest's `events`. Nothing delivers them yet.
-- A capability needed by two or more modules goes into a shared package, not a copy. Shared kits: `@erp/audit` (`writeAudit`, `diffFields`, `listAudit`), `@erp/export` (xlsx/csv export with an audit row, and the all-or-nothing import kit), `@erp/attachments` (storage, signed URLs, `uploadSingle`), and in `@erp/ui` `DataTable`, `ImportWizard`, `ExportMenu`.
+- A capability needed by two or more modules goes into a shared package, not a copy. Shared kits: `@erp/audit` (`writeAudit`, `diffFields`, `listAudit`), `@erp/export` (xlsx/csv export with an audit row, and the all-or-nothing import kit), `@erp/attachments` (storage, signed URLs, `uploadSingle`), and in `@erp/ui` `DataTable`, `ImportWizard`, `ExportMenu`. `@erp/approvals` owns decision guards and stamps; `@erp/notifications` owns scoped in-app notifications and approver lookup.
 - Permissions are declared as `{ label, scopes?, managerDefault? }` (no `scopes` means on/off). Access is `can(ctx, 'key' | 'key:scope')` from `@erp/auth`; a user is `SUPER_ADMIN` (one, DB-enforced; moved only by `pnpm admin:transfer <email>`, password reset by `pnpm admin:reset-password`), `ADMIN` (holds everything) or `STANDARD` (one role).
 - Permission keys are `area.action` strings declared in each manifest. Keys must be unique across modules (`allPermissions` throws on duplicates). The API guards routes with `requirePermission('<key>')`.
 - Code is the source of truth for permissions: `db:seed` deletes permission rows that no manifest declares, and grants newly declared ones to the starter roles that list them (admin edits to older grants are kept).
@@ -99,3 +99,11 @@ The API must be served from the same host as the web app (or proxied under a pat
 - Node 24 (`>=24.9.0 <25`), pnpm 12.5.1.
 - Short single-purpose files. No mock data, no dead or commented-out code. Comments explain why, not what.
 - Do not import another module's internals; use the module's exported functions or its declared events.
+
+## Attendance and leave
+
+- Attendance and leave use office-local calendar dates (Asia/Dhaka) stored as UTC-midnight `@db.Date` values. Punches are instants; use attendance time helpers to convert them.
+- Manifest navigation groups with the same label merge in `apps/web/lib/nav.ts`. Attendance exposes a leave-day lookup injection so it never imports the leave module.
+- A non-admin cannot decide their own attendance or leave, even with an all-scope approval grant. `ADMIN` and `SUPER_ADMIN` may self-decide; decisions are audited and written to the outbox.
+- Leave requests store charged days at submission. Approval updates the balance in the same transaction, and employee-specific advisory locks serialize applications, decisions, cancellations, and balance adjustments.
+- In-app notification rows are transactionally written; email delivery and scheduling the callable attendance auto-close rule are deferred to the worker plan.
