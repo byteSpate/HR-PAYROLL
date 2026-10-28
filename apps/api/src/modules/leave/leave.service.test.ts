@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@erp/db';
-import { applyForLeave, decideLeave, cancelLeave } from './leave.service.js';
+import { applyForLeave, decideLeave, cancelLeave, balancesFor } from './leave.service.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
 
 const prefix = 'zzleavesvc';
@@ -52,6 +52,12 @@ describe('leave requests', () => {
     const row = await applyForLeave(employee.user.id, input());
     expect(row.chargedDays).toBe(1);
     expect((await prisma.leaveBalance.findUniqueOrThrow({ where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId: typeId, year: 2027 } } })).balance).toBe(1);
+  });
+  it('applies each earned policy minimum service when showing balances', async () => {
+    await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'EARNED', minServiceMonths: 100 } });
+    await prisma.attendance.createMany({ data: Array.from({ length: 18 }, (_, i) => ({ employeeId, date: new Date(Date.UTC(2026, 2, i + 1)), checkIn: new Date(Date.UTC(2026, 2, i + 1, 3)) })) });
+    const balances = await balancesFor(employeeId, 2026);
+    expect(balances.find(balance => balance.leaveTypeId === typeId)?.balance).toBe(0);
   });
   it('rejects requests exceeding the paid balance', async () => {
     await prisma.leaveBalance.create({ data: { employeeId, leaveTypeId: typeId, year: 2027, accrued: 0.5, balance: 0.5 } });
