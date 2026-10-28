@@ -26,7 +26,7 @@ beforeAll(async () => {
 afterEach(async () => {
   const requests = await prisma.leaveRequest.findMany({ where: { employeeId: { in: [employeeId, managerId] } }, select: { id: true } });
   await prisma.outboxEvent.deleteMany({ where: { OR: requests.map(r => ({ payload: { path: ['requestId'], equals: r.id } })) } });
-  await prisma.notification.deleteMany({ where: { userId: { in: [manager.user.id, employee.user.id] } } });
+  await prisma.notification.deleteMany({ where: { OR: [{ userId: { in: [manager.user.id, employee.user.id] } }, { entity: 'LEAVE_REQUEST', entityId: { in: requests.map(r => r.id) } }] } });
   await prisma.auditLog.deleteMany({ where: { OR: [{ entity: 'LEAVE_REQUEST', entityId: { in: requests.map(r => r.id) } }, { entity: 'LEAVE_BALANCE', changedBy: manager.user.id }] } });
   await prisma.attendance.deleteMany({ where: { employeeId } });
   await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'PRO_RATED', minServiceMonths: 0, isPaid: true } });
@@ -53,6 +53,12 @@ describe('leave requests', () => {
     const row = await applyForLeave(employee.user.id, input());
     expect(row.chargedDays).toBe(1);
     expect((await prisma.leaveBalance.findUniqueOrThrow({ where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId: typeId, year: 2027 } } })).balance).toBe(1);
+  });
+  it('does not count the leave half of a partially worked day toward earned accrual', async () => {
+    await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'EARNED', minServiceMonths: 12 } });
+    await prisma.attendance.createMany({ data: Array.from({ length: 18 }, (_, i) => ({ employeeId, date: new Date(Date.UTC(2026, 2, i + 1)), checkIn: new Date(Date.UTC(2026, 2, i + 1, 3)) })) });
+    await prisma.leaveRequest.create({ data: { employeeId, leaveTypeId: typeId, startDate: new Date('2026-03-01T00:00:00Z'), endDate: new Date('2026-03-01T00:00:00Z'), startSession: 'FIRST_HALF', endSession: 'FIRST_HALF', chargedDays: 0.5, status: 'APPROVED' } });
+    expect(await status(applyForLeave(employee.user.id, input()))).toBe(409);
   });
   it('applies each earned policy minimum service when showing balances', async () => {
     await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'EARNED', minServiceMonths: 100 } });
