@@ -12,3 +12,12 @@ it('lists configured holidays and provides an add form', async () => {
   expect(await screen.findByText('Holiday')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Add holiday' })).toBeTruthy();
 });
+it('preserves shift settings when editing its name', async () => {
+  const userEvent = (await import('@testing-library/user-event')).default;
+  vi.mocked(api.configList).mockResolvedValue([{ id: 's', name: 'Ramadan', startTime: '09:00', endTime: '16:00', graceMinutes: 5, breakMinutes: 30, weeklyOffDays: [5, 6], effectiveFrom: '2026-03-01', effectiveTo: '2026-03-30' }]);
+  vi.mocked(api.createConfig).mockResolvedValue({ id: 's', name: 'Updated' });
+  render(<QueryClientProvider client={new QueryClient()}><AttendanceConfig kind="shifts" /></QueryClientProvider>);
+  await userEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Save changes' }));
+  expect(api.createConfig).toHaveBeenCalledWith('shifts', expect.objectContaining({ graceMinutes: 5, breakMinutes: 30, weeklyOffDays: [5, 6], effectiveFrom: '2026-03-01', effectiveTo: '2026-03-30' }), 's');
+});
