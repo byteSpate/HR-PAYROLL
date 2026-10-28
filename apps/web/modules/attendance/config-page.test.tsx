@@ -27,3 +27,18 @@ it('offers an import guide for holiday files', async () => {
   render(<QueryClientProvider client={new QueryClient()}><AttendanceConfig kind="holidays" /></QueryClientProvider>);
   expect(await screen.findByText('Holiday name')).toBeTruthy();
 });
+it('lets HR configure shift grace, days off and dated overrides', async () => {
+  const { fireEvent } = await import('@testing-library/react');
+  const userEvent = (await import('@testing-library/user-event')).default;
+  vi.mocked(api.configList).mockResolvedValue([]);
+  vi.mocked(api.importGuide).mockResolvedValue([]);
+  vi.mocked(api.createConfig).mockResolvedValue({ id: 's', name: 'Ramadan' });
+  render(<QueryClientProvider client={new QueryClient()}><AttendanceConfig kind="shifts" /></QueryClientProvider>);
+  await userEvent.type(screen.getByLabelText('Name'), 'Ramadan');
+  fireEvent.change(screen.getByLabelText('Grace minutes'), { target: { value: '5' } });
+  await userEvent.click(screen.getByLabelText('Saturday off'));
+  fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-03-01' } });
+  fireEvent.change(screen.getByLabelText('Effective to'), { target: { value: '2026-03-30' } });
+  await userEvent.click(screen.getByRole('button', { name: 'Add shift' }));
+  expect(api.createConfig).toHaveBeenCalledWith('shifts', expect.objectContaining({ graceMinutes: 5, weeklyOffDays: [5, 6], effectiveFrom: '2026-03-01', effectiveTo: '2026-03-30' }), undefined);
+});
