@@ -4,12 +4,12 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { LeaveTypes } from './components/leave-types';
 import * as api from './api';
-vi.mock('./api', () => ({ types: vi.fn(), saveType: vi.fn(), deleteType: vi.fn(), configEmployees: vi.fn(), adjustBalance: vi.fn() }));
+vi.mock('./api', () => ({ types: vi.fn(), saveType: vi.fn(), deleteType: vi.fn(), configEmployees: vi.fn().mockResolvedValue([]), adjustBalance: vi.fn() }));
 afterEach(cleanup);
 it('lists leave policies and offers a policy form', async () => {
   vi.mocked(api.types).mockResolvedValue([{ id: 't', name: 'Casual', isPaid: true }]);
   render(<QueryClientProvider client={new QueryClient()}><LeaveTypes /></QueryClientProvider>);
-  expect(await screen.findByText('Casual')).toBeTruthy();
+  expect(await screen.findByRole('cell', { name: 'Casual' })).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Add leave type' })).toBeTruthy();
 });
 it('lets HR configure leave eligibility and policy rules', async () => {

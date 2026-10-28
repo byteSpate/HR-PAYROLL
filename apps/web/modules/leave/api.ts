@@ -13,3 +13,5 @@ export const teamStatus = () => api.request<LeaveRequest[]>('/leave/team-status'
 export interface LeavePolicy extends LeaveType { code: string; annualQuota: number; carryForwardPct: number; maxConsecutive: number | null; allowsBackdating: boolean; eligibleFor: string[]; statutory: boolean; countsHolidays: boolean; accrualBasis: string; minServiceMonths: number; maxAccrual: number | null; allowsHalfDay: boolean }
 export const saveType = (body: Record<string, unknown>, id?: string) => api.request<LeavePolicy>(`/leave/types${id ? `/${id}` : ''}`, { method: id ? 'PATCH' : 'POST', body });
 export const deleteType = (id: string) => api.request<void>(`/leave/types/${id}`, { method: 'DELETE' });
+export const configEmployees = () => api.request<{ id: string; fullName: string; employeeCode: string }[]>('/leave/config/employees');
+export const adjustBalance = (body: { employeeId: string; leaveTypeId: string; year: number; accrued: number; note: string }) => api.request<LeaveBalance>('/leave/balances/adjust', { method: 'POST', body });
