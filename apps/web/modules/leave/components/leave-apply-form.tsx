@@ -1,24 +1,26 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@erp/ui/components/button';
 export interface LeaveChoice { id: string; name: string; isPaid: boolean; balance: number }
 export interface LeaveApplication { leaveTypeId: string; startDate: string; endDate: string; startSession: 'FIRST_HALF' | 'SECOND_HALF'; endSession: 'FIRST_HALF' | 'SECOND_HALF'; reason: string }
 export function LeaveApplyForm({ types, preview, onSubmit, busy = false }: { types: LeaveChoice[]; preview: (request: LeaveApplication) => number | { chargedDays: number; available: number | null } | Promise<number | { chargedDays: number; available: number | null }>; onSubmit: (request: LeaveApplication) => void; busy?: boolean }) {
   const [value, setValue] = useState<LeaveApplication>({ leaveTypeId: types[0]?.id ?? '', startDate: '', endDate: '', startSession: 'FIRST_HALF', endSession: 'SECOND_HALF', reason: '' });
   const selected = types.find(t => t.id === value.leaveTypeId);
-  const [days, setDays] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [available, setAvailable] = useState<number | null>(null);
-  const previewRef = useRef(preview);
-  previewRef.current = preview;
+  const key = JSON.stringify(value);
+  const validRange = Boolean(value.startDate && value.endDate && value.startDate <= value.endDate && value.leaveTypeId);
+  const [result, setResult] = useState<{ key: string; days: number; available: number | null } | null>(null);
   useEffect(() => {
     let active = true;
-    if (!value.startDate || !value.endDate || value.startDate > value.endDate || !value.leaveTypeId) return;
-    setLoading(true);
-    Promise.resolve(previewRef.current(value)).then(result => { if (active) { setDays(typeof result === 'number' ? result : result.chargedDays); setAvailable(typeof result === 'number' ? null : result.available); } }, () => { if (active) setDays(0); }).finally(() => { if (active) setLoading(false); });
+    if (!validRange) return;
+    Promise.resolve(preview(value)).then(response => {
+      if (active) setResult({ key, days: typeof response === 'number' ? response : response.chargedDays, available: typeof response === 'number' ? null : response.available });
+    }, () => { if (active) setResult({ key, days: 0, available: null }); });
     return () => { active = false; };
-  }, [value]);
-  const balance = available ?? selected?.balance ?? 0;
+  }, [value, key, validRange, preview]);
+  const current = result?.key === key ? result : null;
+  const days = current?.days ?? 0;
+  const loading = validRange && !current;
+  const balance = current?.available ?? selected?.balance ?? 0;
   const disabled = busy || loading || !selected || days <= 0 || (selected.isPaid && days > balance);
   return <form className="space-y-4 rounded-2xl border border-line bg-white p-6" onSubmit={e => { e.preventDefault(); if (!disabled) onSubmit(value); }}>
     <label className="block">Leave type<select aria-label="Leave type" className="mt-1 block w-full rounded border p-2" value={value.leaveTypeId} onChange={e => setValue({ ...value, leaveTypeId: e.target.value })}>{types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
