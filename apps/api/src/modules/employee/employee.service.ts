@@ -97,6 +97,7 @@ export async function createEmployee(input: unknown, viewer: Viewer) {
       if (body.reportingManagerId && !(await tx.employee.count({ where: { id: body.reportingManagerId } }))) {
         throw new AppError(400, 'Unknown reporting manager');
       }
+      if (body.shiftId && !(await tx.shift.count({ where: { id: body.shiftId } }))) throw new AppError(400, 'Unknown shift');
       const { id: userId, temporaryPassword } = await insertStandardUser(
         tx,
         { email: body.email, displayName: body.fullName, roleId: body.roleId },
@@ -110,6 +111,7 @@ export async function createEmployee(input: unknown, viewer: Viewer) {
           designation: body.designation,
           departmentId: body.departmentId,
           reportingManagerId: body.reportingManagerId ?? null,
+          shiftId: body.shiftId ?? null,
           employmentType: body.employmentType,
           joiningDate: toDate(body.joiningDate),
         },
@@ -219,6 +221,7 @@ export async function updateEmployee(viewer: Viewer, id: string, input: unknown)
 
     if (body.departmentId && !(await departmentExists(tx, body.departmentId))) throw new AppError(400, 'Unknown department');
     if (body.reportingManagerId) await assertNoReportingCycle(tx, id, body.reportingManagerId);
+    if (body.shiftId && !(await tx.shift.count({ where: { id: body.shiftId } }))) throw new AppError(400, 'Unknown shift');
 
     const data = Object.fromEntries(
       Object.entries(body).map(([k, v]) => [k, DATE_FIELDS.has(k) && typeof v === 'string' ? toDate(v) : v]),

@@ -58,6 +58,7 @@ export interface EmployeeRecord {
   employmentStatus: string;
   joiningDate: Date;
   officeLocation: string | null;
+  shiftId: string | null;
   lastWorkingDay: Date | null;
   exitReason: string | null;
   dateOfBirth: Date | null;
@@ -109,6 +110,7 @@ export function projectEmployee(
       employmentStatus: e.employmentStatus,
       joiningDate: dateOnly(e.joiningDate)!,
       officeLocation: e.officeLocation,
+      shiftId: e.shiftId,
       lastWorkingDay: dateOnly(e.lastWorkingDay),
       exitReason: e.exitReason,
     };

@@ -20,6 +20,7 @@ export const HR_ONLY_FIELDS = [
   'employmentType',
   'joiningDate',
   'officeLocation',
+  'shiftId',
   'bankAccountNumber',
   'bankName',
   'bankRoutingNumber',

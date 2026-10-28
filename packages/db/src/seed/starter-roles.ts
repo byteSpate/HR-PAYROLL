@@ -32,6 +32,11 @@ export const STARTER_ROLES: StarterRoleDef[] = [
       { key: 'employee.create', scope: null },
       { key: 'employee.read.financial', scope: null },
       { key: 'employee.export', scope: null },
+      { key: 'attendance.read', scope: 'all' },
+      { key: 'attendance.approve', scope: 'all' },
+      { key: 'attendance.manage', scope: 'all' },
+      { key: 'attendance.report', scope: 'all' },
+      { key: 'attendance.config', scope: null },
     ],
   },
   {

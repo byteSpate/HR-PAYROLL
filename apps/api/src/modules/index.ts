@@ -1,4 +1,5 @@
 import type { Router } from 'express';
+import { attendanceConfigRouter } from './attendance/config.routes.js';
 import { authRouter } from './auth/auth.routes.js';
 import { auditRouter } from './core-audit/audit.routes.js';
 import { departmentRouter } from './department/department.routes.js';
@@ -16,4 +17,5 @@ export const apiMounts: [prefix: string, router: Router][] = [
   ['/departments', departmentRouter],
   ['/employees', employeeRouter],
   ['/notifications', notificationRouter],
+  ['/attendance', attendanceConfigRouter],
 ];

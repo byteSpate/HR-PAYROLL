@@ -1,0 +1,118 @@
+// Ported from HR-MNG-V1 without the RFID, face and fingerprint sources, which need devices this app does not have.
+
+enum HolidayType {
+  GENERAL
+  EXECUTIVE_ORDER
+  OPTIONAL
+  // Inverts: a normal off-day declared working. The cabinet cancelled the weekly holiday on 2026-05-23
+  // when it extended Eid-ul-Azha to seven days, and a calendar that can only take days away cannot say so.
+  WORKING_DAY
+}
+
+model Holiday {
+  id   String      @id @default(uuid())
+  name String
+  date DateTime    @db.Date
+  type HolidayType @default(GENERAL)
+
+  // Unique on (date, name), not on date alone: 2026-05-01 is both May Day and Buddha Purnima,
+  // and a unique-on-date makes that pair unseedable.
+  @@unique([date, name])
+  @@index([date])
+}
+
+// Times are "HH:mm" strings, not DateTime: a shift start is a time-of-day with no date and no timezone.
+model Shift {
+  id            String     @id @default(uuid())
+  name          String     @unique
+  startTime     String
+  endTime       String
+  // Lunch and breaks sit inside the span, so the 09:00-18:00 expectation is 9 elapsed hours and
+  // nothing subtracts the break anywhere.
+  breakMinutes  Int        @default(60)
+  graceMinutes  Int        @default(15)
+  // 0=Sun ... 6=Sat. [5] is Friday.
+  weeklyOffDays Int[]
+  // A dated shift is a company-wide override for its window (Ramadan hours) without reassigning
+  // every employee. Null/null is a standing shift that employees are assigned to.
+  effectiveFrom DateTime?  @db.Date
+  effectiveTo   DateTime?  @db.Date
+  employees     Employee[]
+
+  @@index([effectiveFrom, effectiveTo])
+}
+
+// No AUTO_APPROVED. A web punch proves identity and server time, never that the person was at work,
+// so the approver's own eyes are the only real control.
+enum AttendanceApproval {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AttendanceSource {
+  WEB
+  MANUAL
+}
+
+model Attendance {
+  id          String   @id @default(uuid())
+  employeeId  String
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  // The office-local calendar day, not the instant: a punch at 23:30 UTC belongs to the next Dhaka day.
+  date        DateTime @db.Date
+  checkIn     DateTime?
+  checkOut    DateTime?
+  workedHours Float?
+  isLate      Boolean  @default(false)
+  isEarlyOut  Boolean  @default(false)
+
+  source AttendanceSource @default(WEB)
+
+  approval     AttendanceApproval @default(PENDING)
+  /// User id of whoever decided (the shared @erp/approvals stamp).
+  decidedBy    String?
+  decidedAt    DateTime?
+  decisionNote String?
+
+  // Set when the employee amends their own record, flagging to the approver that the time came
+  // from the person it benefits.
+  regularisedAt   DateTime?
+  regularisedNote String?
+
+  // Set when the close-open-days rule wrote the shift's end as the check-out. A column of its own
+  // rather than a new source: the check-in really was a WEB punch, and this marks the check-out
+  // alone as invented, which is what the approver needs to know.
+  autoCheckOutAt DateTime?
+
+  // User id, set when HR edits the record. Holds only the most recent edit; the full history is in `audits`.
+  correctedBy    String?
+  correctedAt    DateTime?
+  correctionNote String?
+
+  audits AttendanceAudit[]
+
+  // Makes check-in a single atomic create instead of a read-then-write race, and stops a
+  // double-tapped button producing two rows.
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([approval])
+}
+
+// Every mutation appends here inside the same transaction: the dispute that matters is always about
+// the value before someone changed it.
+model AttendanceAudit {
+  id           String     @id @default(uuid())
+  attendanceId String
+  attendance   Attendance @relation(fields: [attendanceId], references: [id], onDelete: Cascade)
+  action       String
+  /// User id of whoever performed the action.
+  changedBy    String?
+  changedAt    DateTime   @default(now())
+  /// Only the fields that changed, not whole snapshots.
+  before       Json?
+  after        Json?
+  note         String?
+
+  @@index([attendanceId, changedAt])
+}

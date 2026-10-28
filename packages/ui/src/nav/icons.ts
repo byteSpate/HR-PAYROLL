@@ -15,6 +15,13 @@ import {
   RiHistoryLine,
   RiShieldUserLine,
   RiUserLine,
+  RiTimeLine,
+  RiCalendarCheckLine,
+  RiCheckboxCircleLine,
+  RiEditLine,
+  RiBarChartLine,
+  RiTimerLine,
+  RiCalendarEventLine,
 } from '@remixicon/react';
 
 type IconComponent = ComponentType<{ className?: string }>;
@@ -36,6 +43,13 @@ const ICONS: Record<string, IconComponent> = {
   RiHistoryLine,
   RiShieldUserLine,
   RiUserLine,
+  RiTimeLine,
+  RiCalendarCheckLine,
+  RiCheckboxCircleLine,
+  RiEditLine,
+  RiBarChartLine,
+  RiTimerLine,
+  RiCalendarEventLine,
 };
 
 export function NavIcon({ name, className }: { name: string; className?: string }) {
