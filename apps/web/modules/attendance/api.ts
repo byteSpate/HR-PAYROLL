@@ -22,3 +22,5 @@ export const importCommit = (kind: ConfigKind, file: File) => importFile(kind, '
 export const regularise = (body: { date: string; checkIn?: string; checkOut?: string; note: string }) => api.request<void>('/attendance/regularise', { method: 'POST', body });
 
 export const manualEmployees = () => api.request<{ id: string; fullName: string; employeeCode: string }[]>('/attendance/manual/employees');
+export const manualRecords = (date: string) => api.request<AttendanceRow[]>(`/attendance/manual/records?date=${encodeURIComponent(date)}`);
+export const correct = (id: string, body: { checkIn?: string; checkOut?: string; note: string }) => api.request<AttendanceRow>(`/attendance/${id}`, { method: 'PATCH', body });
