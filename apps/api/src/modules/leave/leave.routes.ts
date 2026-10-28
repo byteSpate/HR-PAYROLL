@@ -6,7 +6,7 @@ import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import { scopeForViewer } from '../attendance/attendance.approval.js';
 import { adjustBalance, deleteLeaveType, saveLeaveType } from './leave.admin.js';
-import { applyForLeave, cancelLeave, decideLeave } from './leave.service.js';
+import { applyForLeave, cancelLeave, decideLeave, previewLeave } from './leave.service.js';
 
 export const leaveRouter = Router();
 leaveRouter.use(requireAuth);
@@ -32,6 +32,7 @@ leaveRouter.get('/team-status', requirePermission('leave.read'), async (req, res
   const today = officeToday();
   res.json(await prisma.leaveRequest.findMany({ where: { employee: scope, status: 'APPROVED', startDate: { lte: today }, endDate: { gte: today } }, include: { employee: { select: { id: true, fullName: true, employeeCode: true } }, leaveType: true } }));
 });
+leaveRouter.post('/preview', async (req, res) => res.json(await previewLeave(req.user!.sub, req.body)));
 leaveRouter.post('/requests', async (req, res) => res.status(201).json(await applyForLeave(req.user!.sub, req.body)));
 leaveRouter.get('/requests', async (req, res) => {
   const mine = req.query['scope'] === 'mine';

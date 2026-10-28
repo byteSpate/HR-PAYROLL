@@ -104,3 +104,22 @@ export async function cancelLeave(viewer: Viewer, id: string, revert = false) {
     return tx.leaveRequest.findUniqueOrThrow({ where: { id } });
   });
 }
+
+export async function previewLeave(userId: string, input: unknown) {
+  const body = applicationSchema.parse(input);
+  const start = at(body.startDate), end = at(body.endDate);
+  if (start > end || start.getUTCFullYear() !== end.getUTCFullYear() || halfIndex(start, body.startSession) > halfIndex(end, body.endSession)) throw new AppError(400, 'Invalid leave range');
+  const employee = await prisma.employee.findUnique({ where: { userId } });
+  if (!employee) throw new AppError(403, 'An employee record is required');
+  const type = await prisma.leaveType.findUnique({ where: { id: body.leaveTypeId } });
+  if (!type || !type.eligibleFor.includes(employee.employmentType)) throw new AppError(400, 'Leave type is unavailable');
+  const shift = await shiftFor(employee.id, start);
+  const holidays = await prisma.holiday.findMany({ where: { date: { gte: start, lte: end } } });
+  const chargedDays = countChargedDays({ start, end, startSession: body.startSession, endSession: body.endSession, countsHolidays: type.countsHolidays, weeklyOffDays: shift.weeklyOffDays, holidays: holidays.filter(h => h.type !== 'WORKING_DAY').map(h => h.date), workingDayOverrides: holidays.filter(h => h.type === 'WORKING_DAY').map(h => h.date) });
+  const year = start.getUTCFullYear();
+  const balance = await prisma.leaveBalance.findUnique({ where: { employeeId_leaveTypeId_year: { employeeId: employee.id, leaveTypeId: type.id, year } } });
+  const earned = type.accrualBasis === 'EARNED' ? await computeEarnedAccrual(employee, officeToday(), type.minServiceMonths, type.maxAccrual) : 0;
+  const quota = type.accrualBasis === 'PER_EVENT' ? type.annualQuota : type.accrualBasis === 'PRO_RATED' ? computeEntitlement(type.annualQuota, employee.joiningDate, year) : earned;
+  const pending = await prisma.leaveRequest.aggregate({ where: { employeeId: employee.id, leaveTypeId: type.id, status: 'PENDING', startDate: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } }, _sum: { chargedDays: true } });
+  return { chargedDays, available: type.isPaid ? (balance?.balance ?? quota) - (pending._sum.chargedDays ?? 0) : null };
+}
