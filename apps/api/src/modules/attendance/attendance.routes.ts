@@ -4,11 +4,14 @@ import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import { decideAttendance, listAttendance } from './attendance.approval.js';
+import { exportReport, getReport } from './attendance.report.js';
 import { correctAttendance, manualAttendance, regulariseAttendance } from './attendance.edit.js';
 
 export const attendanceRouter = Router();
 attendanceRouter.use(requireAuth);
 const text = (value: unknown) => typeof value === 'string' ? value : undefined;
+attendanceRouter.get('/report/export', requirePermission('attendance.report'), exportReport);
+attendanceRouter.get('/report', requirePermission('attendance.report'), getReport);
 attendanceRouter.get('/approvals', requirePermission('attendance.approve'), async (req, res) => {
   res.json(await listAttendance(req.user!, 'attendance.approve', { date: text(req.query['date']), status: text(req.query['status']) }));
 });
