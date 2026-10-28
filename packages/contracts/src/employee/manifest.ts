@@ -17,32 +17,36 @@ export const employee = defineModule({
   },
   nav: [
     {
-      label: 'My Space',
-      order: 10,
-      icon: 'RiUserSmileLine',
+      label: 'Workspace',
+      order: 20,
       items: [
-        { label: 'My Profile', href: '/me', icon: 'RiUserLine', permission: null },
         { label: 'Directory', href: '/me/directory', icon: 'RiContactsBook2Line', permission: null },
+        { label: 'My Profile', href: '/me', icon: 'RiUser3Line', permission: null },
       ],
     },
     {
-      label: 'Employees',
-      order: 20,
-      icon: 'RiTeamLine',
+      label: 'Overview',
+      order: 10,
       items: [
-        { label: 'Add Employee', href: '/employees/new', icon: 'RiUserAddLine', permission: 'employee.create' },
         {
-          label: 'Employee List',
+          label: 'Employees',
           href: '/employees',
-          icon: 'RiListUnordered',
-          permission: ['employee.read:department', 'employee.read.financial'],
-        },
-        { label: 'My Team', href: '/employees/team', icon: 'RiGroupLine', permission: 'employee.read:team' },
-        {
-          label: 'ID Change Requests',
-          href: '/employees/id-requests',
-          icon: 'RiIdCardLine',
-          permission: 'employee.id_request.decide:department',
+          icon: 'RiTeamLine',
+          permission: null,
+          children: [
+            {
+              label: 'Employee List',
+              href: '/employees',
+              permission: ['employee.read:department', 'employee.read.financial'],
+            },
+            { label: 'Add Employee', href: '/employees/new', permission: 'employee.create' },
+            { label: 'My Team', href: '/employees/team', permission: 'employee.read:team' },
+            {
+              label: 'ID Change Requests',
+              href: '/employees/id-requests',
+              permission: 'employee.id_request.decide:department',
+            },
+          ],
         },
       ],
     },

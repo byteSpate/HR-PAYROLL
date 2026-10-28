@@ -5,7 +5,6 @@ import { mergeNavGroups, navGroups } from './nav';
 const group = (label: string, order: number, ...items: string[]): NavGroup => ({
   label,
   order,
-  icon: 'RiCircleLine',
   items: items.map((name) => ({ label: name, href: `/${name}`, icon: 'RiCircleLine', permission: null })),
 });
 
@@ -29,10 +28,17 @@ describe('mergeNavGroups', () => {
 });
 
 describe('real navGroups', () => {
-  it('has a single My Space group holding items from several modules', () => {
-    const mySpace = navGroups.filter((g) => g.label === 'My Space');
-    expect(mySpace).toHaveLength(1);
-    expect(mySpace[0]?.items.map((i) => i.href)).toEqual(expect.arrayContaining(['/me', '/me/directory', '/me/attendance']));
+  it('has one Workspace heading holding personal pages from several modules', () => {
+    const workspace = navGroups.filter((g) => g.label === 'Workspace');
+    expect(workspace).toHaveLength(1);
+    expect(workspace[0]?.items.map((i) => i.href)).toEqual(expect.arrayContaining(['/me', '/me/directory', '/me/attendance', '/me/leave']));
+  });
+
+  it('puts every admin-side module under Overview, with Attendance expanding into its own pages', () => {
+    const overview = navGroups.find((g) => g.label === 'Overview');
+    expect(overview?.items.map((i) => i.label)).toEqual(expect.arrayContaining(['Dashboard', 'Employees', 'Attendance', 'Leave']));
+    const attendance = overview?.items.find((i) => i.label === 'Attendance');
+    expect(attendance?.children?.map((c) => c.label)).toEqual(['Attendance Approvals', "Today's Attendance", 'Reports', 'Holiday Calendar']);
   });
 });
 
@@ -40,7 +46,7 @@ describe('navGroups', () => {
   it('lists groups by their order, not by module registration', () => {
     const orders = navGroups.map((g) => g.order);
     expect(orders).toEqual([...orders].sort((a, b) => a - b));
-    expect(navGroups[0]?.label).toBe('Dashboard');
-    expect(navGroups.at(-1)?.label).toBe('Settings');
+    expect(navGroups[0]?.label).toBe('Overview');
+    expect(navGroups.at(-1)?.label).toBe('Administration');
   });
 });

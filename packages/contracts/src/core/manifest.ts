@@ -11,24 +11,17 @@ export const core = defineModule({
   },
   nav: [
     {
-      label: 'Dashboard',
-      order: 0,
-      icon: 'RiDashboardLine',
-      items: [{ label: 'Overview', href: '/dashboard', icon: 'RiDashboardLine', permission: null }],
+      label: 'Overview',
+      order: 10,
+      items: [{ label: 'Dashboard', href: '/dashboard', icon: 'RiDashboardLine', permission: null }],
     },
     {
-      label: 'Settings',
+      label: 'Administration',
       order: 900,
-      icon: 'RiSettings3Line',
       items: [
         { label: 'Users', href: '/settings/users', icon: 'RiUserLine', permission: 'user.manage' },
-        {
-          label: 'Roles & Permissions',
-          href: '/settings/roles',
-          icon: 'RiShieldUserLine',
-          permission: 'role.manage',
-        },
-        { label: 'Activity Log', href: '/settings/activity', icon: 'RiHistoryLine', permission: 'audit.read' },
+        { label: 'Roles & Permissions', href: '/settings/roles', icon: 'RiSettingsLine', permission: 'role.manage' },
+        { label: 'Activity', href: '/settings/activity', icon: 'RiPulseLine', permission: 'audit.read' },
       ],
     },
   ],

@@ -13,22 +13,26 @@ export const attendance = defineModule({
   },
   nav: [
     {
-      label: 'My Space',
-      order: 10,
-      icon: 'RiUserSmileLine',
+      label: 'Workspace',
+      order: 20,
       items: [{ label: 'My Attendance', href: '/me/attendance', icon: 'RiTimeLine', permission: null }],
     },
     {
-      label: 'Attendance',
-      order: 40,
-      icon: 'RiCalendarCheckLine',
+      label: 'Overview',
+      order: 10,
       items: [
-        { label: 'Today', href: '/attendance', icon: 'RiTimeLine', permission: 'attendance.read:team' },
-        { label: 'Approvals', href: '/attendance/approvals', icon: 'RiCheckboxCircleLine', permission: 'attendance.approve:team' },
-        { label: 'Manual Entry', href: '/attendance/manual', icon: 'RiEditLine', permission: 'attendance.manage:department' },
-        { label: 'Reports', href: '/attendance/reports', icon: 'RiBarChartLine', permission: 'attendance.report:team' },
-        { label: 'Shifts', href: '/attendance/shifts', icon: 'RiTimerLine', permission: 'attendance.config' },
-        { label: 'Holidays', href: '/attendance/holidays', icon: 'RiCalendarEventLine', permission: 'attendance.config' },
+        {
+          label: 'Attendance',
+          href: '/attendance',
+          icon: 'RiTimeLine',
+          permission: null,
+          children: [
+            { label: 'Attendance Approvals', href: '/attendance/approvals', permission: 'attendance.approve:team' },
+            { label: "Today's Attendance", href: '/attendance', permission: 'attendance.read:team' },
+            { label: 'Reports', href: '/attendance/reports', permission: 'attendance.report:team' },
+            { label: 'Holiday Calendar', href: '/attendance/holidays', permission: null },
+          ],
+        },
       ],
     },
   ],

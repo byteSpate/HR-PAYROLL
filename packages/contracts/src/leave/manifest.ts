@@ -9,13 +9,39 @@ export const leave = defineModule({
     'leave.config': { label: 'Manage leave policies' },
   },
   nav: [
-    { label: 'My Space', order: 10, icon: 'RiUserSmileLine', items: [{ label: 'My Leave', href: '/me/leave', icon: 'RiCalendarLine', permission: null }] },
-    { label: 'Leave', order: 50, icon: 'RiCalendarLine', items: [
-      { label: 'Apply Leave', href: '/leave/apply', icon: 'RiAddCircleLine', permission: null },
-      { label: 'Leave Requests', href: '/leave/requests', icon: 'RiFileListLine', permission: 'leave.read:team' },
-      { label: 'Approvals', href: '/leave/approvals', icon: 'RiCheckboxCircleLine', permission: 'leave.approve:team' },
-      { label: 'Team Status', href: '/leave/team', icon: 'RiTeamLine', permission: 'leave.read:team' },
-      { label: 'Leave Types', href: '/leave/types', icon: 'RiSettingsLine', permission: 'leave.config' },
-    ] },
+    {
+      label: 'Workspace',
+      order: 20,
+      items: [
+        {
+          label: 'My Leave',
+          href: '/me/leave',
+          icon: 'RiCalendarEventLine',
+          permission: null,
+          children: [
+            { label: 'My Leave', href: '/me/leave', permission: null },
+            { label: 'Apply Leave', href: '/leave/apply', permission: null },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Overview',
+      order: 10,
+      items: [
+        {
+          label: 'Leave',
+          href: '/leave/requests',
+          icon: 'RiCalendarEventLine',
+          permission: null,
+          children: [
+            { label: 'Leave Requests', href: '/leave/requests', permission: 'leave.read:team' },
+            { label: 'Leave Approvals', href: '/leave/approvals', permission: 'leave.approve:team' },
+            { label: 'Team Status', href: '/leave/team', permission: 'leave.read:team' },
+            { label: 'Leave Types', href: '/leave/types', permission: 'leave.config' },
+          ],
+        },
+      ],
+    },
   ], events: LEAVE_EVENTS,
 });

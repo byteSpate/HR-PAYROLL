@@ -10,20 +10,33 @@ export interface PermissionDef {
   managerDefault?: boolean;
 }
 
-export interface NavItem {
+/** A page inside a collapsible sidebar item. */
+export interface NavChild {
   label: string;
   href: string;
-  /** Remix icon component name; kept a string so contracts stay React-free. */
-  icon: string;
-  /** 'key' or 'key:scope'. An array shows the item when any entry is held. */
+  /** 'key' or 'key:scope'. An array shows the child when any entry is held. */
   permission: string | string[] | null;
 }
 
+export interface NavItem {
+  label: string;
+  href: string;
+  /** Remix icon component name, looked up in the `@erp/ui/dashboard` icon registry; a string keeps contracts React-free. */
+  icon: string;
+  /** 'key' or 'key:scope'. An array shows the item when any entry is held. Ignored when `children` is set. */
+  permission: string | string[] | null;
+  /**
+   * Present where one original page holds several sections, each with its own route. The item then
+   * expands instead of navigating, and shows only the children the user may open.
+   */
+  children?: NavChild[];
+}
+
+/** A sidebar heading. Modules contribute items to headings by label, and the app merges them. */
 export interface NavGroup {
   label: string;
-  /** Sidebar position, ascending; modules pick numbers so the order is not registry order. */
+  /** Heading position, ascending; the lowest `order` among contributors wins. */
   order: number;
-  icon: string;
   items: NavItem[];
 }
 

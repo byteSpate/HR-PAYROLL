@@ -1,2 +1,2 @@
 export { AppShell } from './app-shell';
-export type { ShellIdentity } from './account-menu';
+export type { ShellIdentity } from './types';

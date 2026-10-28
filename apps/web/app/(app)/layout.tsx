@@ -2,7 +2,9 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { filterNav } from '@erp/ui/nav';
 import { AppShell } from '@erp/ui/shell';
+import { BrandLogo } from '@/components/brand/brand';
 import { navGroups } from '@/lib/nav';
 import { loginPathFor } from '@/lib/return-to';
 import { useSession } from '@/lib/session';
@@ -33,11 +35,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell
-      groups={navGroups}
-      access={user}
-      identity={{ name: user.displayName, subtitle, email: user.email }}
-      onSignOut={() => void signOut()}
+      navGroups={filterNav(navGroups, user)}
+      rootHref="/dashboard"
       profileHref="/me"
+      brand={<BrandLogo tone="dark" width={172} />}
+      identity={{ name: user.displayName, email: user.email, subtitle, roleLabel: subtitle }}
+      onSignOut={() => void signOut()}
       headerSlot={<NotificationBell />}
     >
       {children}
