@@ -30,7 +30,7 @@ export const attendance = defineModule({
             { label: 'Attendance Approvals', href: '/attendance/approvals', permission: 'attendance.approve:team' },
             { label: "Today's Attendance", href: '/attendance', permission: 'attendance.read:team' },
             { label: 'Reports', href: '/attendance/reports', permission: 'attendance.report:team' },
-            { label: 'Holiday Calendar', href: '/attendance/holidays', permission: null },
+            { label: 'Holiday Calendar', href: '/attendance/holidays', permission: 'attendance.config' },
           ],
         },
       ],

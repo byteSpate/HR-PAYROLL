@@ -11,4 +11,10 @@ export class ApiError extends Error {
   ) {
     super(message);
   }
+
+  /** What the server attached to the error, such as an import's per-row `issues`. */
+  get details(): Record<string, unknown> | undefined {
+    const details = this.body['details'];
+    return typeof details === 'object' && details !== null ? (details as Record<string, unknown>) : undefined;
+  }
 }

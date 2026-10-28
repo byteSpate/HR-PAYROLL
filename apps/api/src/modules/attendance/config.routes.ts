@@ -77,6 +77,5 @@ attendanceConfigRouter.patch('/holidays/:id', canConfig, async (req, res) => {
   res.json(await holidays.updateHoliday(String(req.params['id']), req.body, req.user!.sub));
 });
 attendanceConfigRouter.delete('/holidays/:id', canConfig, async (req, res) => {
-  await holidays.deleteHoliday(String(req.params['id']), req.user!.sub);
-  res.status(204).end();
+  res.json(await holidays.deleteHoliday(String(req.params['id']), req.user!.sub));
 });

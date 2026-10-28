@@ -40,6 +40,9 @@ export const holidayInputSchema = z.object({
   type: z.enum(holidayTypes).default('GENERAL'),
 });
 
+/** A holiday change names only what it changes. No defaults: an omitted type must not reset to GENERAL. */
+export const holidayPatchSchema = z.object({ name: text(120), date: dateOnly, type: z.enum(holidayTypes) }).partial();
+
 export type ShiftInput = z.infer<typeof shiftInputSchema>;
 export type HolidayInput = z.infer<typeof holidayInputSchema>;
 

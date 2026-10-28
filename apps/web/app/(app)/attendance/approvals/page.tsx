@@ -2,13 +2,12 @@
 
 import { can } from '@erp/auth/permissions';
 import { PageHeader } from '@erp/ui/dashboard';
-import { useAccessToken, useSession } from '@/lib/session';
+import { useSession } from '@/lib/session';
 import { ApprovalsSection } from '@/modules/attendance/components/approvals-section';
 import { RequirePermission } from '@/modules/settings/components/require-permission';
 
 export default function AttendanceApprovalsPage() {
-  const { user } = useSession();
-  const accessToken = useAccessToken();
+  const { user, accessToken } = useSession();
   return (
     <RequirePermission permission="attendance.approve:team">
       <PageHeader kicker="Attendance" title="Attendance Approvals" sub="Review and decide check-ins, hours, and exceptions" />
