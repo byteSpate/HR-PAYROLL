@@ -21,6 +21,7 @@ beforeAll(async () => {
   employeeId = (await prisma.employee.create({ data: { ...base, userId: user.user.id, employeeCode: `${prefix}-e-${Date.now()}`, fullName: 'Employee', reportingManagerId: managerId } })).id;
 });
 afterEach(async () => {
+  await prisma.outboxEvent.deleteMany({ where: { type: 'attendance.corrected', payload: { path: ['attendanceId'], equals: rowId } } });
   await prisma.notification.deleteMany({ where: { userId: { in: [user.user.id, manager.user.id] } } });
   await prisma.auditLog.deleteMany({ where: { entity: 'ATTENDANCE', entityId: rowId } });
   await prisma.attendanceAudit.deleteMany({ where: { attendanceId: rowId } });

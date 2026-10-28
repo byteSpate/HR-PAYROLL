@@ -10,7 +10,7 @@ let admin: Awaited<ReturnType<typeof makeActor>>;
 let user: Awaited<ReturnType<typeof makeActor>>;
 let employeeId: string;
 let departmentId: string;
-let ids: string[] = [];
+const ids: string[] = [];
 beforeAll(async () => {
   admin = await makeActor(prefix, 'ADMIN');
   user = await makeActor(prefix, 'STANDARD');
