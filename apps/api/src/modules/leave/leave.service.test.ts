@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@erp/db';
-import { applyForLeave, decideLeave } from './leave.service.js';
+import { applyForLeave, decideLeave, cancelLeave } from './leave.service.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
 
 const prefix = 'zzleavesvc';
@@ -56,6 +56,12 @@ describe('leave requests', () => {
     expect(await prisma.notification.count({ where: { userId: employee.user.id, entityId: row.id } })).toBe(1);
     expect(await prisma.outboxEvent.count({ where: { type: 'leave.approved', payload: { path: ['requestId'], equals: row.id } } })).toBe(1);
     expect(await status(decideLeave(viewer(), row.id, 'APPROVED'))).toBe(409);
+  });
+  it('restores the balance when an approved future request is cancelled', async () => {
+    const row = await applyForLeave(employee.user.id, input());
+    await decideLeave(viewer(), row.id, 'APPROVED');
+    await cancelLeave({ sub: manager.user.id, accessLevel: 'ADMIN', grants: [] }, row.id);
+    expect(await prisma.leaveBalance.findUniqueOrThrow({ where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId: typeId, year: 2027 } } })).toMatchObject({ used: 0, balance: 10 });
   });
   it('rejects non-admin self decisions even with all-scope approval', async () => {
     const row = await applyForLeave(employee.user.id, input());
