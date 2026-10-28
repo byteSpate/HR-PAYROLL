@@ -8,8 +8,8 @@ const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dhaka', y
 const columns: DataColumn<api.AttendanceRow>[] = [
   { key: 'employee', header: 'Employee', cell: r => r.employee?.fullName ?? '—' },
   { key: 'date', header: 'Date', cell: r => r.date.slice(0, 10) },
-  { key: 'in', header: 'Check in', cell: r => r.checkIn ? new Date(r.checkIn).toLocaleTimeString() : '—' },
-  { key: 'out', header: 'Check out', cell: r => r.checkOut ? new Date(r.checkOut).toLocaleTimeString() : '—' },
+  { key: 'in', header: 'Check in', cell: r => r.checkIn ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(r.checkIn)) : '—' },
+  { key: 'out', header: 'Check out', cell: r => r.checkOut ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dhaka', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(r.checkOut)) : '—' },
   { key: 'status', header: 'Status', cell: r => <Tag label={r.approval} tone={r.approval === 'APPROVED' ? 'good' : r.approval === 'REJECTED' ? 'bad' : 'warn'} /> },
 ];
 export function AttendanceToday() {
