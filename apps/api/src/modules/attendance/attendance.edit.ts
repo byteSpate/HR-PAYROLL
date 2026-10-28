@@ -53,3 +53,24 @@ export async function correctAttendance(viewer: Viewer, id: string, input: unkno
     return row;
   });
 }
+
+export async function manualAttendance(viewer: Viewer, input: unknown) {
+  const body = regulariseSchema.extend({ employeeId: z.string().uuid() }).parse(input);
+  const scope = await scopeForViewer(viewer, 'attendance.manage');
+  const employee = await prisma.employee.findFirst({ where: { AND: [scope, { id: body.employeeId }] } });
+  if (!employee) throw new AppError(404, 'Employee not found');
+  const date = new Date(`${body.date}T00:00:00.000Z`);
+  const calculated = await times(employee.id, date, body);
+  try {
+    return await prisma.$transaction(async (tx) => {
+      const row = await tx.attendance.create({ data: { employeeId: employee.id, date, ...calculated, source: 'MANUAL', correctedBy: viewer.sub, correctedAt: new Date(), correctionNote: body.note } });
+      await tx.attendanceAudit.create({ data: { attendanceId: row.id, action: 'MANUAL', changedBy: viewer.sub, after: snapshot(row), note: body.note } });
+      await writeAudit(tx, { entity: 'ATTENDANCE', entityId: row.id, action: 'CREATE', changedBy: viewer.sub, after: snapshot(row) });
+      await emit(tx, 'attendance.corrected', { attendanceId: row.id, employeeId: employee.id, date: body.date, correctedBy: viewer.sub });
+      return row;
+    });
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') throw new AppError(409, 'Attendance already exists for this day');
+    throw error;
+  }
+}
