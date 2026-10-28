@@ -80,3 +80,25 @@ export async function decideLeave(viewer: Viewer, id: string, decision: 'APPROVE
     return tx.leaveRequest.findUniqueOrThrow({ where: { id } });
   });
 }
+
+export async function cancelLeave(viewer: Viewer, id: string, revert = false) {
+  const row = await prisma.leaveRequest.findUnique({ where: { id }, include: { employee: true, leaveType: true } });
+  if (!row) throw new AppError(404, 'Leave request not found');
+  const owner = row.employee.userId === viewer.sub;
+  if (!(owner && row.status === 'PENDING' && !revert)) {
+    const scope = await scopeForViewer(viewer, 'leave.manage');
+    if (!await prisma.employee.count({ where: { AND: [scope, { id: row.employeeId }] } })) throw new AppError(403, 'Forbidden');
+    if (row.status !== 'APPROVED' || (!revert && row.startDate <= officeToday())) throw new AppError(409, 'This leave cannot be cancelled');
+  }
+  return prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${row.employeeId}))`;
+    const changed = await tx.leaveRequest.updateMany({ where: { id, status: row.status }, data: { status: 'CANCELLED', ...decisionStamp(viewer.sub) } });
+    if (!changed.count) throw new AppError(409, 'This request has already changed');
+    if (row.status === 'APPROVED' && row.leaveType.isPaid) {
+      await tx.leaveBalance.update({ where: { employeeId_leaveTypeId_year: { employeeId: row.employeeId, leaveTypeId: row.leaveTypeId, year: row.startDate.getUTCFullYear() } }, data: { balance: { increment: row.chargedDays }, used: { decrement: row.chargedDays } } });
+    }
+    await writeAudit(tx, { entity: 'LEAVE_REQUEST', entityId: id, action: 'CANCEL', changedBy: viewer.sub, before: { status: row.status }, after: { status: 'CANCELLED' } });
+    await emit(tx, 'leave.cancelled', { requestId: id, employeeId: row.employeeId, subjectUserId: row.employee.userId, actorUserId: viewer.sub, chargedDays: row.chargedDays });
+    return tx.leaveRequest.findUniqueOrThrow({ where: { id } });
+  });
+}
