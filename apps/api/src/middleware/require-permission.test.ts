@@ -8,6 +8,9 @@ import { requireAuth } from './require-auth.js';
 import { requirePermission } from './require-permission.js';
 
 const app = express();
+app.get('/either', requireAuth, requirePermission(['a.b', 'c.d']), (_req, res) => {
+  res.json({ ok: true });
+});
 app.get('/guarded', requireAuth, requirePermission('a.b'), (_req, res) => {
   res.json({ ok: true });
 });
@@ -55,5 +58,12 @@ describe('requirePermission', () => {
   it('200 when the permission is granted', async () => {
     const res = await request(app).get('/guarded').set('Authorization', `Bearer ${token(['a.b'])}`);
     expect(res.status).toBe(200);
+  });
+
+  it('passes an any-of list when one entry is held, and names the list when none is', async () => {
+    expect((await request(app).get('/either').set('Authorization', `Bearer ${token(['c.d'])}`)).status).toBe(200);
+    const res = await request(app).get('/either').set('Authorization', `Bearer ${token(['x.y'])}`);
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ error: 'Forbidden', permission: ['a.b', 'c.d'] });
   });
 });

@@ -42,6 +42,41 @@ async function resolveRole(tx: Tx, roleId: string | null | undefined, caller: Ca
   return role;
 }
 
+/**
+ * The one place a STANDARD account is created, shared by user admin and employee onboarding so both
+ * apply the same role-grant check and duplicate-email rule. Always STANDARD: admins are appointed by
+ * the super admin through the access-level endpoint. The temporary password never reaches the audit row.
+ */
+export async function insertStandardUser(
+  tx: Tx,
+  input: { email: string; displayName: string; roleId?: string | null },
+  actor: Caller,
+): Promise<{ id: string; temporaryPassword: string }> {
+  const role = await resolveRole(tx, input.roleId, actor);
+  if (await tx.user.findUnique({ where: { email: input.email }, select: { id: true } })) {
+    throw new AppError(409, 'An account with that email already exists');
+  }
+  const temporaryPassword = generateTemporaryPassword();
+  const user = await tx.user.create({
+    data: {
+      email: input.email,
+      displayName: input.displayName,
+      passwordHash: await hashPassword(temporaryPassword),
+      mustChangePassword: true,
+      accessLevel: 'STANDARD',
+      roleId: role?.id ?? null,
+    },
+  });
+  await writeAudit(tx, {
+    entity: 'USER',
+    entityId: user.id,
+    action: 'CREATE',
+    changedBy: actor.sub,
+    after: { email: input.email, displayName: input.displayName, role: role?.name ?? null },
+  });
+  return { id: user.id, temporaryPassword };
+}
+
 export async function createUser(input: unknown, caller: Caller) {
   const body = createUserSchema.parse(input);
   const email = body.email.trim().toLowerCase();
@@ -49,28 +84,9 @@ export async function createUser(input: unknown, caller: Caller) {
   const displayName = body.displayName.trim();
   if (!displayName) throw new AppError(400, 'Display name is required');
 
-  const temporaryPassword = generateTemporaryPassword();
-  const passwordHash = await hashPassword(temporaryPassword);
-
-  const id = await prisma.$transaction(async (tx) => {
+  const { id, temporaryPassword } = await prisma.$transaction(async (tx) => {
     const actor = await loadActor(tx, caller.sub, 'user.manage');
-    const role = await resolveRole(tx, body.roleId, actor);
-    if (await tx.user.findUnique({ where: { email }, select: { id: true } })) {
-      throw new AppError(409, 'An account with that email already exists');
-    }
-    // Always STANDARD: admins are appointed by the super admin through the access-level endpoint.
-    const user = await tx.user.create({
-      data: { email, displayName, passwordHash, mustChangePassword: true, accessLevel: 'STANDARD', roleId: role?.id ?? null },
-    });
-    // The temporary password is deliberately absent from the audit row.
-    await writeAudit(tx, {
-      entity: 'USER',
-      entityId: user.id,
-      action: 'CREATE',
-      changedBy: caller.sub,
-      after: { email, displayName, role: role?.name ?? null },
-    });
-    return user.id;
+    return insertStandardUser(tx, { email, displayName, roleId: body.roleId }, actor);
   });
   return { user: await loadPublicUser(prisma, id), temporaryPassword };
 }
