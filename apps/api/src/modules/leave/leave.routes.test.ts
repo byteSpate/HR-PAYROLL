@@ -29,6 +29,9 @@ describe('leave routes', () => {
   it('allows an employee to apply and see their own requests and balances', async () => {
     expect((await request(app).get('/api/leave/types')).status).toBe(401);
     expect((await request(app).get('/api/leave/types').set(user.header)).status).toBe(200);
+    const preview = await request(app).post('/api/leave/preview').set(user.header).send({ leaveTypeId: typeId, startDate: '2027-01-04', endDate: '2027-01-04' });
+    expect(preview.status).toBe(200);
+    expect(preview.body.chargedDays).toBe(1);
     const res = await request(app).post('/api/leave/requests').set(user.header).send({ leaveTypeId: typeId, startDate: '2027-01-04', endDate: '2027-01-04' });
     expect(res.status).toBe(201); requestId = res.body.id;
     expect((await request(app).get('/api/leave/requests?scope=mine').set(user.header)).body).toHaveLength(1);
