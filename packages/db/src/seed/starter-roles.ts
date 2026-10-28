@@ -37,6 +37,10 @@ export const STARTER_ROLES: StarterRoleDef[] = [
       { key: 'attendance.manage', scope: 'all' },
       { key: 'attendance.report', scope: 'all' },
       { key: 'attendance.config', scope: null },
+      { key: 'leave.read', scope: 'all' },
+      { key: 'leave.approve', scope: 'all' },
+      { key: 'leave.manage', scope: 'all' },
+      { key: 'leave.config', scope: null },
     ],
   },
   {
