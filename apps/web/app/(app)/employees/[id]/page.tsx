@@ -34,7 +34,7 @@ export default function EmployeePage({ params }: { params: Promise<{ id: string 
         error={update.error?.message ?? null}
         onSave={(patch) => update.mutate({ id, patch }, { onSuccess: () => toast.success('Saved') })}
       />
-      <DocumentsPanel employeeId={id} canManage={canManageDocs} />
+      <DocumentsPanel employeeId={id} canManage={canManageDocs} canSee={!!employee.data.personal} />
       <div className="flex flex-wrap gap-2">
         {canExit && (status === 'ACTIVE' || status === 'ON_LEAVE') ? <ExitDialog employeeId={id} /> : null}
         {canUpdate ? (

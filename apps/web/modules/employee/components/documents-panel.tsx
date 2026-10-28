@@ -10,14 +10,17 @@ import { documentUrl } from '../api';
 import { useDeleteDocument, useDocuments, useUploadDocument } from '../hooks';
 import { humanize } from '../labels';
 
-export function DocumentsPanel({ employeeId, canManage }: { employeeId: string; canManage: boolean }) {
-  const docs = useDocuments(employeeId);
+/**
+ * `canSee`: the viewer got the personal section (themselves or HR within reach), which is exactly
+ * who may read documents; asking otherwise would only earn a 403.
+ */
+export function DocumentsPanel({ employeeId, canManage, canSee }: { employeeId: string; canManage: boolean; canSee: boolean }) {
+  const docs = useDocuments(employeeId, canSee || canManage);
   const upload = useUploadDocument();
   const remove = useDeleteDocument();
   const [type, setType] = useState<string>('CONTRACT');
 
-  // The 403 for colleagues is expected: they simply do not get this panel.
-  if (docs.error) return null;
+  if ((!canSee && !canManage) || docs.error) return null;
 
   const open = async (docId: string) => {
     try {

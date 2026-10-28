@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { RiArrowRightSLine } from '@remixicon/react';
 import type { NavGroup } from '@erp/contracts';
@@ -29,6 +30,12 @@ export function AppSidebar({
 }) {
   const pathname = usePathname();
   const visible = filterNav(groups, access, pathname);
+  // Controlled open state: each group follows "is it the active group" until the user toggles it,
+  // and navigating to a new page resets that, so the group you land in is always open.
+  const [toggles, setToggles] = useState<{ pathname: string; open: Record<string, boolean> }>({ pathname, open: {} });
+  if (toggles.pathname !== pathname) setToggles({ pathname, open: {} });
+  const isOpen = (label: string, active: boolean) => toggles.open[label] ?? active;
+  const setOpen = (label: string, open: boolean) => setToggles((t) => ({ ...t, open: { ...t.open, [label]: open } }));
 
   return (
     <Sidebar>
@@ -36,8 +43,12 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarMenu>
             {visible.map((group) => (
-              // defaultOpen only seeds the state; the user can still collapse the active group.
-              <Collapsible key={group.label} defaultOpen={group.active} render={<SidebarMenuItem />}>
+              <Collapsible
+                key={group.label}
+                open={isOpen(group.label, group.active)}
+                onOpenChange={(open) => setOpen(group.label, open)}
+                render={<SidebarMenuItem />}
+              >
                 <CollapsibleTrigger
                   render={<SidebarMenuButton className="group/trigger" />}
                 >

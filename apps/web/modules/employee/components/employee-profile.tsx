@@ -85,8 +85,11 @@ export function EmployeeProfileView({
     onSave(patch);
   };
 
+  // Re-created whenever the saved values change, so inputs show what the server now holds.
+  const version = sections.flatMap((s) => s.fields.map((f) => f.value ?? '')).join('|');
+
   return (
-    <form onSubmit={submit} className="space-y-4">
+    <form key={version} onSubmit={submit} className="space-y-4">
       <div className="flex items-center gap-3">
         <EmployeeAvatar name={employee.work.fullName} url={employee.work.avatarUrl} className="size-14" />
         <div>
