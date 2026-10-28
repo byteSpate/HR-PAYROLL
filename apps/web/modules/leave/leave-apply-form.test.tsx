@@ -16,3 +16,10 @@ it('waits for an authoritative asynchronous preview before enabling submission',
   fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-03-05' } });
   expect(await screen.findByText('1 days charged')).toBeTruthy();
 });
+it('uses the available balance supplied by the server preview', async () => {
+  render(<LeaveApplyForm types={[{ id: 't', name: 'Casual', isPaid: true, balance: 0 }]} preview={async () => ({ chargedDays: 1, available: 5 })} onSubmit={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-03-05' } });
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-03-05' } });
+  expect(await screen.findByText('1 days charged')).toBeTruthy();
+  expect((screen.getByRole('button', { name: 'Submit request' }) as HTMLButtonElement).disabled).toBe(false);
+});
