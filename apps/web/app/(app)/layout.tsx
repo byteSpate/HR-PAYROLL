@@ -1,25 +1,14 @@
 'use client';
 
-import { RiLogoutBoxRLine, RiUserLine } from '@remixicon/react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Button } from '@erp/ui/components/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@erp/ui/components/dropdown-menu';
-import { Separator } from '@erp/ui/components/separator';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@erp/ui/components/sidebar';
-import { AppSidebar } from '@erp/ui/nav';
+import { AppShell } from '@erp/ui/shell';
 import { navGroups } from '@/lib/nav';
 import { loginPathFor } from '@/lib/return-to';
 import { useSession } from '@/lib/session';
 import { ChangePasswordDialog } from '@/modules/settings/components/change-password-dialog';
+
+const ACCESS_LEVEL_LABEL = { SUPER_ADMIN: 'Super Admin', ADMIN: 'Admin' } as const;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -39,34 +28,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Nothing else mounts until the temporary password is replaced, so no page or sidebar query fires meanwhile.
   if (user.mustChangePassword) return <ChangePasswordDialog />;
 
+  const subtitle = user.accessLevel === 'STANDARD' ? (user.role?.name ?? 'Employee') : ACCESS_LEVEL_LABEL[user.accessLevel];
+
   return (
-    <SidebarProvider>
-      <AppSidebar groups={navGroups} access={user} />
-      <SidebarInset>
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="h-4" />
-          <div className="ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
-                <RiUserLine />
-                <span>{user.displayName}</span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuGroup>
-                  <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => void signOut()}>
-                  <RiLogoutBoxRLine />
-                  Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </header>
-        <main className="p-4 md:p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+    <AppShell
+      groups={navGroups}
+      access={user}
+      identity={{ name: user.displayName, subtitle, email: user.email }}
+      onSignOut={() => void signOut()}
+      profileHref="/me"
+    >
+      {children}
+    </AppShell>
   );
 }
