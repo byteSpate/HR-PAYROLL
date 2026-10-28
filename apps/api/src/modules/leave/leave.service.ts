@@ -130,10 +130,11 @@ export async function balancesFor(employeeId: string, year: number) {
   if (!employee) throw new AppError(404, 'Employee not found');
   const types = await prisma.leaveType.findMany({ where: { eligibleFor: { has: employee.employmentType } }, orderBy: { name: 'asc' } });
   const rows = await prisma.leaveBalance.findMany({ where: { employeeId, year } });
-  const earned = types.some(t => t.accrualBasis === 'EARNED') ? await computeEarnedAccrual(employee, officeToday(), 12, null) : 0;
-  return types.map(type => {
+  const asOf = new Date(Math.min(officeToday().getTime(), Date.UTC(year, 11, 31)));
+  return Promise.all(types.map(async type => {
+    const earned = type.accrualBasis === 'EARNED' ? await computeEarnedAccrual(employee, asOf, type.minServiceMonths, type.maxAccrual) : 0;
     const existing = rows.find(row => row.leaveTypeId === type.id);
     const quota = type.accrualBasis === 'PER_EVENT' ? type.annualQuota : type.accrualBasis === 'PRO_RATED' ? computeEntitlement(type.annualQuota, employee.joiningDate, year) : type.accrualBasis === 'EARNED' ? Math.min(earned, type.maxAccrual ?? earned) : 0;
     return { id: existing?.id ?? `${employee.id}:${type.id}:${year}`, employeeId, leaveTypeId: type.id, year, accrued: existing?.accrued ?? quota, used: existing?.used ?? 0, balance: existing?.balance ?? quota, leaveType: type };
-  });
+  }));
 }
