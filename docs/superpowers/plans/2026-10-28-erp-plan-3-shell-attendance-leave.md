@@ -1,5 +1,7 @@
 # ERP Plan 3 - Original-Look Shell, Notifications, Attendance and Leave Implementation Plan
 
+> **Superseded in part (2026-10-29).** PR A's shell and page kit (Tasks 1-3) and the nav tables in Tasks 7, 11 and 14 are replaced by an exact copy of HR-MNG-V1's UI: `AppShell` takes `navGroups`, `rootHref`, `brand`, `identity` and `onSignOut` (not `groups` and `access`); the page kit is `@erp/ui/dashboard` with the original props and tones (`green/yellow/red/neutral`), not `@erp/ui/page`; headings are `Overview`, `Workspace` and `Administration`, not `My Space`; there is no `nav/app-sidebar.tsx` or `nav/icons.ts`. The backend tasks (4-13) stand. See `2026-10-29-exact-port-ledger.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Two outcomes, shipped as two PRs:

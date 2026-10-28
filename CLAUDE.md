@@ -91,7 +91,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 3. API: `apps/api/src/modules/<module>/` (routes, controller, service). Mount the router in `apiMounts` in `apps/api/src/modules/index.ts`.
 4. Web: `apps/web/modules/<module>/` for components, hooks and API client. Pages go in `apps/web/app/(app)/<route>/`, kept thin.
 5. Grants: add starter grants to `packages/db/src/seed/starter-roles.ts`; the next `db:seed` grants them on existing databases too. SUPER_ADMIN and ADMIN users hold every permission implicitly.
-6. Icons: add each new Remix icon name used in the manifest to `packages/ui/src/nav/icons.ts`.
+6. Icons: use names from the `icons` registry in `packages/ui/src/dashboard/icons.ts` (HR-MNG-V1's list; add an entry there if a module needs a new one). `nav/manifest-icons.test.ts` fails when a manifest names an icon the registry lacks.
 
 ## Conventions
 
@@ -104,6 +104,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 ## Attendance and leave
 
 - Attendance and leave use office-local calendar dates (Asia/Dhaka) stored as UTC-midnight `@db.Date` values. Punches are instants; use attendance time helpers to convert them.
+- The UI is an exact copy of HR-MNG-V1 (see `docs/superpowers/plans/2026-10-29-exact-port-ledger.md`): copy its files, changing only import paths and the data layer, never its markup or props. The sidebar is its own `Sidebar`, so a manifest `nav` entry is `{ label, order, items }` where a heading's label (`Overview`, `Workspace`, `Administration`) is shared across modules, and an item with `children` expands into one page per original section.
 - Manifest navigation groups with the same label merge in `apps/web/lib/nav.ts`. Attendance exposes a leave-day lookup injection so it never imports the leave module.
 - A non-admin cannot decide their own attendance or leave, even with an all-scope approval grant. `ADMIN` and `SUPER_ADMIN` may self-decide; decisions are audited and written to the outbox.
 - Leave requests store charged days at submission. Approval updates the balance in the same transaction, and employee-specific advisory locks serialize applications, decisions, cancellations, and balance adjustments.
