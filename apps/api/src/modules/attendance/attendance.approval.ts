@@ -8,7 +8,7 @@ import { AppError } from '@erp/utils';
 import { dateOnly } from '@erp/contracts/attendance';
 import type { Viewer } from '../employee/employee.access.js';
 
-async function scopeForViewer(viewer: Viewer, permission: string): Promise<Prisma.EmployeeWhereInput> {
+export async function scopeForViewer(viewer: Viewer, permission: string): Promise<Prisma.EmployeeWhereInput> {
   const scope = scopeFor(viewer, permission);
   if (scope === 'all') return {};
   const me = await prisma.employee.findUnique({ where: { userId: viewer.sub }, select: { id: true, departmentId: true } });
