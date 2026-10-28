@@ -27,6 +27,10 @@
     "./notification": {
       "types": "./dist/notification/index.d.ts",
       "default": "./dist/notification/index.js"
+    },
+    "./leave": {
+      "types": "./dist/leave/index.d.ts",
+      "default": "./dist/leave/index.js"
     }
   },
   "scripts": {

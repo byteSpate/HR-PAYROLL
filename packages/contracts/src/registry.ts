@@ -3,10 +3,11 @@ import { core } from './core/manifest.js';
 import { department } from './department/manifest.js';
 import { employee } from './employee/manifest.js';
 import type { ModuleManifest, Permission, PermissionDef, Scope } from './module.js';
+import { leave } from './leave/manifest.js';
 import { notification } from './notification/manifest.js';
 
 // Core first; later plans append their manifests here.
-export const modules: readonly ModuleManifest[] = [core, department, employee, notification, attendance];
+export const modules: readonly ModuleManifest[] = [core, department, employee, notification, attendance, leave];
 
 function findCycle(byName: Map<string, ModuleManifest>): string[] {
   const state = new Map<string, 'visiting' | 'done'>();
