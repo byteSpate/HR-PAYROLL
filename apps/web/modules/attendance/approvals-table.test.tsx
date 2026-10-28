@@ -14,3 +14,9 @@ it('supports selecting rows and requires a rejection note', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Reject selected' }));
   expect(decide).toHaveBeenCalledWith(['one', 'two'], 'REJECTED', 'Missing details');
 });
+it('does not retain selection after a decided row disappears', async () => {
+  const view = render(<ApprovalsTable rows={[{ id: 'one', name: 'Amina', date: '2026-03-01' }]} onDecide={vi.fn()} />);
+  await userEvent.click(screen.getByLabelText('Select Amina'));
+  view.rerender(<ApprovalsTable rows={[]} onDecide={vi.fn()} />);
+  expect((screen.getByRole('button', { name: 'Approve selected' }) as HTMLButtonElement).disabled).toBe(true);
+});
