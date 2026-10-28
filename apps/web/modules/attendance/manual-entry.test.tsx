@@ -6,8 +6,8 @@ import { ManualEntry } from './components/manual-entry';
 afterEach(cleanup);
 it('submits the employee, date, times and reason', async () => {
   const submit = vi.fn();
-  render(<ManualEntry onSubmit={submit} />);
-  await userEvent.type(screen.getByLabelText('Employee ID'), 'employee-id');
+  render(<ManualEntry employees={[{ id: 'employee-id', fullName: 'Bilal', employeeCode: 'E1' }]} onSubmit={submit} />);
+  await userEvent.selectOptions(screen.getByLabelText('Employee'), 'employee-id');
   fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-03-02' } });
   fireEvent.change(screen.getByLabelText('Check in'), { target: { value: '09:00' } });
   fireEvent.change(screen.getByLabelText('Check out'), { target: { value: '18:00' } });
