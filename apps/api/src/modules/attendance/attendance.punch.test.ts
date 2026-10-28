@@ -54,6 +54,19 @@ describe('attendance punching', () => {
     expect(await checkOut(actor.user.id)).toMatchObject({ workedHours: 7.73, isEarlyOut: true });
     expect(await status(checkOut(actor.user.id))).toBe(409);
   });
+  it('closes an overnight punch on its original day and rejects stale punches', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-03-02T16:00:00Z'));
+    await checkIn(actor.user.id);
+    vi.setSystemTime(new Date('2026-03-02T18:30:00Z'));
+    const row = await checkOut(actor.user.id);
+    expect(row.date.toISOString()).toBe('2026-03-02T00:00:00.000Z');
+    expect(row.isEarlyOut).toBe(false);
+    vi.setSystemTime(new Date('2026-03-03T03:00:00Z'));
+    await checkIn(actor.user.id);
+    vi.setSystemTime(new Date('2026-03-04T00:00:00Z'));
+    expect(await status(checkOut(actor.user.id))).toBe(409);
+  });
   it('requires an employee record and filters the caller’s month', async () => {
     expect(await status(checkIn(other.user.id))).toBe(403);
     await prisma.attendance.createMany({ data: [
