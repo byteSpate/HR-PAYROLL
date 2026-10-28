@@ -4,7 +4,7 @@ import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AttendanceConfig } from './components/attendance-config';
 import * as api from './api';
-vi.mock('./api', () => ({ configList: vi.fn(), createConfig: vi.fn(), deleteConfig: vi.fn(), exportConfig: vi.fn(), importGuide: vi.fn(), importTemplate: vi.fn(), importPreview: vi.fn(), importCommit: vi.fn() }));
+vi.mock('./api', () => ({ configList: vi.fn(), createConfig: vi.fn(), deleteConfig: vi.fn(), exportConfig: vi.fn(), importGuide: vi.fn().mockResolvedValue([]), importTemplate: vi.fn(), importPreview: vi.fn(), importCommit: vi.fn() }));
 afterEach(cleanup);
 it('lists configured holidays and provides an add form', async () => {
   vi.mocked(api.configList).mockResolvedValue([{ id: 'h', name: 'Holiday', date: '2026-03-05', type: 'GENERAL' }]);
