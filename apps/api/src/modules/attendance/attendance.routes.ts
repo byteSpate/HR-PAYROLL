@@ -5,7 +5,10 @@ import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import { decideAttendance, listAttendance, scopeForViewer, toApprovalItem } from './attendance.approval.js';
+import { dateOnly } from '@erp/contracts/attendance';
 import { exportReport, getReport } from './attendance.report.js';
+import { getAuditTrail, getEmployeeAttendance } from './attendance.history.js';
+import { getDailySummary, getMonthlySummary } from './attendance.summary.js';
 import { correctAttendance, manualAttendance, regulariseAttendance } from './attendance.edit.js';
 
 export const attendanceRouter = Router();
@@ -13,6 +16,27 @@ attendanceRouter.use(requireAuth);
 const text = (value: unknown) => typeof value === 'string' ? value : undefined;
 attendanceRouter.get('/report/export', requirePermission('attendance.report'), exportReport);
 attendanceRouter.get('/report', requirePermission('attendance.report'), getReport);
+// The derived views, read by the screens ported from HR-MNG-V1. Scope comes from the caller's attendance.read grant.
+attendanceRouter.get('/summary/daily', requirePermission('attendance.read'), async (req, res) => {
+  const date = text(req.query['date']);
+  if (date) dateOnly.parse(date);
+  res.json(await getDailySummary(req.user!, date));
+});
+attendanceRouter.get('/summary/monthly', requirePermission('attendance.read'), async (req, res) => {
+  const { month, year } = z.object({ month: z.coerce.number().int().min(1).max(12), year: z.coerce.number().int().min(2000).max(2100) }).parse(req.query);
+  res.json(await getMonthlySummary(req.user!, month, year));
+});
+// Sign-in is enough here: the service lets people read their own days and checks a grant for anyone else's.
+attendanceRouter.get('/history/:employeeId', async (req, res) => {
+  const from = text(req.query['from']);
+  const to = text(req.query['to']);
+  if (from) dateOnly.parse(from);
+  if (to) dateOnly.parse(to);
+  res.json(await getEmployeeAttendance(req.user!, String(req.params['employeeId']), from, to));
+});
+attendanceRouter.get('/:id/audit', requirePermission('attendance.manage'), async (req, res) => {
+  res.json(await getAuditTrail(String(req.params['id'])));
+});
 attendanceRouter.get('/approvals', requirePermission('attendance.approve'), async (req, res) => {
   const rows = await listAttendance(req.user!, 'attendance.approve', { date: text(req.query['date']), status: text(req.query['status']) });
   res.json(rows.map(toApprovalItem));
