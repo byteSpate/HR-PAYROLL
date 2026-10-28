@@ -91,6 +91,8 @@ model Employee {
   documents      Document[]
   changeRequests EmployeeChangeRequest[]
   attendances    Attendance[]
+  leaveRequests  LeaveRequest[]
+  leaveBalances  LeaveBalance[]
 
   @@index([shiftId])
   @@index([reportingManagerId])
