@@ -7,6 +7,7 @@ const prefix = 'zzpunch';
 let actor: Awaited<ReturnType<typeof makeActor>>;
 let other: Awaited<ReturnType<typeof makeActor>>;
 let employeeId: string;
+let managerId: string;
 let departmentId: string;
 const status = (p: Promise<unknown>) => p.then(() => 0, (e: { status?: number }) => e.status);
 
@@ -15,18 +16,21 @@ beforeAll(async () => {
   other = await makeActor(prefix, 'STANDARD');
   const dept = await prisma.department.create({ data: { name: `${prefix}-${Date.now()}` } });
   departmentId = dept.id;
+  managerId = (await prisma.employee.create({ data: { userId: other.user.id, employeeCode: `${prefix}-manager-${Date.now()}`, fullName: 'Manager', designation: 'Engineer', departmentId, employmentType: 'FULL_TIME', joiningDate: new Date('2026-01-01T00:00:00Z') } })).id;
   const employee = await prisma.employee.create({ data: {
     userId: actor.user.id, employeeCode: `${prefix}-${Date.now()}`, fullName: 'Punch Person', designation: 'Engineer',
-    departmentId, employmentType: 'FULL_TIME', joiningDate: new Date('2026-01-01T00:00:00Z'),
+    departmentId, reportingManagerId: managerId, employmentType: 'FULL_TIME', joiningDate: new Date('2026-01-01T00:00:00Z'),
   } });
   employeeId = employee.id;
 });
 afterEach(async () => {
   vi.useRealTimers();
+  await prisma.notification.deleteMany({ where: { userId: other.user.id } });
   await prisma.attendance.deleteMany({ where: { employeeId } });
 });
 afterAll(async () => {
   await prisma.employee.delete({ where: { id: employeeId } });
+  await prisma.employee.delete({ where: { id: managerId } });
   await prisma.department.delete({ where: { id: departmentId } });
   await cleanActors(prefix);
 });
@@ -38,6 +42,7 @@ describe('attendance punching', () => {
     const row = await checkIn(actor.user.id);
     expect(row).toMatchObject({ approval: 'PENDING', isLate: false });
     expect(row.date.toISOString()).toBe('2026-03-02T00:00:00.000Z');
+    expect(await prisma.notification.count({ where: { userId: other.user.id, entityId: row.id } })).toBe(1);
   });
   it('allows only one of two concurrent check-ins', async () => {
     const outcomes = await Promise.all([status(checkIn(actor.user.id)), status(checkIn(actor.user.id))]);
@@ -68,7 +73,8 @@ describe('attendance punching', () => {
     expect(await status(checkOut(actor.user.id))).toBe(409);
   });
   it('requires an employee record and filters the caller’s month', async () => {
-    expect(await status(checkIn(other.user.id))).toBe(403);
+    const noEmployee = await makeActor(prefix, 'STANDARD');
+    expect(await status(checkIn(noEmployee.user.id))).toBe(403);
     await prisma.attendance.createMany({ data: [
       { employeeId, date: new Date('2026-03-02T00:00:00Z') },
       { employeeId, date: new Date('2026-04-02T00:00:00Z') },
