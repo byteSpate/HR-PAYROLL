@@ -322,6 +322,22 @@ importers:
         specifier: 4.3.3
         version: 4.3.3
 
+  packages/approvals:
+    dependencies:
+      '@erp/utils':
+        specifier: workspace:*
+        version: link:../utils
+    devDependencies:
+      '@erp/config-eslint':
+        specifier: workspace:*
+        version: link:../config-eslint
+      '@erp/config-typescript':
+        specifier: workspace:*
+        version: link:../config-typescript
+      '@types/node':
+        specifier: 26.1.1
+        version: 26.1.1
+
   packages/attachments:
     dependencies:
       '@erp/utils':
