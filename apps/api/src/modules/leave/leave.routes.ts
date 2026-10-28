@@ -18,6 +18,7 @@ async function me(userId: string) {
 leaveRouter.post('/types', requirePermission('leave.config'), async (req, res) => res.status(201).json(await saveLeaveType(req.user!.sub, req.body)));
 leaveRouter.patch('/types/:id', requirePermission('leave.config'), async (req, res) => res.json(await saveLeaveType(req.user!.sub, req.body, String(req.params['id']))));
 leaveRouter.delete('/types/:id', requirePermission('leave.config'), async (req, res) => { await deleteLeaveType(req.user!.sub, String(req.params['id'])); res.status(204).end(); });
+leaveRouter.get('/config/employees', requirePermission('leave.config'), async (_req, res) => res.json(await prisma.employee.findMany({ select: { id: true, fullName: true, employeeCode: true }, orderBy: { fullName: 'asc' } })));
 leaveRouter.post('/balances/adjust', requirePermission('leave.config'), async (req, res) => res.json(await adjustBalance(req.user!.sub, req.body)));
 leaveRouter.get('/types', async (_req, res) => res.json(await prisma.leaveType.findMany({ orderBy: { name: 'asc' } })));
 leaveRouter.get('/balances/me', async (req, res) => res.json(await balancesFor((await me(req.user!.sub)).id, req.query['year'] ? Number(req.query['year']) : officeToday().getUTCFullYear())));
