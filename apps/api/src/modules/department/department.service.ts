@@ -17,11 +17,10 @@ async function assertNameFree(tx: Tx, name: string, exceptId?: string) {
   if (clash) throw duplicate();
 }
 
-// Employees arrive with the employee module; until then every department is empty.
-const employeeCount = async (): Promise<number> => 0;
+const employeeCount = (db: Db, departmentId: string) => db.employee.count({ where: { departmentId } });
 
 async function toView(db: Db, d: { id: string; name: string }): Promise<DepartmentView> {
-  return { id: d.id, name: d.name, employeeCount: await employeeCount() };
+  return { id: d.id, name: d.name, employeeCount: await employeeCount(db, d.id) };
 }
 
 /** Exported for modules that depend on department (employee validates its departmentId). */
@@ -82,7 +81,7 @@ export async function deleteDepartment(id: string, actorId: string): Promise<voi
   await prisma.$transaction(async (tx) => {
     const existing = await tx.department.findUnique({ where: { id } });
     if (!existing) throw new AppError(404, 'Department not found');
-    if ((await employeeCount()) > 0) throw new AppError(409, 'Department has employees');
+    if ((await employeeCount(tx, id)) > 0) throw new AppError(409, 'Department has employees');
     await tx.department.delete({ where: { id } });
     await writeAudit(tx, { entity: 'DEPARTMENT', entityId: id, action: 'DELETE', changedBy: actorId, before: { name: existing.name } });
   });

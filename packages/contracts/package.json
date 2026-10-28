@@ -15,6 +15,10 @@
     "./department": {
       "types": "./dist/department/index.d.ts",
       "default": "./dist/department/index.js"
+    },
+    "./employee": {
+      "types": "./dist/employee/index.d.ts",
+      "default": "./dist/employee/index.js"
     }
   },
   "scripts": {

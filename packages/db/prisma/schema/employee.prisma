@@ -1,0 +1,124 @@
+// Ported from HR-MNG-V1 without shift, device ID, salary structure, sales, accounting and the
+// back-relations of modules that do not exist yet; each later module adds its own.
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+}
+
+enum EmploymentStatus {
+  ACTIVE
+  ON_LEAVE
+  RESIGNED
+  TERMINATED
+}
+
+// Section numbers are the Bangladesh Labour Act clause each reason falls under.
+enum ExitReason {
+  RESIGNATION // s27
+  RETIREMENT // s28
+  TERMINATION // s26, with notice, no misconduct
+  DISMISSAL // s23, misconduct
+  DISCHARGE // s22, ill health or incapacity
+  RETRENCHMENT // s20, redundancy
+  CONTRACT_END
+  DEATH
+}
+
+enum DocumentType {
+  CONTRACT
+  NID
+  CERTIFICATE
+  OFFER_LETTER
+  RESIGNATION
+  OTHER
+}
+
+// A closed enum so each new field that needs approval is a deliberate migration.
+enum EmployeeChangeField {
+  NATIONAL_ID
+}
+
+enum EmployeeChangeStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model Employee {
+  id                 String           @id @default(uuid())
+  userId             String           @unique
+  user               User             @relation(fields: [userId], references: [id])
+  employeeCode       String           @unique
+  fullName           String
+  /// Packed "publicId:version" of the avatar in file storage.
+  profilePicture     String?
+  dateOfBirth        DateTime?        @db.Date
+  gender             String?
+  nationalId         String?
+  bloodGroup         String?
+  maritalStatus      String?
+  phone              String?
+  presentAddress     String?
+  permanentAddress   String?
+  emergencyContact   String?
+  designation        String
+  departmentId       String
+  department         Department       @relation(fields: [departmentId], references: [id])
+  reportingManagerId String?
+  reportingManager   Employee?        @relation("ManagerRelation", fields: [reportingManagerId], references: [id])
+  subordinates       Employee[]       @relation("ManagerRelation")
+  employmentType     EmploymentType
+  employmentStatus   EmploymentStatus @default(ACTIVE)
+  joiningDate        DateTime         @db.Date
+  officeLocation     String?
+  bankAccountNumber  String?
+  bankName           String?
+  bankRoutingNumber  String?
+  lastWorkingDay     DateTime?        @db.Date
+  exitReason         ExitReason?
+  exitNote           String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  documents      Document[]
+  changeRequests EmployeeChangeRequest[]
+
+  @@index([reportingManagerId])
+  @@index([departmentId])
+}
+
+model Document {
+  id         String       @id @default(uuid())
+  employeeId String
+  employee   Employee     @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       DocumentType
+  // Storage id, not a URL: delivery URLs are signed per request and expire.
+  publicId   String       @unique
+  fileName   String
+  bytes      Int
+  format     String
+  uploadedBy String?
+  uploadedAt DateTime     @default(now())
+
+  @@index([employeeId, uploadedAt])
+}
+
+model EmployeeChangeRequest {
+  id           String               @id @default(uuid())
+  employeeId   String
+  employee     Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  field        EmployeeChangeField
+  oldValue     String?
+  newValue     String
+  status       EmployeeChangeStatus @default(PENDING)
+  decidedBy    String?
+  decidedAt    DateTime?
+  decisionNote String?
+  createdAt    DateTime             @default(now())
+
+  @@index([employeeId, field, status])
+}
