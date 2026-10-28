@@ -4,6 +4,7 @@ import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import { scopeForViewer } from '../attendance/attendance.approval.js';
+import { adjustBalance, deleteLeaveType, saveLeaveType } from './leave.admin.js';
 import { applyForLeave, cancelLeave, decideLeave } from './leave.service.js';
 
 export const leaveRouter = Router();
@@ -13,6 +14,10 @@ async function me(userId: string) {
   if (!employee) throw new AppError(403, 'An employee record is required');
   return employee;
 }
+leaveRouter.post('/types', requirePermission('leave.config'), async (req, res) => res.status(201).json(await saveLeaveType(req.user!.sub, req.body)));
+leaveRouter.patch('/types/:id', requirePermission('leave.config'), async (req, res) => res.json(await saveLeaveType(req.user!.sub, req.body, String(req.params['id']))));
+leaveRouter.delete('/types/:id', requirePermission('leave.config'), async (req, res) => { await deleteLeaveType(req.user!.sub, String(req.params['id'])); res.status(204).end(); });
+leaveRouter.post('/balances/adjust', requirePermission('leave.config'), async (req, res) => res.json(await adjustBalance(req.user!.sub, req.body)));
 leaveRouter.get('/types', async (_req, res) => res.json(await prisma.leaveType.findMany({ orderBy: { name: 'asc' } })));
 leaveRouter.get('/balances/me', async (req, res) => res.json(await prisma.leaveBalance.findMany({ where: { employeeId: (await me(req.user!.sub)).id }, include: { leaveType: true } })));
 leaveRouter.get('/balances/:employeeId', requirePermission('leave.read'), async (req, res) => {
