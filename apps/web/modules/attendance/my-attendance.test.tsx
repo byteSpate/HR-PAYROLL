@@ -26,3 +26,8 @@ it('allows an employee to submit a regularisation request', async () => {
   await userEvent.click(screen.getByRole('button', { name: 'Request correction' }));
   await waitFor(() => expect(api.regularise).toHaveBeenCalled());
 });
+it('displays punch times in the Dhaka office timezone', async () => {
+  vi.mocked(api.myAttendance).mockResolvedValue([{ id: 'a', employeeId: 'e', date: '2026-03-02', checkIn: '2026-03-02T03:00:00Z', checkOut: null, workedHours: null, approval: 'PENDING' }]);
+  render(<QueryClientProvider client={new QueryClient()}><MyAttendance /></QueryClientProvider>);
+  expect(await screen.findByText('09:00')).toBeTruthy();
+});
