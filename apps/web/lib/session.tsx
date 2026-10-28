@@ -74,6 +74,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
+/**
+ * The access token, for the screens copied from HR-MNG-V1, which thread one through every call.
+ * The shared client already attaches it to each request, so the copied calls ignore the value; this
+ * only supplies the string they forward.
+ */
+export function useAccessToken(): string {
+  return api.getAccessToken() ?? '';
+}
+
 export function useSession(): SessionValue {
   const ctx = useContext(SessionContext);
   if (!ctx) throw new Error('useSession must be used within a SessionProvider');

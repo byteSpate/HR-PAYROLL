@@ -29,6 +29,25 @@ afterAll(async () => {
   await cleanActors(prefix);
 });
 describe('attendance management routes', () => {
+  it('lists approvals in the shape the approvals screen reads', async () => {
+    const res = await request(app).get('/api/attendance/approvals?status=PENDING').set(admin.header);
+    const item = res.body.find((r: { id: string }) => r.id === ids[1]);
+    expect(item).toMatchObject({
+      employee: { id: employeeId, fullName: 'Test Employee', designation: 'Engineer' },
+      date: '2026-03-03',
+      checkIn: null,
+      checkOut: null,
+      approval: 'PENDING',
+      regularised: false,
+      regularisedNote: null,
+      stalled: true,
+    });
+    expect(item.employee.employeeCode).toEqual(expect.any(String));
+    expect(Array.isArray(item.exceptions)).toBe(true);
+    // Months old, and the queue should say so: it is the number the "stalled" badge reads.
+    expect(item.agingDays).toBeGreaterThan(3);
+  });
+
   it('enforces permission and decides records', async () => {
     expect((await request(app).get('/api/attendance/approvals').set(user.header)).status).toBe(403);
     expect((await request(app).get('/api/attendance/approvals?status=PENDING').set(admin.header)).status).toBe(200);

@@ -1,4 +1,26 @@
 import { api } from '@/lib/api-client';
+import type { ApprovalItem, AttendanceApproval, BulkDecisionResult } from './types';
+
+// ── Calls in the shape the copied HR-MNG-V1 screens use ──
+// The originals take an access token first. ERP's shared client attaches it, so it is accepted and
+// ignored here, which lets the copied components run unchanged.
+
+export const getApprovals = (_accessToken: string, status: AttendanceApproval = 'PENDING', minAgingDays?: number) =>
+  api
+    .request<ApprovalItem[]>(`/attendance/approvals?status=${status}`)
+    .then((items) => (minAgingDays === undefined ? items : items.filter((i) => i.agingDays >= minAgingDays)));
+
+export const bulkDecideAttendance = (_accessToken: string, ids: string[], decision: 'APPROVE' | 'REJECT', note?: string) =>
+  api
+    .request<{ results: { id: string; status: number; error?: string }[] }>('/attendance/bulk-decide', {
+      method: 'POST',
+      body: { ids, decision: decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', note },
+    })
+    .then(({ results }): BulkDecisionResult[] =>
+      results.map((r) => ({ id: r.id, ok: r.status === 200, ...(r.error ? { error: r.error } : {}) })),
+    );
+
+// ── The module's own calls ──
 export interface AttendanceRow { id: string; employeeId: string; date: string; checkIn: string | null; checkOut: string | null; workedHours: number | null; approval: string; exceptions?: string[]; employee?: { id: string; fullName: string; employeeCode: string } }
 export const myAttendance = (month: string) => api.request<AttendanceRow[]>(`/attendance/me?month=${encodeURIComponent(month)}`);
 export const punch = (action: 'check-in' | 'check-out') => api.request<void>(`/attendance/${action}`, { method: 'POST' });

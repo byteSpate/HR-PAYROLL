@@ -3,6 +3,7 @@
 export { AvatarLightbox } from './avatar-lightbox';
 export { ChartCard } from './chart-card';
 export { DataTable } from './data-table';
+export { DecisionDialog } from './decision-dialog';
 export { ALL, FilterBar, FilterSelect } from './filter-bar';
 export { FilterChip } from './filter-chip';
 export { HERO_OVERLAP_PX, HeroBanner } from './hero-banner';

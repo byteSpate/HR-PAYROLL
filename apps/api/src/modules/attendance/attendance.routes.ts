@@ -4,7 +4,7 @@ import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
-import { decideAttendance, listAttendance, scopeForViewer } from './attendance.approval.js';
+import { decideAttendance, listAttendance, scopeForViewer, toApprovalItem } from './attendance.approval.js';
 import { exportReport, getReport } from './attendance.report.js';
 import { correctAttendance, manualAttendance, regulariseAttendance } from './attendance.edit.js';
 
@@ -14,7 +14,8 @@ const text = (value: unknown) => typeof value === 'string' ? value : undefined;
 attendanceRouter.get('/report/export', requirePermission('attendance.report'), exportReport);
 attendanceRouter.get('/report', requirePermission('attendance.report'), getReport);
 attendanceRouter.get('/approvals', requirePermission('attendance.approve'), async (req, res) => {
-  res.json(await listAttendance(req.user!, 'attendance.approve', { date: text(req.query['date']), status: text(req.query['status']) }));
+  const rows = await listAttendance(req.user!, 'attendance.approve', { date: text(req.query['date']), status: text(req.query['status']) });
+  res.json(rows.map(toApprovalItem));
 });
 attendanceRouter.post('/bulk-decide', requirePermission('attendance.approve'), async (req, res) => {
   const body = z.object({ ids: z.array(z.string()).min(1).max(100), decision: z.enum(['APPROVED', 'REJECTED']), note: z.string().optional() }).parse(req.body);

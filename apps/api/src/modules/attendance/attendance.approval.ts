@@ -8,7 +8,7 @@ import { AppError } from '@erp/utils';
 import { dateOnly } from '@erp/contracts/attendance';
 import { exceptionsFor } from './attendance.exceptions.js';
 import { shiftFor } from './attendance.punch.js';
-import { toMinutes } from './attendance.time.js';
+import { AGING_WARN_DAYS, officeToday, toMinutes } from './attendance.time.js';
 import type { Viewer } from '../employee/employee.access.js';
 
 export async function scopeForViewer(viewer: Viewer, permission: string): Promise<Prisma.EmployeeWhereInput> {
@@ -20,12 +20,39 @@ export async function scopeForViewer(viewer: Viewer, permission: string): Promis
   throw new AppError(403, 'Forbidden');
 }
 
+type ListedRow = Awaited<ReturnType<typeof listAttendance>>[number];
+
+/**
+ * One queue row as the approvals screen reads it. `agingDays` and `stalled` are computed here
+ * because only the server knows the office calendar: a day is "stalled" once it has waited
+ * longer than AGING_WARN_DAYS for a decision.
+ */
+export function toApprovalItem(row: ListedRow) {
+  const agingDays = Math.max(0, Math.round((officeToday().getTime() - row.date.getTime()) / 86_400_000));
+  return {
+    id: row.id,
+    employee: row.employee,
+    date: row.date.toISOString().slice(0, 10),
+    checkIn: row.checkIn?.toISOString() ?? null,
+    checkOut: row.checkOut?.toISOString() ?? null,
+    workedHours: row.workedHours,
+    isLate: row.isLate,
+    isEarlyOut: row.isEarlyOut,
+    approval: row.approval,
+    regularised: row.regularisedAt !== null,
+    regularisedNote: row.regularisedNote,
+    exceptions: row.exceptions,
+    agingDays,
+    stalled: agingDays > AGING_WARN_DAYS,
+  };
+}
+
 export async function listAttendance(viewer: Viewer, permission: string, filter: { date?: string; status?: string } = {}) {
   const employee = await scopeForViewer(viewer, permission);
   const date = filter.date ? new Date(`${dateOnly.parse(filter.date)}T00:00:00.000Z`) : undefined;
   const status = filter.status;
   if (status && !['PENDING', 'APPROVED', 'REJECTED'].includes(status)) throw new AppError(400, 'Invalid status');
-  const rows = await prisma.attendance.findMany({ where: { employee, ...(date ? { date } : {}), ...(status ? { approval: status as 'PENDING' | 'APPROVED' | 'REJECTED' } : {}) }, include: { employee: { select: { id: true, fullName: true, employeeCode: true } } }, orderBy: { date: 'desc' } });
+  const rows = await prisma.attendance.findMany({ where: { employee, ...(date ? { date } : {}), ...(status ? { approval: status as 'PENDING' | 'APPROVED' | 'REJECTED' } : {}) }, include: { employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } } }, orderBy: { date: 'desc' } });
   return Promise.all(rows.map(async row => {
     const [shift, holidays, leave] = await Promise.all([
       shiftFor(row.employeeId, row.date),

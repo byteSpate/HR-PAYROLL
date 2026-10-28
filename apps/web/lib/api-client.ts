@@ -125,6 +125,7 @@ export function createApiClient({ baseUrl, onUnauthenticated, fetchImpl }: ApiCl
     setAccessToken(token: string | null) {
       accessToken = token;
     },
+    getAccessToken: () => accessToken,
   };
 }
 
