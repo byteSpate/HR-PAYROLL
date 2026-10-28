@@ -7,3 +7,9 @@ export const bulkDecide = (ids: string[], decision: 'APPROVED' | 'REJECTED', not
 export interface GridRow { employeeId: string; employeeCode: string; fullName: string; department: string; days: { date: string; status: string }[] }
 export const report = (month: string) => api.request<GridRow[]>(`/attendance/report?month=${month}`);
 export const exportReport = (month: string, format: 'csv' | 'xlsx') => api.download(`/attendance/report/export?month=${month}&format=${format}`);
+export type ConfigKind = 'shifts' | 'holidays';
+export interface ConfigRow { id: string; name: string; date?: string; type?: string; startTime?: string; endTime?: string; graceMinutes?: number; breakMinutes?: number; weeklyOffDays?: number[]; effectiveFrom?: string | null; effectiveTo?: string | null }
+export const configList = (kind: ConfigKind) => api.request<ConfigRow[]>(`/attendance/${kind}`);
+export const createConfig = (kind: ConfigKind, body: Record<string, unknown>, id?: string) => api.request<ConfigRow>(`/attendance/${kind}${id ? `/${id}` : ''}`, { method: id ? 'PATCH' : 'POST', body });
+export const deleteConfig = (kind: ConfigKind, id: string) => api.request<void>(`/attendance/${kind}/${id}`, { method: 'DELETE' });
+export const exportConfig = (kind: ConfigKind, format: 'csv' | 'xlsx') => api.download(`/attendance/${kind}/export?format=${format}`);
