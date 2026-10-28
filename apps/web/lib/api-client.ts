@@ -1,15 +1,8 @@
 import type { PublicUser } from '@erp/contracts/core';
+import { ApiError } from '@erp/utils';
 
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-    /** The parsed JSON error body, for structured details such as an import's per-row issues. */
-    readonly body: Record<string, unknown> = {},
-  ) {
-    super(message);
-  }
-}
+// Re-exported so existing imports from this module keep working.
+export { ApiError };
 
 export interface DownloadedFile {
   blob: Blob;

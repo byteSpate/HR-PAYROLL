@@ -9,6 +9,7 @@
     "./nav": "./src/nav/index.ts",
     "./shell": "./src/shell/index.ts",
     "./page": "./src/page/index.ts",
+    "./dashboard": "./src/dashboard/index.ts",
     "./lib/cn": "./src/lib/cn.ts",
     "./lib/dates": "./src/lib/dates.ts"
   },
@@ -21,6 +22,7 @@
     "@base-ui/react": "1.6.0",
     "@erp/auth": "workspace:*",
     "@erp/contracts": "workspace:*",
+    "@erp/utils": "workspace:*",
     "@remixicon/react": "4.9.0",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
