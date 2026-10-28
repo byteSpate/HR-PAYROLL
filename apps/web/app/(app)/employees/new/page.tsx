@@ -1,11 +1,13 @@
+import { PageHeader } from '@erp/ui/page';
+import { ShiftSelect } from '@/modules/attendance/components/shift-select';
 import { EmployeeForm } from '@/modules/employee/components/employee-form';
 import { RequirePermission } from '@/modules/settings/components/require-permission';
 
 export default function NewEmployeePage() {
   return (
     <RequirePermission permission="employee.create">
-      <h1 className="mb-4 font-heading text-2xl font-bold tracking-tight">Add Employee</h1>
-      <EmployeeForm />
+      <PageHeader kicker="Employees" title="Add employee" />
+      <EmployeeForm extraFields={<ShiftSelect />} />
     </RequirePermission>
   );
 }

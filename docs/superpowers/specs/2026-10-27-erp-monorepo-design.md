@@ -27,7 +27,7 @@ feature used by several modules (approvals, attachments, exports…) exists once
 - One folder per module on each side (api, web), shared code in `packages/`.
 - Maximum reuse: a capability needed by 2+ modules lives in a shared package.
 - Permission-based access that each module extends on its own.
-- Module-based navigation: collapsible sidebar group per module, sub-pages as real routes.
+- Module-based navigation: `HR-MNG-V1`'s sidebar, with multi-section pages as collapsible items whose children are real routes (§8).
 - Event-based integration points (outbox) so future accounting can subscribe.
 
 **Non-goals (now)**
@@ -62,8 +62,8 @@ feature used by several modules (approvals, attachments, exports…) exists once
   agent shells; use the `migrate diff` → `migrate deploy` recipe documented in
   `HR-MNG-V1/CLAUDE.md`.
 - **Visuals:** colours, fonts, and component look from `HR-MNG-V1/DESIGN.md`
-  and the current client. Only the *sidebar structure* comes from the
-  reference screenshot (§8).
+  and the current client, copied exactly. The only deliberate difference is the
+  collapsible sidebar item (§8).
 
 ## 4. Repository layout (decided: split by layer)
 
@@ -222,20 +222,36 @@ Reports live in their owning module (Attendance → Reports, Expenses → Expens
 
 ## 8. Frontend navigation
 
+> **Revised 2026-10-29.** The owner asked for an exact copy of `HR-MNG-V1`'s UI with
+> one deliberate difference, so this section now describes that sidebar, not the
+> reference screenshot's one-group-per-module layout. Ledger:
+> `docs/superpowers/plans/2026-10-29-exact-port-ledger.md`.
+
 - Routes are per module, not per role. Employee self-service lives under `/me`.
-- Sidebar: one collapsible group per module (icon + label), sub-items listed
-  under a vertical guide line, active group expanded, each sub-item with its own
-  line icon. **Structure from the reference screenshot; colours and fonts from
-  `HR-MNG-V1`.**
-- Every sub-item is a real route. "Add X" / "New X" items are full pages.
-- Each module defines its group in `@erp/contracts/<module>/nav.ts`:
-  `{ label, icon, items: [{ label, href, icon, permission }] }`. The shared
-  `Sidebar` in `@erp/ui` renders all groups and hides items the user lacks the
-  permission for, and hides a group with no visible items.
+- Sidebar: `HR-MNG-V1`'s own `Sidebar`, copied. It shows **headings** (`Overview`
+  for the admin-side modules, `Workspace` for personal pages, `Administration`),
+  each holding **items** with an icon. An item that is one page is a link. An item
+  whose original page stacked several sections is **collapsible**: it expands, and
+  does not navigate, into one child page per section. Children have no icon.
+  The collapsible item is the only deliberate difference from the original.
+- Every child is a real route, and each renders the original section component
+  unchanged. "Add X" / "New X" items are full pages.
+- Each module contributes to headings in its manifest's `nav` in
+  `@erp/contracts/<module>`: `{ label, order, items: [{ label, href, icon,
+  permission, children?: [{ label, href, permission }] }] }`. Headings with the
+  same label merge across modules (`apps/web/lib/nav.ts`). `filterNav` in
+  `@erp/ui/nav` drops what the user lacks the permission for: a collapsible item
+  keeps only its permitted children and disappears when none remain, and a heading
+  with nothing left disappears. Icons are names from the one registry in
+  `@erp/ui/dashboard`.
 
 ### 8.1 Draft menu (user to edit)
 
-Derived from the existing pages and endpoints in `HR-MNG-V1`.
+Derived from the existing pages and endpoints in `HR-MNG-V1`. **Superseded for the
+labels and grouping by the exact port:** the real menu is `HR-MNG-V1`'s own item
+names under the headings above (for example Attendance expands into Attendance
+Approvals, Today's Attendance, Reports and Holiday Calendar). Routes and
+permissions below remain the starting point for modules not yet ported.
 
 | Group | Sub-page | Route | Permission |
 |---|---|---|---|

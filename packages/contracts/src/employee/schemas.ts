@@ -28,6 +28,7 @@ export const createEmployeeSchema = z.object({
   joiningDate: dateOnly,
   employeeCode: text(30).min(1).optional(),
   roleId: z.string().min(1).nullable().optional(),
+  shiftId: z.string().min(1).nullable().optional(),
 });
 
 export const updateEmployeeSchema = z
@@ -47,6 +48,7 @@ export const updateEmployeeSchema = z
     employmentType: z.enum(employmentTypes).optional(),
     joiningDate: dateOnly.optional(),
     officeLocation: optionalText(100),
+    shiftId: z.string().min(1).nullable().optional(),
     bankAccountNumber: optionalText(40),
     bankName: optionalText(100),
     bankRoutingNumber: optionalText(20),
@@ -84,6 +86,7 @@ export interface EmployeeView {
     employmentStatus: string;
     joiningDate: string;
     officeLocation: string | null;
+    shiftId: string | null;
     lastWorkingDay: string | null;
     exitReason: string | null;
   };

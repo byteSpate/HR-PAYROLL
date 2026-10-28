@@ -10,6 +10,12 @@ type Status = 'loading' | 'authenticated' | 'unauthenticated';
 interface SessionValue {
   user: PublicUser | null;
   status: Status;
+  /**
+   * For the screens copied from HR-MNG-V1, which read the token from the session and thread it
+   * through every call. The shared client already attaches it to each request, so the copied calls
+   * ignore the value; it exists so those components run unchanged.
+   */
+  accessToken: string;
   signIn(email: string, password: string): Promise<void>;
   signOut(): Promise<void>;
   /** Replaces the cached user, e.g. after the forced password change clears mustChangePassword. */
@@ -68,7 +74,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [clear]);
 
   const value = useMemo(
-    () => ({ user, status, signIn, signOut, setUser }),
+    // `user` and `status` change whenever the token does (sign-in, refresh, sign-out), so it is read with them.
+    () => ({ user, status, accessToken: api.getAccessToken() ?? '', signIn, signOut, setUser }),
     [user, status, signIn, signOut],
   );
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

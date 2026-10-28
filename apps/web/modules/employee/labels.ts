@@ -1,3 +1,5 @@
+import type { Tone } from '@erp/ui/page';
+
 // Display names for employee fields, shared by the profile, the table and the forms.
 export const FIELD_LABELS: Record<string, string> = {
   fullName: 'Full name',
@@ -26,6 +28,13 @@ export const FIELD_LABELS: Record<string, string> = {
 };
 
 export const DATE_FIELDS = new Set(['joiningDate', 'dateOfBirth', 'lastWorkingDay']);
+
+export const STATUS_TONE: Record<string, Tone> = {
+  ACTIVE: 'good',
+  ON_LEAVE: 'info',
+  RESIGNED: 'warn',
+  TERMINATED: 'bad',
+};
 
 /** FULL_TIME -> Full time */
 export const humanize = (value: string) => value.charAt(0) + value.slice(1).toLowerCase().replace(/_/g, ' ');

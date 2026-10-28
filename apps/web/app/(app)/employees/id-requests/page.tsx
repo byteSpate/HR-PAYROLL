@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { PageHeader } from '@erp/ui/page';
 import { IdRequestTable } from '@/modules/employee/components/id-request-table';
 import { RequirePermission } from '@/modules/settings/components/require-permission';
 
@@ -10,7 +11,7 @@ export default function IdRequestsPage() {
   const [status, setStatus] = useState<string>('PENDING');
   return (
     <RequirePermission permission="employee.id_request.decide:department">
-      <h1 className="mb-4 font-heading text-2xl font-bold tracking-tight">ID Change Requests</h1>
+      <PageHeader kicker="Employees" title="ID change requests" />
       <select
         aria-label="Status"
         value={status}

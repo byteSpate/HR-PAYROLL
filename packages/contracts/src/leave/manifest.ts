@@ -1,0 +1,47 @@
+import { defineModule } from '../module.js';
+import { LEAVE_EVENTS } from './events.js';
+export const leave = defineModule({
+  name: 'leave', deps: ['core', 'employee', 'attendance'],
+  permissions: {
+    'leave.read': { label: 'View leave requests', scopes: ['team', 'department', 'all'], managerDefault: true },
+    'leave.approve': { label: 'Approve or reject leave', scopes: ['team', 'department', 'all'], managerDefault: true },
+    'leave.manage': { label: 'Manage leave requests', scopes: ['department', 'all'] },
+    'leave.config': { label: 'Manage leave policies' },
+  },
+  nav: [
+    {
+      label: 'Workspace',
+      order: 20,
+      items: [
+        {
+          label: 'My Leave',
+          href: '/me/leave',
+          icon: 'RiCalendarEventLine',
+          permission: null,
+          children: [
+            { label: 'My Leave', href: '/me/leave', permission: null },
+            { label: 'Apply Leave', href: '/leave/apply', permission: null },
+          ],
+        },
+      ],
+    },
+    {
+      label: 'Overview',
+      order: 10,
+      items: [
+        {
+          label: 'Leave',
+          href: '/leave/requests',
+          icon: 'RiCalendarEventLine',
+          permission: null,
+          children: [
+            { label: 'Leave Requests', href: '/leave/requests', permission: 'leave.read:team' },
+            { label: 'Leave Approvals', href: '/leave/approvals', permission: 'leave.approve:team' },
+            { label: 'Team Status', href: '/leave/team', permission: 'leave.read:team' },
+            { label: 'Leave Types', href: '/leave/types', permission: 'leave.config' },
+          ],
+        },
+      ],
+    },
+  ], events: LEAVE_EVENTS,
+});

@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./attendance": {
+      "types": "./dist/attendance/index.d.ts",
+      "default": "./dist/attendance/index.js"
+    },
     "./core": {
       "types": "./dist/core/index.d.ts",
       "default": "./dist/core/index.js"
@@ -19,6 +23,14 @@
     "./employee": {
       "types": "./dist/employee/index.d.ts",
       "default": "./dist/employee/index.js"
+    },
+    "./notification": {
+      "types": "./dist/notification/index.d.ts",
+      "default": "./dist/notification/index.js"
+    },
+    "./leave": {
+      "types": "./dist/leave/index.d.ts",
+      "default": "./dist/leave/index.js"
     }
   },
   "scripts": {

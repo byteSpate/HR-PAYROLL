@@ -1,5 +1,5 @@
 export type { Actor } from './actor.js';
-export { formatDateOnly, officeToday } from './dates.js';
+export { MS_PER_DAY, addDays, formatDateOnly, officeToday, parseDateOnly } from './dates.js';
 export { csvCell, toCsv } from './export/csv.js';
 export { toCsvFile } from './export/export.csv.js';
 export { formatCell } from './export/export.format.js';

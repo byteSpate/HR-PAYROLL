@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { Button } from '@erp/ui/components/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@erp/ui/components/card';
 import { Input } from '@erp/ui/components/input';
+import { PageHeader } from '@erp/ui/page';
 import { EmployeeProfileView } from '@/modules/employee/components/employee-profile';
 import { useMe, useRequestIdChange, useSetAvatar, useUpdateEmployee } from '@/modules/employee/hooks';
 
@@ -21,7 +22,7 @@ export default function MyProfilePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-heading text-2xl font-bold tracking-tight">My Profile</h1>
+      <PageHeader kicker="My Space" title="My profile" />
       <EmployeeProfileView
         employee={employee}
         saving={update.isPending}

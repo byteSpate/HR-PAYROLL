@@ -25,6 +25,12 @@ export const envSchema = z.object({
   JWT_ACCESS_EXPIRY: z.string().default('15m').superRefine(lifetime),
   JWT_REFRESH_EXPIRY: z.string().default('7d').superRefine(lifetime),
   APP_TIMEZONE: z.string().default('Asia/Dhaka'),
+  // The first day attendance is tracked: earlier days read as "not tracked" instead of absent. The
+  // default is far enough back that it never applies until a go-live date is set.
+  ATTENDANCE_GO_LIVE: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'ATTENDANCE_GO_LIVE must be a YYYY-MM-DD date')
+    .default('2000-01-01'),
   COMPANY_NAME: z.string().default('Byte Spate'),
   // Optional: without them uploads return 503 and avatars fall back to initials. A partial set is a
   // typo, so it fails startup instead of silently turning storage off.
