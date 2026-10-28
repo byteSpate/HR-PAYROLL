@@ -1,5 +1,5 @@
 import { api } from '@/lib/api-client';
-export interface AttendanceRow { id: string; employeeId: string; date: string; checkIn: string | null; checkOut: string | null; workedHours: number | null; approval: string; employee?: { id: string; fullName: string; employeeCode: string } }
+export interface AttendanceRow { id: string; employeeId: string; date: string; checkIn: string | null; checkOut: string | null; workedHours: number | null; approval: string; exceptions?: string[]; employee?: { id: string; fullName: string; employeeCode: string } }
 export const myAttendance = (month: string) => api.request<AttendanceRow[]>(`/attendance/me?month=${encodeURIComponent(month)}`);
 export const punch = (action: 'check-in' | 'check-out') => api.request<void>(`/attendance/${action}`, { method: 'POST' });
 export const listAttendance = (query = '') => api.request<AttendanceRow[]>(`/attendance${query}`);
