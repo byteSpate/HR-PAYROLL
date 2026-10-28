@@ -12,3 +12,18 @@ it('lists leave policies and offers a policy form', async () => {
   expect(await screen.findByText('Casual')).toBeTruthy();
   expect(screen.getByRole('button', { name: 'Add leave type' })).toBeTruthy();
 });
+it('lets HR configure leave eligibility and policy rules', async () => {
+  const { fireEvent } = await import('@testing-library/react');
+  const userEvent = (await import('@testing-library/user-event')).default;
+  vi.mocked(api.types).mockResolvedValue([]);
+  vi.mocked(api.saveType).mockResolvedValue({ id: 't', code: 'COMP', name: 'Company', isPaid: false, annualQuota: 3, carryForwardPct: 0, maxConsecutive: null, allowsBackdating: false, eligibleFor: ['FULL_TIME'], statutory: false, countsHolidays: true, accrualBasis: 'NONE', minServiceMonths: 0, maxAccrual: null, allowsHalfDay: true });
+  render(<QueryClientProvider client={new QueryClient()}><LeaveTypes /></QueryClientProvider>);
+  await userEvent.type(screen.getByLabelText('Code'), 'COMP');
+  await userEvent.type(screen.getByLabelText('Name'), 'Company');
+  fireEvent.change(screen.getByLabelText('Annual quota'), { target: { value: '3' } });
+  await userEvent.click(screen.getByLabelText('Paid leave'));
+  await userEvent.click(screen.getByLabelText('Count holidays'));
+  await userEvent.selectOptions(screen.getByLabelText('Accrual basis'), 'NONE');
+  await userEvent.click(screen.getByRole('button', { name: 'Add leave type' }));
+  expect(api.saveType).toHaveBeenCalledWith(expect.objectContaining({ isPaid: false, countsHolidays: true, accrualBasis: 'NONE' }), undefined);
+});
