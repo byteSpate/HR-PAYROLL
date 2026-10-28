@@ -3,7 +3,7 @@ import request from 'supertest';
 import { prisma } from '@erp/db';
 import { officeToday } from '@erp/export';
 import { createApp } from '../../app.js';
-import { cleanActors, makeActor } from '../../test-utils/access.js';
+import { bearer, cleanActors, makeActor } from '../../test-utils/access.js';
 const prefix = 'zzleaveroutes';
 const app = createApp();
 let admin: Awaited<ReturnType<typeof makeActor>>;
@@ -37,6 +37,7 @@ describe('leave routes', () => {
     expect((await request(app).get('/api/leave/requests?scope=mine').set(user.header)).body).toHaveLength(1);
     expect((await request(app).get('/api/leave/balances/me').set(user.header)).body).toHaveLength(1);
     expect((await request(app).get('/api/leave/requests?scope=team').set(user.header)).status).toBe(403);
+    expect((await request(app).get('/api/leave/requests?scope=approvals').set(bearer(user.user.id, 'STANDARD', ['leave.approve:all']))).status).toBe(200);
   });
   it('shows approved leave today only to a viewer with leave read access', async () => {
     const today = officeToday();
