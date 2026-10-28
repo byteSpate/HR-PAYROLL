@@ -119,28 +119,36 @@ export async function setUserRole(userId: string, input: unknown, caller: Caller
   return loadPublicUser(prisma, userId);
 }
 
+/**
+ * Activates or deactivates a login inside the caller's transaction. Shared by user admin and the
+ * employee module (account toggle, exit), so the super-admin and admin guards always apply.
+ */
+export async function applyUserStatus(tx: Tx, userId: string, isActive: boolean, actor: Caller): Promise<void> {
+  const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true, accessLevel: true } });
+  if (!user) throw new AppError(404, 'User not found');
+  assertCanActOn(actor, user);
+  if (user.isActive === isActive) return;
+
+  await tx.user.update({ where: { id: userId }, data: { isActive } });
+  // Without this the refresh cookie would keep minting access tokens for a locked-out account.
+  if (!isActive) {
+    await tx.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+  }
+  await writeAudit(tx, {
+    entity: 'USER',
+    entityId: userId,
+    action: 'UPDATE',
+    changedBy: actor.sub,
+    before: { isActive: user.isActive },
+    after: { isActive },
+  });
+}
+
 export async function setUserStatus(userId: string, input: unknown, caller: Caller): Promise<PublicUser> {
   const { isActive } = updateUserStatusSchema.parse(input);
   await prisma.$transaction(async (tx) => {
     const actor = await loadActor(tx, caller.sub, 'user.manage');
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { id: true, isActive: true, accessLevel: true } });
-    if (!user) throw new AppError(404, 'User not found');
-    assertCanActOn(actor, user);
-    if (user.isActive === isActive) return;
-
-    await tx.user.update({ where: { id: userId }, data: { isActive } });
-    // Without this the refresh cookie would keep minting access tokens for a locked-out account.
-    if (!isActive) {
-      await tx.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
-    }
-    await writeAudit(tx, {
-      entity: 'USER',
-      entityId: userId,
-      action: 'UPDATE',
-      changedBy: caller.sub,
-      before: { isActive: user.isActive },
-      after: { isActive },
-    });
+    await applyUserStatus(tx, userId, isActive, actor);
   });
   return loadPublicUser(prisma, userId);
 }

@@ -8,10 +8,13 @@ import { parseOrigins } from './cors.js';
 import { env } from './env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { apiMounts } from './modules/index.js';
+import { registerEmployeeGrants } from './modules/employee/employee.team.js';
 
 export function createApp(): Express {
   // Throws on an unknown dep or a cycle, so a broken manifest stops boot.
   resolveModuleOrder(modules);
+  // Modules that derive grants from facts (a manager's direct reports) register them here.
+  registerEmployeeGrants();
 
   const app = express();
   // Exactly one hop: a client cannot spoof its address with its own X-Forwarded-For.
