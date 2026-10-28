@@ -24,14 +24,14 @@ beforeAll(async () => {
   typeId = (await prisma.leaveType.create({ data: { code: `${prefix}-${Date.now()}`, name: `${prefix}-${Date.now()}`, annualQuota: 10, eligibleFor: ['FULL_TIME'] } })).id;
 });
 afterEach(async () => {
-  const requests = await prisma.leaveRequest.findMany({ where: { employeeId }, select: { id: true } });
+  const requests = await prisma.leaveRequest.findMany({ where: { employeeId: { in: [employeeId, managerId] } }, select: { id: true } });
   await prisma.outboxEvent.deleteMany({ where: { OR: requests.map(r => ({ payload: { path: ['requestId'], equals: r.id } })) } });
   await prisma.notification.deleteMany({ where: { userId: { in: [manager.user.id, employee.user.id] } } });
   await prisma.auditLog.deleteMany({ where: { OR: [{ entity: 'LEAVE_REQUEST', entityId: { in: requests.map(r => r.id) } }, { entity: 'LEAVE_BALANCE', changedBy: manager.user.id }] } });
   await prisma.attendance.deleteMany({ where: { employeeId } });
   await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'PRO_RATED', minServiceMonths: 0, isPaid: true } });
-  await prisma.leaveRequest.deleteMany({ where: { employeeId } });
-  await prisma.leaveBalance.deleteMany({ where: { employeeId } });
+  await prisma.leaveRequest.deleteMany({ where: { employeeId: { in: [employeeId, managerId] } } });
+  await prisma.leaveBalance.deleteMany({ where: { employeeId: { in: [employeeId, managerId] } } });
 });
 afterAll(async () => {
   await prisma.leaveType.delete({ where: { id: typeId } });
@@ -117,9 +117,13 @@ describe('leave requests', () => {
     await cancelLeave({ sub: manager.user.id, accessLevel: 'ADMIN', grants: [] }, row.id);
     expect(await prisma.leaveBalance.findUniqueOrThrow({ where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId: typeId, year: 2027 } } })).toMatchObject({ used: 0, balance: 10 });
   });
-  it('rejects non-admin self decisions even with all-scope approval', async () => {
+  it('rejects a manager decision outside their team', async () => {
+    const row = await applyForLeave(manager.user.id, input());
+    expect(await status(decideLeave({ sub: employee.user.id, accessLevel: 'STANDARD', grants: ['leave.approve:team'] }, row.id, 'APPROVED'))).toBe(403);
+  });
+  it.each(['ADMIN', 'SUPER_ADMIN'] as const)('allows %s self approval but rejects standard self approval', async (level) => {
     const row = await applyForLeave(employee.user.id, input());
     expect(await status(decideLeave({ sub: employee.user.id, accessLevel: 'STANDARD', grants: ['leave.approve:all'] }, row.id, 'APPROVED'))).toBe(403);
-    expect((await decideLeave({ sub: employee.user.id, accessLevel: 'ADMIN', grants: [] }, row.id, 'APPROVED')).status).toBe('APPROVED');
+    expect((await decideLeave({ sub: employee.user.id, accessLevel: level, grants: [] }, row.id, 'APPROVED')).status).toBe('APPROVED');
   });
 });
