@@ -2,9 +2,9 @@
 
 import { useDeferredValue, useState } from 'react';
 import { toast } from 'sonner';
-import { Badge } from '@erp/ui/components/badge';
 import { Button } from '@erp/ui/components/button';
 import { Input } from '@erp/ui/components/input';
+import { Tag } from '@erp/ui/page';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@erp/ui/components/table';
 import type { PublicUser } from '@erp/contracts/core';
 import { useSession } from '@/lib/session';
@@ -16,6 +16,12 @@ function accessLabel(user: PublicUser): string | null {
   if (user.accessLevel === 'SUPER_ADMIN') return 'Super admin';
   if (user.accessLevel === 'ADMIN') return 'Admin';
   return user.role?.name ?? null;
+}
+
+function AccessTag({ user }: { user: PublicUser }) {
+  const label = accessLabel(user);
+  if (!label) return <span className="text-sm text-muted-foreground">No role</span>;
+  return <Tag label={label} tone={user.accessLevel === 'STANDARD' ? 'neutral' : 'info'} />;
 }
 
 export function UsersTable() {
@@ -85,14 +91,10 @@ export function UsersTable() {
                 <TableCell className="font-medium">{user.displayName}</TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
-                  {accessLabel(user) ? (
-                    <Badge variant={user.accessLevel === 'STANDARD' ? 'secondary' : 'outline'}>{accessLabel(user)}</Badge>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">No role</span>
-                  )}
+                  <AccessTag user={user} />
                 </TableCell>
                 <TableCell>
-                  <Badge variant={user.isActive ? 'default' : 'outline'}>{user.isActive ? 'Active' : 'Inactive'}</Badge>
+                  <Tag label={user.isActive ? 'Active' : 'Inactive'} tone={user.isActive ? 'good' : 'neutral'} />
                 </TableCell>
                 <TableCell>
                   {/* The super admin row never has actions; admin rows only for the super admin. */}

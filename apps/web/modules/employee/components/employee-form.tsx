@@ -13,7 +13,11 @@ import { humanize } from '../labels';
 
 const selectClass = 'h-8 w-full rounded-md border border-input bg-background px-2 text-sm';
 
-export function EmployeeForm() {
+/**
+ * `extraFields` holds inputs another module contributes (the shift picker). Taking them as a slot,
+ * not importing that module, keeps employee from depending on modules that depend on it.
+ */
+export function EmployeeForm({ extraFields }: { extraFields?: React.ReactNode }) {
   const router = useRouter();
   const create = useCreateEmployee();
   const departments = useDepartments();
@@ -36,6 +40,7 @@ export function EmployeeForm() {
         reportingManagerId: text('reportingManagerId') || null,
         employmentType: text('employmentType') as (typeof employmentTypes)[number],
         joiningDate: text('joiningDate'),
+        shiftId: text('shiftId') || null,
         ...(text('employeeCode') ? { employeeCode: text('employeeCode') } : {}),
       });
       setCreated({ id: res.employee.id, password: res.temporaryPassword });
@@ -86,6 +91,7 @@ export function EmployeeForm() {
           </select>
         </div>
         <Field label="Joining date" name="joiningDate" type="date" required />
+        {extraFields}
         {error ? <p className="text-sm text-destructive sm:col-span-2">{error}</p> : null}
         <div className="sm:col-span-2">
           <Button type="submit" disabled={create.isPending}>

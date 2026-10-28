@@ -1,0 +1,117 @@
+// Nav icons are referenced by name (not component reference) in nav-config
+// data because that data flows from a Server Component layout into the
+// client Sidebar as props — function/component values can't cross that RSC
+// boundary, but this lookup (used only inside the client Sidebar) can.
+
+import {
+  RiApps2Line,
+  RiBankLine,
+  RiBarChartLine,
+  RiBillLine,
+  RiBookOpenLine,
+  RiBriefcaseLine,
+  RiBuilding2Line,
+  RiCalendar2Line,
+  RiCalendarCheckLine,
+  RiCalendarEventLine,
+  RiCalculatorLine,
+  RiCashLine,
+  RiCheckboxCircleLine,
+  RiCoinsLine,
+  RiComputerLine,
+  RiContactsBook2Line,
+  RiDashboardLine,
+  RiFileReduceLine,
+  RiFileChartLine,
+  RiFileList2Line,
+  RiExchangeDollarLine,
+  RiFileTextLine,
+  RiHandCoinLine,
+  RiTableLine,
+  RiArticleLine,
+  RiFileList3Line,
+  RiMailLine,
+  RiFilter3Line,
+  RiFolderChartLine,
+  RiMegaphoneLine,
+  RiNodeTree,
+  RiPercentLine,
+  RiPieChartLine,
+  RiPlayCircleLine,
+  RiPulseLine,
+  RiQuestionLine,
+  RiReceiptLine,
+  RiScales3Line,
+  RiSettingsLine,
+  RiShoppingBag3Line,
+  RiTaskLine,
+  RiTeamLine,
+  RiTimeLine,
+  RiTruckLine,
+  RiUser3Line,
+  RiUserLine,
+  RiWallet3Line,
+  type RemixiconComponentType,
+} from "@remixicon/react"
+
+export const icons = {
+  RiApps2Line,
+  /** The funnel: every live deal, read across all accounts at once. */
+  RiBriefcaseLine,
+  RiDashboardLine,
+  RiTimeLine,
+  RiCalendarEventLine,
+  RiWallet3Line,
+  RiReceiptLine,
+  RiMailLine,
+  /** A customer purchase order, on the Receivables nav group. */
+  RiShoppingBag3Line,
+  /** A customer invoice. */
+  RiFileList2Line,
+  /** A receipt from a customer. */
+  RiCoinsLine,
+  /** Waiting for approval: a draft becoming real. */
+  RiCheckboxCircleLine,
+  /** VAT summary. */
+  RiPercentLine,
+  RiMegaphoneLine,
+  RiUser3Line,
+  RiTeamLine,
+  RiBarChartLine,
+  RiSettingsLine,
+  RiContactsBook2Line,
+  RiComputerLine,
+  RiBillLine,
+  RiBuilding2Line,
+  RiFileList3Line,
+  RiFileChartLine,
+  RiExchangeDollarLine,
+  RiFileTextLine,
+  RiFolderChartLine,
+  RiHandCoinLine,
+  RiTableLine,
+  RiArticleLine,
+  RiNodeTree,
+  RiBookOpenLine,
+  RiCashLine,
+  RiBankLine,
+  RiScales3Line,
+  RiCalendarCheckLine,
+  RiPlayCircleLine,
+  RiCalculatorLine,
+  RiPieChartLine,
+  RiPulseLine,
+  RiQuestionLine,
+  /** A meeting with a customer, in the Sales Hub. */
+  RiCalendar2Line,
+  /** A follow-up task, in the Sales Hub. */
+  RiTaskLine,
+  /** The funnel: every quoted deal, per person (revision §27). */
+  RiFilter3Line,
+  RiUserLine,
+  RiTruckLine,
+  /** A supplier credit note: a bill, reduced. */
+  RiFileReduceLine,
+} satisfies Record<string, RemixiconComponentType>
+
+export type IconName = keyof typeof icons

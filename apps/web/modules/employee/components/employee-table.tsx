@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import type { EmployeeView } from '@erp/contracts/employee';
-import { Badge } from '@erp/ui/components/badge';
 import { DataTable, type DataColumn } from '@erp/ui/components/data-table';
-import { humanize } from '../labels';
+import { Tag } from '@erp/ui/page';
+import { STATUS_TONE, humanize } from '../labels';
 import { EmployeeAvatar } from './avatar';
 
 const columns: DataColumn<EmployeeView>[] = [
@@ -28,9 +28,7 @@ const columns: DataColumn<EmployeeView>[] = [
     sortValue: (e) => e.employment?.employmentStatus,
     cell: (e) =>
       e.employment ? (
-        <Badge variant={e.employment.employmentStatus === 'ACTIVE' ? 'default' : 'secondary'}>
-          {humanize(e.employment.employmentStatus)}
-        </Badge>
+        <Tag label={humanize(e.employment.employmentStatus)} tone={STATUS_TONE[e.employment.employmentStatus] ?? 'neutral'} />
       ) : null,
   },
 ];

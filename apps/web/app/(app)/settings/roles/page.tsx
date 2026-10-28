@@ -1,9 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { buttonVariants } from '@erp/ui/components/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@erp/ui/components/table';
-import { cn } from '@erp/ui/lib/cn';
+import { PageHeader } from '@erp/ui/page';
 import { useRoles } from '@/modules/settings/hooks';
 import { RequirePermission } from '@/modules/settings/components/require-permission';
 
@@ -43,12 +42,7 @@ function RolesList() {
 export default function RolesPage() {
   return (
     <RequirePermission permission="role.manage">
-      <div className="mb-4 flex items-center">
-        <h1 className="font-heading text-2xl font-bold tracking-tight">Roles &amp; Permissions</h1>
-        <Link href="/settings/roles/new" className={cn(buttonVariants(), 'ml-auto')}>
-          New role
-        </Link>
-      </div>
+      <PageHeader kicker="Settings" title="Roles & permissions" cta="New role" ctaHref="/settings/roles/new" />
       <RolesList />
     </RequirePermission>
   );

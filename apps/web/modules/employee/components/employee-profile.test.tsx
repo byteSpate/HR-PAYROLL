@@ -17,7 +17,7 @@ const full: EmployeeView = {
   id: 'e',
   employeeCode: 'EMP-0001',
   work,
-  employment: { employmentType: 'FULL_TIME', employmentStatus: 'ACTIVE', joiningDate: '2026-01-05', officeLocation: null, lastWorkingDay: null, exitReason: null },
+  employment: { employmentType: 'FULL_TIME', employmentStatus: 'ACTIVE', joiningDate: '2026-01-05', officeLocation: null, shiftId: null, lastWorkingDay: null, exitReason: null },
   personal: { dateOfBirth: null, gender: null, nationalId: '123', bloodGroup: null, maritalStatus: null, presentAddress: null, permanentAddress: null, emergencyContact: null },
   money: { bankAccountNumber: '999', bankName: 'City', bankRoutingNumber: null },
   editableFields: ['phone'],

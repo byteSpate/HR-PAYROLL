@@ -1,38 +1,24 @@
-import type { NavGroup } from '@erp/contracts';
+import type { NavGroup, NavItem } from '@erp/contracts';
 import { can, type AccessContext } from '@erp/auth/permissions';
 
-export interface VisibleGroup extends NavGroup {
-  active: boolean;
-  activeHref: string | null;
-}
+const holds = (access: AccessContext, permission: string | string[] | null): boolean =>
+  // An array means any-of.
+  permission === null || [permission].flat().some((required) => can(access, required));
 
-// Prefix match needs the trailing slash so "/settingsx" does not light up "/settings".
-function matches(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-export function filterNav(
-  groups: NavGroup[],
-  access: AccessContext,
-  pathname: string,
-): VisibleGroup[] {
-  const visible: VisibleGroup[] = [];
+/**
+ * What this user may open. A collapsible item keeps only its permitted children and disappears when
+ * it has none (its own permission is not consulted); a heading with nothing left disappears too.
+ * Which item is active is the sidebar's business, since it already knows the pathname.
+ */
+export function filterNav(groups: readonly NavGroup[], access: AccessContext): NavGroup[] {
+  const visible: NavGroup[] = [];
   for (const group of groups) {
-    const items = group.items.filter((item) => {
-      if (item.permission === null) return true;
-      // An array means any-of.
-      return [item.permission].flat().some((required) => can(access, required));
+    const items = group.items.flatMap((item): NavItem[] => {
+      if (!item.children) return holds(access, item.permission) ? [item] : [];
+      const children = item.children.filter((c) => holds(access, c.permission));
+      return children.length > 0 ? [{ ...item, children }] : [];
     });
-    if (items.length === 0) continue;
-
-    // Longest href wins so "/settings/roles" beats a sibling "/settings" entry.
-    let activeHref: string | null = null;
-    for (const item of items) {
-      if (matches(pathname, item.href) && (activeHref === null || item.href.length > activeHref.length)) {
-        activeHref = item.href;
-      }
-    }
-    visible.push({ ...group, items, active: activeHref !== null, activeHref });
+    if (items.length > 0) visible.push({ ...group, items });
   }
   return visible;
 }

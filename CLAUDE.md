@@ -51,6 +51,7 @@ git push origin <branch> && git push reza <branch>
 - Env files are copied from their `.env.example` and git-ignored: `packages/db/.env` (`DATABASE_URL`, `DATABASE_URL_TEST`, `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`), `apps/api/.env`, `apps/web/.env.local`.
 - Optional Cloudinary file storage: set all of `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` in `apps/api/.env` or none (uploads then answer 503 and avatars show initials).
 - Only `.env.example` files are committed. Never commit real secrets.
+- Shared dev login after `pnpm db:seed`: `admin@example.com` / `change-me-now` (the `.env.example` values). That password is public, so the seed refuses it when `NODE_ENV=production`.
 
 ## Migrations
 
@@ -74,7 +75,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 - The dependency graph must stay acyclic. `resolveModuleOrder` throws at API boot on a cycle or an unknown dependency.
 - Reads of another module's tables through the shared Prisma client are fine. Writes to another module's data go through its service functions, which accept an optional transaction client so callers can stay atomic.
 - Loose coupling goes through events: `emit(tx, type, payload)` inside the caller's transaction, with event types listed in the manifest's `events`. Nothing delivers them yet.
-- A capability needed by two or more modules goes into a shared package, not a copy. Shared kits: `@erp/audit` (`writeAudit`, `diffFields`, `listAudit`), `@erp/export` (xlsx/csv export with an audit row, and the all-or-nothing import kit), `@erp/attachments` (storage, signed URLs, `uploadSingle`), and in `@erp/ui` `DataTable`, `ImportWizard`, `ExportMenu`.
+- A capability needed by two or more modules goes into a shared package, not a copy. Shared kits: `@erp/audit` (`writeAudit`, `diffFields`, `listAudit`), `@erp/export` (xlsx/csv export with an audit row, and the all-or-nothing import kit), `@erp/attachments` (storage, signed URLs, `uploadSingle`), and in `@erp/ui` `DataTable`, `ImportWizard`, `ExportMenu`. `@erp/approvals` owns decision guards and stamps; `@erp/notifications` owns scoped in-app notifications and approver lookup.
 - Permissions are declared as `{ label, scopes?, managerDefault? }` (no `scopes` means on/off). Access is `can(ctx, 'key' | 'key:scope')` from `@erp/auth`; a user is `SUPER_ADMIN` (one, DB-enforced; moved only by `pnpm admin:transfer <email>`, password reset by `pnpm admin:reset-password`), `ADMIN` (holds everything) or `STANDARD` (one role).
 - Permission keys are `area.action` strings declared in each manifest. Keys must be unique across modules (`allPermissions` throws on duplicates). The API guards routes with `requirePermission('<key>')`.
 - Code is the source of truth for permissions: `db:seed` deletes permission rows that no manifest declares, and grants newly declared ones to the starter roles that list them (admin edits to older grants are kept).
@@ -90,7 +91,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 3. API: `apps/api/src/modules/<module>/` (routes, controller, service). Mount the router in `apiMounts` in `apps/api/src/modules/index.ts`.
 4. Web: `apps/web/modules/<module>/` for components, hooks and API client. Pages go in `apps/web/app/(app)/<route>/`, kept thin.
 5. Grants: add starter grants to `packages/db/src/seed/starter-roles.ts`; the next `db:seed` grants them on existing databases too. SUPER_ADMIN and ADMIN users hold every permission implicitly.
-6. Icons: add each new Remix icon name used in the manifest to `packages/ui/src/nav/icons.ts`.
+6. Icons: use names from the `icons` registry in `packages/ui/src/dashboard/icons.ts` (HR-MNG-V1's list; add an entry there if a module needs a new one). `nav/manifest-icons.test.ts` fails when a manifest names an icon the registry lacks.
 
 ## Conventions
 
@@ -99,3 +100,12 @@ The API must be served from the same host as the web app (or proxied under a pat
 - Node 24 (`>=24.9.0 <25`), pnpm 12.5.1.
 - Short single-purpose files. No mock data, no dead or commented-out code. Comments explain why, not what.
 - Do not import another module's internals; use the module's exported functions or its declared events.
+
+## Attendance and leave
+
+- Attendance and leave use office-local calendar dates (Asia/Dhaka) stored as UTC-midnight `@db.Date` values. Punches are instants; use attendance time helpers to convert them.
+- The UI is an exact copy of HR-MNG-V1 (see `docs/superpowers/plans/2026-10-29-exact-port-ledger.md`): copy its files, changing only import paths and the data layer, never its markup or props. The sidebar is its own `Sidebar`, so a manifest `nav` entry is `{ label, order, items }` where a heading's label (`Overview`, `Workspace`, `Administration`) is shared across modules, and an item with `children` expands into one page per original section.
+- Manifest navigation groups with the same label merge in `apps/web/lib/nav.ts`. Attendance exposes a leave-day lookup injection so it never imports the leave module.
+- A non-admin cannot decide their own attendance or leave, even with an all-scope approval grant. `ADMIN` and `SUPER_ADMIN` may self-decide; decisions are audited and written to the outbox.
+- Leave requests store charged days at submission. Approval updates the balance in the same transaction, and employee-specific advisory locks serialize applications, decisions, cancellations, and balance adjustments.
+- In-app notification rows are transactionally written; email delivery and scheduling the callable attendance auto-close rule are deferred to the worker plan.

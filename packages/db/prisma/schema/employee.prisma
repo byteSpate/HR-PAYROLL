@@ -84,9 +84,17 @@ model Employee {
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
+  // The shift this person works. Null falls back to the built-in default (09:00-18:00, Friday off).
+  shiftId String?
+  shift   Shift?  @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+
   documents      Document[]
   changeRequests EmployeeChangeRequest[]
+  attendances    Attendance[]
+  leaveRequests  LeaveRequest[]
+  leaveBalances  LeaveBalance[]
 
+  @@index([shiftId])
   @@index([reportingManagerId])
   @@index([departmentId])
 }
