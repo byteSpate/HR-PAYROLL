@@ -10,3 +10,9 @@ it('previews the charge and blocks submission when the balance is short', () => 
   expect(screen.getByText('2 days charged')).toBeTruthy();
   expect((screen.getByRole('button', { name: 'Submit request' }) as HTMLButtonElement).disabled).toBe(true);
 });
+it('waits for an authoritative asynchronous preview before enabling submission', async () => {
+  render(<LeaveApplyForm types={[{ id: 't', name: 'Casual', isPaid: true, balance: 3 }]} preview={async () => 1} onSubmit={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Start date'), { target: { value: '2026-03-05' } });
+  fireEvent.change(screen.getByLabelText('End date'), { target: { value: '2026-03-05' } });
+  expect(await screen.findByText('1 days charged')).toBeTruthy();
+});
