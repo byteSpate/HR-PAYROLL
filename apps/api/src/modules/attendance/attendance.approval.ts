@@ -6,6 +6,9 @@ import { emit } from '@erp/events';
 import { notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import { dateOnly } from '@erp/contracts/attendance';
+import { exceptionsFor } from './attendance.exceptions.js';
+import { shiftFor } from './attendance.punch.js';
+import { toMinutes } from './attendance.time.js';
 import type { Viewer } from '../employee/employee.access.js';
 
 export async function scopeForViewer(viewer: Viewer, permission: string): Promise<Prisma.EmployeeWhereInput> {
@@ -22,7 +25,17 @@ export async function listAttendance(viewer: Viewer, permission: string, filter:
   const date = filter.date ? new Date(`${dateOnly.parse(filter.date)}T00:00:00.000Z`) : undefined;
   const status = filter.status;
   if (status && !['PENDING', 'APPROVED', 'REJECTED'].includes(status)) throw new AppError(400, 'Invalid status');
-  return prisma.attendance.findMany({ where: { employee, ...(date ? { date } : {}), ...(status ? { approval: status as 'PENDING' | 'APPROVED' | 'REJECTED' } : {}) }, include: { employee: { select: { id: true, fullName: true, employeeCode: true } } }, orderBy: { date: 'desc' } });
+  const rows = await prisma.attendance.findMany({ where: { employee, ...(date ? { date } : {}), ...(status ? { approval: status as 'PENDING' | 'APPROVED' | 'REJECTED' } : {}) }, include: { employee: { select: { id: true, fullName: true, employeeCode: true } } }, orderBy: { date: 'desc' } });
+  return Promise.all(rows.map(async row => {
+    const [shift, holidays, leave] = await Promise.all([
+      shiftFor(row.employeeId, row.date),
+      prisma.holiday.findMany({ where: { date: row.date } }),
+      prisma.leaveRequest.count({ where: { employeeId: row.employeeId, status: 'APPROVED', startDate: { lte: row.date }, endDate: { gte: row.date } } }),
+    ]);
+    const working = holidays.some(h => h.type === 'WORKING_DAY');
+    const isOffDay = !working && (shift.weeklyOffDays.includes(row.date.getUTCDay()) || holidays.some(h => h.type !== 'WORKING_DAY'));
+    return { ...row, exceptions: exceptionsFor({ ...row, expectedHours: (toMinutes(shift.endTime) - toMinutes(shift.startTime)) / 60, onApprovedLeave: leave > 0, isOffDay }) };
+  }));
 }
 
 export async function decideAttendance(viewer: Viewer, id: string, decision: 'APPROVED' | 'REJECTED', note?: string | null) {
