@@ -1,7 +1,7 @@
 import { prisma } from '@erp/db';
 import { monthString } from '@erp/contracts/attendance';
 import { AppError } from '@erp/utils';
-import { computeIsEarlyOut, computeIsLate, elapsedHours, officeDateOf } from './attendance.time.js';
+import { computeIsEarlyOut, computeIsLate, elapsedHours, MAX_OPEN_SHIFT_HOURS, officeDateOf } from './attendance.time.js';
 import { effectiveShift } from './shift.service.js';
 
 async function employeeFor(userId: string) {
@@ -35,12 +35,12 @@ export async function checkIn(userId: string) {
 export async function checkOut(userId: string) {
   const employee = await employeeFor(userId);
   const now = new Date();
-  const date = officeDateOf(now);
-  const row = await prisma.attendance.findUnique({ where: { employeeId_date: { employeeId: employee.id, date } } });
-  if (!row?.checkIn || row.checkOut) throw new AppError(409, 'No open check-in for today');
-  const shift = await shiftFor(employee.id, date);
+  const row = await prisma.attendance.findFirst({ where: { employeeId: employee.id, checkIn: { not: null }, checkOut: null }, orderBy: { date: 'desc' } });
+  if (!row?.checkIn) throw new AppError(409, 'No open check-in');
+  if (elapsedHours(row.checkIn, now) > MAX_OPEN_SHIFT_HOURS) throw new AppError(409, 'Your last check-in is too old; ask HR to correct it');
+  const shift = await shiftFor(employee.id, row.date);
   const result = await prisma.attendance.updateMany({ where: { id: row.id, checkOut: null }, data: {
-    checkOut: now, workedHours: elapsedHours(row.checkIn, now), isEarlyOut: computeIsEarlyOut(now, date, shift),
+    checkOut: now, workedHours: elapsedHours(row.checkIn, now), isEarlyOut: computeIsEarlyOut(now, row.date, shift),
   } });
   if (!result.count) throw new AppError(409, 'Already checked out');
   return prisma.attendance.findUniqueOrThrow({ where: { id: row.id } });
