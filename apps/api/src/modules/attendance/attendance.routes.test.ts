@@ -49,5 +49,8 @@ describe('attendance management routes', () => {
     expect(response.status).toBe(201);
     ids.push(response.body.id);
     expect((await request(app).get('/api/attendance?date=2026-03-04').set(admin.header)).body).toHaveLength(1);
+    const editable = await request(app).get('/api/attendance/manual/records?date=2026-03-04').set(admin.header);
+    expect(editable.status).toBe(200);
+    expect(editable.body[0].id).toBe(response.body.id);
   });
 });
