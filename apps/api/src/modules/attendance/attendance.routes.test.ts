@@ -42,6 +42,9 @@ describe('attendance management routes', () => {
     expect(response.body.results.map((r: { status: number }) => r.status)).toEqual([409, 200]);
   });
   it('allows manual entry and scoped listing', async () => {
+    const employees = await request(app).get('/api/attendance/manual/employees').set(admin.header);
+    expect(employees.status).toBe(200);
+    expect(employees.body.map((item: { id: string }) => item.id)).toContain(employeeId);
     const response = await request(app).post('/api/attendance/manual').set(admin.header).send({ employeeId, date: '2026-03-04', checkIn: '09:00', checkOut: '18:00', note: 'Manual entry' });
     expect(response.status).toBe(201);
     ids.push(response.body.id);
