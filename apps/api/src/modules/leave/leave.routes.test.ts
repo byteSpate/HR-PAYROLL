@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { prisma } from '@erp/db';
+import { officeToday } from '@erp/export';
 import { createApp } from '../../app.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
 const prefix = 'zzleaveroutes';
@@ -33,6 +34,16 @@ describe('leave routes', () => {
     expect((await request(app).get('/api/leave/requests?scope=mine').set(user.header)).body).toHaveLength(1);
     expect((await request(app).get('/api/leave/balances/me').set(user.header)).body).toHaveLength(1);
     expect((await request(app).get('/api/leave/requests?scope=team').set(user.header)).status).toBe(403);
+  });
+  it('shows approved leave today only to a viewer with leave read access', async () => {
+    const today = officeToday();
+    const row = await prisma.leaveRequest.create({ data: { employeeId, leaveTypeId: typeId, startDate: today, endDate: today, chargedDays: 1, status: 'APPROVED' } });
+    try {
+      expect((await request(app).get('/api/leave/team-status').set(user.header)).status).toBe(403);
+      const result = await request(app).get('/api/leave/team-status').set(admin.header);
+      expect(result.status).toBe(200);
+      expect(result.body.map((item: { id: string }) => item.id)).toContain(row.id);
+    } finally { await prisma.leaveRequest.delete({ where: { id: row.id } }); }
   });
   it('allows an admin to approve, list, and cancel an approved future request', async () => {
     expect((await request(app).post(`/api/leave/requests/${requestId}/approve`).set(user.header)).status).toBe(403);
