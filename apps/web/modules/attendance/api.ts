@@ -20,3 +20,5 @@ const importFile = (kind: ConfigKind, action: 'preview' | 'commit', file: File) 
 export const importPreview = (kind: ConfigKind, file: File) => importFile(kind, 'preview', file);
 export const importCommit = (kind: ConfigKind, file: File) => importFile(kind, 'commit', file);
 export const regularise = (body: { date: string; checkIn?: string; checkOut?: string; note: string }) => api.request<void>('/attendance/regularise', { method: 'POST', body });
+
+export const manualEmployees = () => api.request<{ id: string; fullName: string; employeeCode: string }[]>('/attendance/manual/employees');
