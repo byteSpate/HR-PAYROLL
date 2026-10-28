@@ -27,6 +27,7 @@ export async function deleteLeaveType(actor: string, id: string) {
 export async function adjustBalance(actor: string, input: unknown) {
   const body = z.object({ employeeId: z.string().uuid(), leaveTypeId: z.string().uuid(), year: z.number().int().min(1900).max(9999), accrued: z.number().min(0), note: z.string().trim().min(1).max(1000) }).parse(input);
   return prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${body.employeeId}))`;
     const key = { employeeId: body.employeeId, leaveTypeId: body.leaveTypeId, year: body.year };
     const old = await tx.leaveBalance.findUnique({ where: { employeeId_leaveTypeId_year: key } });
     if (old && body.accrued < old.used) throw new AppError(409, 'Entitlement cannot be below used days');
