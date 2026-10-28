@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@erp/db';
 import { applyForLeave, decideLeave, cancelLeave, balancesFor } from './leave.service.js';
+import { adjustBalance } from './leave.admin.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
 
 const prefix = 'zzleavesvc';
@@ -26,7 +27,7 @@ afterEach(async () => {
   const requests = await prisma.leaveRequest.findMany({ where: { employeeId }, select: { id: true } });
   await prisma.outboxEvent.deleteMany({ where: { OR: requests.map(r => ({ payload: { path: ['requestId'], equals: r.id } })) } });
   await prisma.notification.deleteMany({ where: { userId: { in: [manager.user.id, employee.user.id] } } });
-  await prisma.auditLog.deleteMany({ where: { entity: 'LEAVE_REQUEST', entityId: { in: requests.map(r => r.id) } } });
+  await prisma.auditLog.deleteMany({ where: { OR: [{ entity: 'LEAVE_REQUEST', entityId: { in: requests.map(r => r.id) } }, { entity: 'LEAVE_BALANCE', changedBy: manager.user.id }] } });
   await prisma.attendance.deleteMany({ where: { employeeId } });
   await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'PRO_RATED', minServiceMonths: 0 } });
   await prisma.leaveRequest.deleteMany({ where: { employeeId } });
@@ -71,6 +72,27 @@ describe('leave requests', () => {
     expect(await prisma.notification.count({ where: { userId: employee.user.id, entityId: row.id } })).toBe(1);
     expect(await prisma.outboxEvent.count({ where: { type: 'leave.approved', payload: { path: ['requestId'], equals: row.id } } })).toBe(1);
     expect(await status(decideLeave(viewer(), row.id, 'APPROVED'))).toBe(409);
+  });
+  it('serializes balance adjustments with the employee leave lock', async () => {
+    let release!: () => void;
+    let acquired!: () => void;
+    const locked = new Promise<void>(resolve => { acquired = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const holder = prisma.$transaction(async tx => { await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${employeeId}))`; acquired(); await gate; });
+    await locked;
+    let finished = false;
+    const adjustment = adjustBalance(manager.user.id, { employeeId, leaveTypeId: typeId, year: 2027, accrued: 12, note: 'Adjustment' }).then(() => { finished = true; });
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const ranBeforeRelease = finished;
+    release();
+    await Promise.all([holder, adjustment]);
+    expect(ranBeforeRelease).toBe(false);
+  });
+  it('preserves an approval when entitlement is adjusted concurrently', async () => {
+    const row = await applyForLeave(employee.user.id, input());
+    await Promise.all([decideLeave(viewer(), row.id, 'APPROVED'), adjustBalance(manager.user.id, { employeeId, leaveTypeId: typeId, year: 2027, accrued: 12, note: 'Adjustment' })]);
+    const balance = await prisma.leaveBalance.findUniqueOrThrow({ where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId: typeId, year: 2027 } } });
+    expect(balance).toMatchObject({ accrued: 12, used: 1, balance: 11 });
   });
   it('restores the balance when an approved future request is cancelled', async () => {
     const row = await applyForLeave(employee.user.id, input());
