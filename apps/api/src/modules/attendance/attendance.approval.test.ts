@@ -58,5 +58,6 @@ describe('attendance decisions', () => {
     expect(await status(decideAttendance(viewer(0), rows[1]!, 'REJECTED'))).toBe(400);
     const result = await listAttendance(viewer(0), 'attendance.read', { date: '2026-03-02' });
     expect(result.map((r: { employeeId: string }) => r.employeeId)).toEqual([ids[1]]);
+    expect(result[0]?.exceptions).toContain('MISSING_CHECKOUT');
   });
 });
