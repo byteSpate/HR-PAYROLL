@@ -36,7 +36,7 @@ leaveRouter.post('/preview', async (req, res) => res.json(await previewLeave(req
 leaveRouter.post('/requests', async (req, res) => res.status(201).json(await applyForLeave(req.user!.sub, req.body)));
 leaveRouter.get('/requests', async (req, res) => {
   const mine = req.query['scope'] === 'mine';
-  const scope = mine ? { id: (await me(req.user!.sub)).id } : await scopeForViewer(req.user!, 'leave.read');
+  const scope = mine ? { id: (await me(req.user!.sub)).id } : await scopeForViewer(req.user!, req.query['scope'] === 'approvals' ? 'leave.approve' : 'leave.read');
   res.json(await prisma.leaveRequest.findMany({ where: { employee: scope }, include: { leaveType: true, employee: { select: { id: true, fullName: true, employeeCode: true } } }, orderBy: { createdAt: 'desc' } }));
 });
 leaveRouter.post('/requests/:id/approve', requirePermission('leave.approve'), async (req, res) => res.json(await decideLeave(req.user!, String(req.params['id']), 'APPROVED', typeof req.body?.note === 'string' ? req.body.note : undefined)));

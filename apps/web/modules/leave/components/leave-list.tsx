@@ -8,7 +8,7 @@ import * as api from '../api';
 export function LeaveList({ mode }: { mode: 'mine' | 'team' | 'approvals' }) {
   const client = useQueryClient();
   const [note, setNote] = useState('');
-  const query = useQuery({ queryKey: ['leave-requests', mode], queryFn: () => api.requests(mode === 'mine' ? 'mine' : 'team') });
+  const query = useQuery({ queryKey: ['leave-requests', mode], queryFn: () => api.requests(mode) });
   const mutation = useMutation({ mutationFn: ({ id, action }: { id: string; action: 'approve' | 'reject' | 'cancel' }) => api.decide(id, action, note), onSuccess: () => client.invalidateQueries({ queryKey: ['leave-requests'] }) });
   const rows = mode === 'approvals' ? query.data?.filter(row => row.status === 'PENDING') : query.data;
   const columns: DataColumn<api.LeaveRequest>[] = [
