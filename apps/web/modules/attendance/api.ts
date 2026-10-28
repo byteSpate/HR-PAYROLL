@@ -4,3 +4,6 @@ export const myAttendance = (month: string) => api.request<AttendanceRow[]>(`/at
 export const punch = (action: 'check-in' | 'check-out') => api.request<void>(`/attendance/${action}`, { method: 'POST' });
 export const listAttendance = (query = '') => api.request<AttendanceRow[]>(`/attendance${query}`);
 export const bulkDecide = (ids: string[], decision: 'APPROVED' | 'REJECTED', note: string) => api.request<{ results: { id: string; status: number; error?: string }[] }>('/attendance/bulk-decide', { method: 'POST', body: { ids, decision, note } });
+export interface GridRow { employeeId: string; employeeCode: string; fullName: string; department: string; days: { date: string; status: string }[] }
+export const report = (month: string) => api.request<GridRow[]>(`/attendance/report?month=${month}`);
+export const exportReport = (month: string, format: 'csv' | 'xlsx') => api.download(`/attendance/report/export?month=${month}&format=${format}`);
