@@ -1,13 +1,23 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@erp/ui/components/button';
 export interface LeaveChoice { id: string; name: string; isPaid: boolean; balance: number }
 export interface LeaveApplication { leaveTypeId: string; startDate: string; endDate: string; startSession: 'FIRST_HALF' | 'SECOND_HALF'; endSession: 'FIRST_HALF' | 'SECOND_HALF'; reason: string }
-export function LeaveApplyForm({ types, preview, onSubmit, busy = false }: { types: LeaveChoice[]; preview: (request: LeaveApplication) => number; onSubmit: (request: LeaveApplication) => void; busy?: boolean }) {
+export function LeaveApplyForm({ types, preview, onSubmit, busy = false }: { types: LeaveChoice[]; preview: (request: LeaveApplication) => number | Promise<number>; onSubmit: (request: LeaveApplication) => void; busy?: boolean }) {
   const [value, setValue] = useState<LeaveApplication>({ leaveTypeId: types[0]?.id ?? '', startDate: '', endDate: '', startSession: 'FIRST_HALF', endSession: 'SECOND_HALF', reason: '' });
   const selected = types.find(t => t.id === value.leaveTypeId);
-  const days = value.startDate && value.endDate && value.startDate <= value.endDate ? preview(value) : 0;
-  const disabled = busy || !selected || days <= 0 || (selected.isPaid && days > selected.balance);
+  const [days, setDays] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const previewRef = useRef(preview);
+  previewRef.current = preview;
+  useEffect(() => {
+    let active = true;
+    if (!value.startDate || !value.endDate || value.startDate > value.endDate || !value.leaveTypeId) return;
+    setLoading(true);
+    Promise.resolve(previewRef.current(value)).then(result => { if (active) setDays(result); }, () => { if (active) setDays(0); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [value]);
+  const disabled = busy || loading || !selected || days <= 0 || (selected.isPaid && days > selected.balance);
   return <form className="space-y-4 rounded-2xl border border-line bg-white p-6" onSubmit={e => { e.preventDefault(); if (!disabled) onSubmit(value); }}>
     <label className="block">Leave type<select aria-label="Leave type" className="mt-1 block w-full rounded border p-2" value={value.leaveTypeId} onChange={e => setValue({ ...value, leaveTypeId: e.target.value })}>{types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
     <label className="block">Start date<input aria-label="Start date" type="date" className="mt-1 block w-full rounded border p-2" value={value.startDate} onChange={e => setValue({ ...value, startDate: e.target.value })} /></label>
