@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { officeToday } from '@erp/export';
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
@@ -25,6 +26,11 @@ leaveRouter.get('/balances/:employeeId', requirePermission('leave.read'), async 
   const employeeId = String(req.params['employeeId']);
   if (!await prisma.employee.count({ where: { AND: [scope, { id: employeeId }] } })) throw new AppError(403, 'Forbidden');
   res.json(await prisma.leaveBalance.findMany({ where: { employeeId }, include: { leaveType: true } }));
+});
+leaveRouter.get('/team-status', requirePermission('leave.read'), async (req, res) => {
+  const scope = await scopeForViewer(req.user!, 'leave.read');
+  const today = officeToday();
+  res.json(await prisma.leaveRequest.findMany({ where: { employee: scope, status: 'APPROVED', startDate: { lte: today }, endDate: { gte: today } }, include: { employee: { select: { id: true, fullName: true, employeeCode: true } }, leaveType: true } }));
 });
 leaveRouter.post('/requests', async (req, res) => res.status(201).json(await applyForLeave(req.user!.sub, req.body)));
 leaveRouter.get('/requests', async (req, res) => {
