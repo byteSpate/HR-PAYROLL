@@ -123,3 +123,17 @@ export async function previewLeave(userId: string, input: unknown) {
   const pending = await prisma.leaveRequest.aggregate({ where: { employeeId: employee.id, leaveTypeId: type.id, status: 'PENDING', startDate: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) } }, _sum: { chargedDays: true } });
   return { chargedDays, available: type.isPaid ? (balance?.balance ?? quota) - (pending._sum.chargedDays ?? 0) : null };
 }
+
+export async function balancesFor(employeeId: string, year: number) {
+  if (!Number.isInteger(year) || year < 1900 || year > 9999) throw new AppError(400, 'Invalid year');
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!employee) throw new AppError(404, 'Employee not found');
+  const types = await prisma.leaveType.findMany({ where: { eligibleFor: { has: employee.employmentType } }, orderBy: { name: 'asc' } });
+  const rows = await prisma.leaveBalance.findMany({ where: { employeeId, year } });
+  const earned = types.some(t => t.accrualBasis === 'EARNED') ? await computeEarnedAccrual(employee, officeToday(), 12, null) : 0;
+  return types.map(type => {
+    const existing = rows.find(row => row.leaveTypeId === type.id);
+    const quota = type.accrualBasis === 'PER_EVENT' ? type.annualQuota : type.accrualBasis === 'PRO_RATED' ? computeEntitlement(type.annualQuota, employee.joiningDate, year) : type.accrualBasis === 'EARNED' ? Math.min(earned, type.maxAccrual ?? earned) : 0;
+    return { id: existing?.id ?? `${employee.id}:${type.id}:${year}`, employeeId, leaveTypeId: type.id, year, accrued: existing?.accrued ?? quota, used: existing?.used ?? 0, balance: existing?.balance ?? quota, leaveType: type };
+  });
+}

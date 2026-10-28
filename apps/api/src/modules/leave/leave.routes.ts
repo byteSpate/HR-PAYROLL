@@ -6,7 +6,7 @@ import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import { scopeForViewer } from '../attendance/attendance.approval.js';
 import { adjustBalance, deleteLeaveType, saveLeaveType } from './leave.admin.js';
-import { applyForLeave, cancelLeave, decideLeave, previewLeave } from './leave.service.js';
+import { applyForLeave, balancesFor, cancelLeave, decideLeave, previewLeave } from './leave.service.js';
 
 export const leaveRouter = Router();
 leaveRouter.use(requireAuth);
@@ -20,12 +20,12 @@ leaveRouter.patch('/types/:id', requirePermission('leave.config'), async (req, r
 leaveRouter.delete('/types/:id', requirePermission('leave.config'), async (req, res) => { await deleteLeaveType(req.user!.sub, String(req.params['id'])); res.status(204).end(); });
 leaveRouter.post('/balances/adjust', requirePermission('leave.config'), async (req, res) => res.json(await adjustBalance(req.user!.sub, req.body)));
 leaveRouter.get('/types', async (_req, res) => res.json(await prisma.leaveType.findMany({ orderBy: { name: 'asc' } })));
-leaveRouter.get('/balances/me', async (req, res) => res.json(await prisma.leaveBalance.findMany({ where: { employeeId: (await me(req.user!.sub)).id }, include: { leaveType: true } })));
+leaveRouter.get('/balances/me', async (req, res) => res.json(await balancesFor((await me(req.user!.sub)).id, req.query['year'] ? Number(req.query['year']) : officeToday().getUTCFullYear())));
 leaveRouter.get('/balances/:employeeId', requirePermission('leave.read'), async (req, res) => {
   const scope = await scopeForViewer(req.user!, 'leave.read');
   const employeeId = String(req.params['employeeId']);
   if (!await prisma.employee.count({ where: { AND: [scope, { id: employeeId }] } })) throw new AppError(403, 'Forbidden');
-  res.json(await prisma.leaveBalance.findMany({ where: { employeeId }, include: { leaveType: true } }));
+  res.json(await balancesFor(employeeId, req.query['year'] ? Number(req.query['year']) : officeToday().getUTCFullYear()));
 });
 leaveRouter.get('/team-status', requirePermission('leave.read'), async (req, res) => {
   const scope = await scopeForViewer(req.user!, 'leave.read');
