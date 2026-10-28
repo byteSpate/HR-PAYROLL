@@ -27,6 +27,8 @@ afterEach(async () => {
   await prisma.outboxEvent.deleteMany({ where: { OR: requests.map(r => ({ payload: { path: ['requestId'], equals: r.id } })) } });
   await prisma.notification.deleteMany({ where: { userId: { in: [manager.user.id, employee.user.id] } } });
   await prisma.auditLog.deleteMany({ where: { entity: 'LEAVE_REQUEST', entityId: { in: requests.map(r => r.id) } } });
+  await prisma.attendance.deleteMany({ where: { employeeId } });
+  await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'PRO_RATED', minServiceMonths: 0 } });
   await prisma.leaveRequest.deleteMany({ where: { employeeId } });
   await prisma.leaveBalance.deleteMany({ where: { employeeId } });
 });
@@ -43,6 +45,13 @@ describe('leave requests', () => {
     expect(await status(applyForLeave(employee.user.id, { ...input(), endSession: 'FIRST_HALF' }))).toBe(409);
     const second = await applyForLeave(employee.user.id, { ...input(), startSession: 'SECOND_HALF' });
     expect(second.chargedDays).toBe(0.5);
+  });
+  it('uses earned attendance accrual when creating a balance', async () => {
+    await prisma.leaveType.update({ where: { id: typeId }, data: { accrualBasis: 'EARNED', minServiceMonths: 12 } });
+    await prisma.attendance.createMany({ data: Array.from({ length: 18 }, (_, i) => ({ employeeId, date: new Date(Date.UTC(2026, 2, i + 1)), checkIn: new Date(Date.UTC(2026, 2, i + 1, 3)) })) });
+    const row = await applyForLeave(employee.user.id, input());
+    expect(row.chargedDays).toBe(1);
+    expect((await prisma.leaveBalance.findUniqueOrThrow({ where: { employeeId_leaveTypeId_year: { employeeId, leaveTypeId: typeId, year: 2027 } } })).balance).toBe(1);
   });
   it('rejects requests exceeding the paid balance', async () => {
     await prisma.leaveBalance.create({ data: { employeeId, leaveTypeId: typeId, year: 2027, accrued: 0.5, balance: 0.5 } });
