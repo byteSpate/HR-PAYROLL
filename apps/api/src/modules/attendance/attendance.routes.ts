@@ -28,6 +28,7 @@ attendanceRouter.post('/bulk-decide', requirePermission('attendance.approve'), a
 });
 attendanceRouter.post('/regularise', async (req, res) => res.json(await regulariseAttendance(req.user!.sub, req.body)));
 attendanceRouter.get('/manual/employees', requirePermission('attendance.manage'), async (req, res) => { const scope = await scopeForViewer(req.user!, 'attendance.manage'); res.json(await prisma.employee.findMany({ where: scope, select: { id: true, fullName: true, employeeCode: true }, orderBy: { fullName: 'asc' } })); });
+attendanceRouter.get('/manual/records', requirePermission('attendance.manage'), async (req, res) => res.json(await listAttendance(req.user!, 'attendance.manage', { date: text(req.query['date']) })));
 attendanceRouter.post('/manual', requirePermission('attendance.manage'), async (req, res) => res.status(201).json(await manualAttendance(req.user!, req.body)));
 attendanceRouter.get('/', requirePermission('attendance.read'), async (req, res) => res.json(await listAttendance(req.user!, 'attendance.read', { date: text(req.query['date']) })));
 attendanceRouter.post('/:id/approve', requirePermission('attendance.approve'), async (req, res) => res.json(await decideAttendance(req.user!, String(req.params['id']), 'APPROVED', text(req.body?.note))));
