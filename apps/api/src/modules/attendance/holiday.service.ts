@@ -2,6 +2,7 @@ import { holidayInputSchema, holidayPatchSchema, type HolidayItem, type HolidayW
 import { diffFields, writeAudit } from '@erp/audit';
 import { prisma, type Db, type Holiday } from '@erp/db';
 import { formatDateOnly, officeToday } from '@erp/export';
+import { assertMonthNotLocked } from '../../lib/month-lock.js';
 import { AppError } from '@erp/utils';
 
 const toDate = (ymd: string) => new Date(`${ymd}T00:00:00.000Z`);
@@ -34,6 +35,7 @@ export async function createHoliday(input: unknown, actorId: string): Promise<Ho
   const date = toDate(body.date);
   try {
     return await prisma.$transaction(async (tx) => {
+      await assertMonthNotLocked(date, tx);
       const row = await tx.holiday.create({ data: { name: body.name, type: body.type, date } });
       await writeAudit(tx, { entity: 'HOLIDAY', entityId: row.id, action: 'CREATE', changedBy: actorId, after: view(row) as never });
       return { holiday: view(row), impact: await impactOf(tx, [date]) };
@@ -52,6 +54,8 @@ export async function updateHoliday(id: string, input: unknown, actorId: string)
       const before = await tx.holiday.findUnique({ where: { id } });
       if (!before) throw new AppError(404, 'Holiday not found');
       const date = patch.date ? toDate(patch.date) : before.date;
+      await assertMonthNotLocked(before.date, tx);
+      await assertMonthNotLocked(date, tx);
       const row = await tx.holiday.update({
         where: { id },
         data: { name: patch.name ?? before.name, type: patch.type ?? before.type, date },
@@ -74,6 +78,7 @@ export async function deleteHoliday(id: string, actorId: string): Promise<{ impa
   return prisma.$transaction(async (tx) => {
     const row = await tx.holiday.findUnique({ where: { id } });
     if (!row) throw new AppError(404, 'Holiday not found');
+    await assertMonthNotLocked(row.date, tx);
     await tx.holiday.delete({ where: { id } });
     await writeAudit(tx, { entity: 'HOLIDAY', entityId: id, action: 'DELETE', changedBy: actorId, before: view(row) as never });
     return { impact: await impactOf(tx, [row.date]) };

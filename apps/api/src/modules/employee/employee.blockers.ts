@@ -3,10 +3,11 @@
 // Named operational blockers, not a completeness percentage. Only fields whose absence stops
 // something appear here: an empty blood group stops nothing. The `blocks` text names the operation
 // rather than the field, because "bankAccountNumber is empty" is scrolled past and "the bank file
-// will skip this employee" is fixed the same day. The salary-structure blocker joins when payroll does.
+// will skip this employee" is fixed the same day.
 import type { Blocker, DocumentType } from '@erp/contracts/employee';
 
 interface BlockerSubject {
+  salaryStructureId: string | null;
   bankAccountNumber: string | null;
   bankRoutingNumber: string | null;
   nationalId: string | null;
@@ -17,6 +18,9 @@ export function computeBlockers(employee: BlockerSubject, documentTypes: Documen
   const blockers: Blocker[] = [];
   const has = (type: DocumentType) => documentTypes.includes(type);
 
+  if (employee.salaryStructureId === null) {
+    blockers.push({ field: 'salaryStructureId', blocks: 'Payroll runs cannot process this employee' });
+  }
   if (employee.bankAccountNumber === null) {
     blockers.push({ field: 'bankAccountNumber', blocks: 'The BEFTN bank file will skip this employee' });
   }

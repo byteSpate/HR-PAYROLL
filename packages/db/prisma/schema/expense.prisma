@@ -36,9 +36,11 @@ model ExpenseClaim {
   decidedAt    DateTime?
   /// Required on reject.
   decisionNote String?
-  /// The payslip or settlement that paid it. Plain columns for now: the payroll migration adds their foreign keys.
+  /// The payslip or settlement that paid it.
   payslipId    String?
+  payslip      Payslip?            @relation(fields: [payslipId], references: [id])
   settlementId String?
+  settlement   Settlement?         @relation(fields: [settlementId], references: [id])
   attachments  ExpenseAttachment[]
   createdAt    DateTime            @default(now())
 

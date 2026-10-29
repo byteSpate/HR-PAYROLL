@@ -70,6 +70,34 @@ describe('permission gate', () => {
   });
 });
 
+describe('POST /api/users/:id/resend-credentials', () => {
+  it('replaces the password, signs the person out, mails once and writes an audit row', async () => {
+    const target = await makeUser();
+    await prisma.refreshToken.create({
+      data: { userId: target.id, tokenHash: `${PREFIX}-${Date.now()}`, expiresAt: new Date(Date.now() + 3_600_000) },
+    });
+    const res = await request(app).post(`/api/users/${target.id}/resend-credentials`).set(await userManager());
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: target.id, email: target.email });
+    expect(res.body.temporaryPassword).toMatch(/\S{8,}/);
+
+    const old = await request(app).post('/api/auth/login').send({ email: target.email, password: 'correct-horse-9' });
+    expect(old.status).toBe(401);
+    const fresh = await request(app).post('/api/auth/login').send({ email: target.email, password: res.body.temporaryPassword });
+    expect(fresh.status).toBe(200);
+    expect(await prisma.refreshToken.count({ where: { userId: target.id, revokedAt: null, tokenHash: { startsWith: PREFIX } } })).toBe(0);
+    expect(await prisma.emailDispatch.count({ where: { to: target.email, kind: 'CREDENTIALS' } })).toBe(1);
+    expect((await auditRows(target.id)).length).toBeGreaterThan(0);
+    await prisma.emailDispatch.deleteMany({ where: { to: target.email } });
+  });
+
+  it('404 for an unknown user and 403 without user.manage', async () => {
+    expect((await request(app).post('/api/users/nope/resend-credentials').set(await userManager())).status).toBe(404);
+    const h = (await makeActor(PREFIX, 'STANDARD', ['role.manage'])).header;
+    expect((await request(app).post('/api/users/x/resend-credentials').set(h)).status).toBe(403);
+  });
+});
+
 describe('GET /api/users/role-options', () => {
   it('200 with user.manage, id and name only, ordered by name', async () => {
     const res = await request(app).get('/api/users/role-options').set(await userManager());

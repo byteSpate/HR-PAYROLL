@@ -1,4 +1,11 @@
-import type { AccountView, PublicUser, SessionView, UserAccountView } from '@erp/contracts/core';
+import type {
+  AccountView,
+  PendingEmailChange,
+  PublicUser,
+  ResendInviteResult,
+  SessionView,
+  UserAccountView,
+} from '@erp/contracts/core';
 import { api } from '@/lib/api-client';
 
 export type Scope = 'own' | 'team' | 'department' | 'all';
@@ -86,3 +93,18 @@ export const setDisplayName = (_accessToken: string, displayName: string | null)
 export const uploadOwnAvatar = (_accessToken: string, file: File) =>
   api.request<AccountView>('/auth/avatar', { method: 'PATCH', body: avatarForm(file) });
 export const clearOwnAvatar = (_accessToken: string) => api.request<AccountView>('/auth/avatar', { method: 'DELETE' });
+
+export const requestEmailChange = (_accessToken: string, newEmail: string) =>
+  api.request<PendingEmailChange>('/auth/email-change', { method: 'POST', body: { newEmail } });
+export const getPendingEmailChange = (_accessToken: string) => api.request<PendingEmailChange | null>('/auth/email-change');
+// The link is the proof, so these three work with no session (a phone that is not signed in, or every session revoked).
+export const approveEmailChange = (token: string) =>
+  api.request<{ newEmail: string }>('/auth/email-change/approve', { method: 'POST', body: { token }, skipRefresh: true });
+export const cancelEmailChange = (token: string) =>
+  api.request<void>('/auth/email-change/cancel', { method: 'POST', body: { token }, skipRefresh: true });
+export const confirmEmailChange = (token: string) =>
+  api.request<{ email: string }>('/auth/email-change/confirm', { method: 'POST', body: { token }, skipRefresh: true });
+export const resendUserInvite = (_accessToken: string, userId: string) =>
+  api.request<ResendInviteResult>(`/users/${userId}/resend-credentials`, { method: 'POST' });
+export const resendEmployeeInvite = (_accessToken: string, employeeId: string) =>
+  api.request<ResendInviteResult>(`/employees/${employeeId}/resend-invite`, { method: 'POST' });

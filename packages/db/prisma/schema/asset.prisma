@@ -277,9 +277,11 @@ model AssetRecovery {
   waivedAt     DateTime?
   waiverReason String?
 
-  /// The payroll adjustment or settlement that collected it. Plain columns for now: the payroll migration adds their foreign keys.
-  adjustmentId String? @unique
+  /// The payroll adjustment or settlement that collected it.
+  adjustmentId String?            @unique
+  adjustment   PayrollAdjustment? @relation(fields: [adjustmentId], references: [id])
   settlementId String?
+  settlement   Settlement?        @relation(fields: [settlementId], references: [id])
 
   createdBy String
   createdAt DateTime @default(now())

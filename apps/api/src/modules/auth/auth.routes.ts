@@ -6,12 +6,17 @@ import { rateLimit } from '../../middleware/rate-limit.js';
 import { requireAuth } from '../../middleware/require-auth.js';
 import * as account from './auth.account.js';
 import {
+  approveEmailChangeHandler,
+  cancelEmailChangeHandler,
   changePasswordHandler,
+  confirmEmailChangeHandler,
+  getPendingEmailChangeHandler,
   listSessionsHandler,
   loginHandler,
   logoutHandler,
   meHandler,
   refreshHandler,
+  requestEmailChangeHandler,
   revokeSessionHandler,
 } from './auth.controller.js';
 
@@ -32,6 +37,11 @@ authRouter.get('/me', requireAuth, meHandler);
 authRouter.get('/sessions', requireAuth, listSessionsHandler);
 authRouter.delete('/sessions/:sessionId', requireAuth, revokeSessionHandler);
 authRouter.post('/change-password', requireAuth, changePasswordHandler);
+authRouter.post('/email-change', requireAuth, requestEmailChangeHandler);
+authRouter.get('/email-change', requireAuth, getPendingEmailChangeHandler);
+authRouter.post('/email-change/approve', approveEmailChangeHandler);
+authRouter.post('/email-change/cancel', cancelEmailChangeHandler);
+authRouter.post('/email-change/confirm', confirmEmailChangeHandler);
 authRouter.get('/account', requireAuth, async (req, res) => res.json(await account.getAccount(req.user!.sub)));
 authRouter.patch('/display-name', requireAuth, async (req, res) => res.json(await account.setDisplayName(req.user!.sub, req.body)));
 authRouter.post('/logout-everywhere', requireAuth, async (req, res) => {

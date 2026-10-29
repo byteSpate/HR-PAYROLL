@@ -201,3 +201,61 @@ export async function pendingRecoveriesFor(employeeId: string, db: Tx | typeof p
   });
   return rows.map(recoveryView);
 }
+
+/**
+ * The mid-employment collection path. Creating a recovery does nothing to money; turning it into a deduction is
+ * this separate act. It creates a payroll adjustment and stops: the next run consumes it. The unique
+ * `adjustmentId` is the idempotency guard, so a second click collides at the database, not at a check two
+ * rapid clicks could race. The switch lives in payroll settings; asset only reads its table.
+ */
+export function recoverFromPayroll(viewer: Viewer, id: string) {
+  return prisma.$transaction(async (tx) => {
+    const settings = await tx.payrollSetting.findUnique({ where: { id: 'payroll' } });
+    if (settings && !settings.recoverAssetsFromSalary)
+      throw new AppError(
+        409,
+        'Taking money from salary for assets is turned off. To turn it on, go to Settings, then Payroll. If the employee does not need to pay, use Waive.',
+      );
+    const recovery = await lockRecovery(tx, id);
+    if (recovery.status === 'WAIVED')
+      throw new AppError(409, 'A waived recovery cannot be deducted from payroll.');
+    if (recovery.status === 'RECOVERED')
+      throw new AppError(409, 'This recovery was already collected.');
+    if (recovery.adjustmentId)
+      throw new AppError(409, 'This recovery is already being collected through payroll.');
+
+    const asset = await tx.asset.findUnique({
+      where: { id: recovery.assetId },
+      select: { assetTag: true, name: true },
+    });
+    const now = new Date();
+    const adjustment = await tx.payrollAdjustment.create({
+      data: {
+        employeeId: recovery.employeeId,
+        // The current month: the next run in progress picks it up, and a closed month refuses it at process.
+        month: now.getUTCMonth() + 1,
+        year: now.getUTCFullYear(),
+        kind: 'DEDUCTION',
+        code: 'ASSET_RECOVERY',
+        label: `Asset recovery - ${asset?.assetTag ?? 'asset'} ${asset?.name ?? ''}`.trim(),
+        currency: recovery.currency,
+        amount: recovery.amount,
+        reason: recovery.reason,
+        createdBy: viewer.sub,
+      },
+    });
+    const updated = await tx.assetRecovery.update({
+      where: { id },
+      data: { adjustmentId: adjustment.id },
+    });
+    await writeAudit(tx, {
+      entity: 'ASSET_RECOVERY',
+      entityId: id,
+      action: 'UPDATE',
+      changedBy: viewer.sub,
+      before: { adjustmentId: null },
+      after: { adjustmentId: adjustment.id },
+    });
+    return recoveryView(updated);
+  });
+}

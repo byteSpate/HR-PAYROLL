@@ -23,6 +23,7 @@
     "@erp/notifications": "workspace:*",
     "@erp/pdf": "workspace:*",
     "@erp/utils": "workspace:*",
+    "@erp/mail": "workspace:*",
     "cookie-parser": "1.4.7",
     "cors": "2.8.6",
     "dotenv": "17.4.2",

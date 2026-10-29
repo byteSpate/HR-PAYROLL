@@ -2,8 +2,14 @@
 // req.file comes from multer, applied by uploadSingle in @erp/attachments.
 import { Router, type Request } from 'express';
 import { storageReady, uploadSingle } from '@erp/attachments';
+import { emailChangeRequestSchema } from '@erp/contracts/core';
+import { prisma } from '@erp/db';
+import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
+import { changeEmployeeEmail } from './employee.email.js';
+import { setSalaryStructure } from './employee.salary.js';
+import { resendCredentials } from '../users/users.service.js';
 import type { Viewer } from './employee.access.js';
 import * as changes from './employee.changerequest.js';
 import { recordExit, setAccountActive } from './employee.exit.js';
@@ -36,6 +42,21 @@ employeeRouter.get(
 );
 
 // Literal paths before '/:id' so they are never read as an id.
+employeeRouter.patch('/:id/email', requirePermission('employee.update:department'), async (req, res) => {
+  const newEmail = emailChangeRequestSchema.parse(req.body);
+  res.json(await changeEmployeeEmail(viewer(req), String(req.params['id']), newEmail.newEmail));
+});
+
+employeeRouter.put('/:id/salary-structure', requirePermission('employee.update'), async (req, res) => {
+  res.json(await setSalaryStructure(viewer(req), String(req.params['id']), req.body));
+});
+
+employeeRouter.post('/:id/resend-invite', requirePermission('user.manage'), async (req, res) => {
+  const employee = await prisma.employee.findUnique({ where: { id: String(req.params['id']) }, select: { userId: true } });
+  if (!employee) throw new AppError(404, 'Employee not found');
+  res.status(200).json(await resendCredentials(employee.userId, req.user!));
+});
+
 employeeRouter.get('/export', requirePermission('employee.export'), exportEmployees);
 
 employeeRouter.get('/team', requirePermission('employee.read:team'), async (req, res) => {

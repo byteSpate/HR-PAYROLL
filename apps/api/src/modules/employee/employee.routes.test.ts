@@ -90,14 +90,14 @@ describe('reading employees', () => {
     const b = await hireOne();
     const mine = (await request(app).get('/api/employees/me').set(a.as)).body;
     expect(mine.documents).toEqual([]);
-    expect(mine.blockers.map((x: { field: string }) => x.field)).toEqual(['bankAccountNumber', 'bankRoutingNumber', 'CONTRACT', 'nationalId', 'emergencyContact']);
+    expect(mine.blockers.map((x: { field: string }) => x.field)).toEqual(['salaryStructureId', 'bankAccountNumber', 'bankRoutingNumber', 'CONTRACT', 'nationalId', 'emergencyContact']);
     expect(mine.personal.nationalIdChangeRequest).toBeNull();
     await request(app).post('/api/employees/national-id-requests').set(a.as).send({ newValue: '1234567890' });
     const pending = (await request(app).get('/api/employees/me').set(a.as)).body.personal.nationalIdChangeRequest;
     expect(pending).toMatchObject({ newValue: '1234567890' });
     expect(typeof pending.id).toBe('string');
     const forHr = (await request(app).get(`/api/employees/${a.id}`).set(hr)).body;
-    expect(forHr.blockers).toHaveLength(5);
+    expect(forHr.blockers).toHaveLength(6);
     expect((await request(app).get(`/api/employees/${b.id}`).set(a.as)).body.blockers).toBeUndefined();
     expect((await request(app).get(`/api/employees/${a.id}`).set(finance)).body.documents).toBeUndefined();
   });

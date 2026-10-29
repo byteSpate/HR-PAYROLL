@@ -5,7 +5,7 @@ import { closePdfBrowser } from '@erp/pdf';
 import { parseDateOnly } from '@erp/export';
 import { createApp } from '../../app.js';
 import { makeActor } from '../../test-utils/access.js';
-import { cleanExpenseData, daysAgo, hireActor, makeDepartment } from './expense.fixtures.js';
+import { cleanExpenseData, daysAgo, hireActor, makeDepartment, makePayslip } from './expense.fixtures.js';
 
 const prefix = 'zzexpreport';
 const app = createApp();
@@ -148,7 +148,7 @@ describe('what is still owed in reimbursements', () => {
     await request(app).post(`/api/expenses/${owed.id}/approve`).set(approver.header).send({});
     const paid = await file(alice, { amount: 15, name: 'Already paid' });
     await request(app).post(`/api/expenses/${paid.id}/approve`).set(approver.header).send({});
-    await prisma.expenseClaim.update({ where: { id: paid.id }, data: { status: 'REIMBURSED', payslipId: 'payslip-x' } });
+    await prisma.expenseClaim.update({ where: { id: paid.id }, data: { status: 'REIMBURSED', payslipId: (await makePayslip(paid.employeeId)).id } });
     expect((await request(app).get('/api/expenses/outstanding-reimbursements').set(alice.header)).status).toBe(403);
     const res = await request(app).get('/api/expenses/outstanding-reimbursements').set(treasurer.header);
     expect(res.status).toBe(200);

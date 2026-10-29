@@ -24,7 +24,9 @@ export type AuditAction =
   | 'PAY'
   | 'SEND_REPAIR'
   | 'RECEIVE_REPAIR'
-  | 'WAIVE';
+  | 'WAIVE'
+  | 'PROCESS'
+  | 'DISBURSE';
 
 export interface AuditEntry {
   entity: string;

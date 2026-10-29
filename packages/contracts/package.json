@@ -40,13 +40,21 @@
       "types": "./dist/expense/index.d.ts",
       "default": "./dist/expense/index.js"
     },
+    "./leave": {
+      "types": "./dist/leave/index.d.ts",
+      "default": "./dist/leave/index.js"
+    },
     "./notification": {
       "types": "./dist/notification/index.d.ts",
       "default": "./dist/notification/index.js"
     },
-    "./leave": {
-      "types": "./dist/leave/index.d.ts",
-      "default": "./dist/leave/index.js"
+    "./payroll": {
+      "types": "./dist/payroll/index.d.ts",
+      "default": "./dist/payroll/index.js"
+    },
+    "./settlement": {
+      "types": "./dist/settlement/index.d.ts",
+      "default": "./dist/settlement/index.js"
     }
   },
   "scripts": {

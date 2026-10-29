@@ -1,0 +1,52 @@
+enum SettlementStatus {
+  DRAFT
+  APPROVED
+  PAID
+}
+
+model Settlement {
+  id           String           @id @default(uuid())
+  settlementNo String           @unique
+  employeeId   String
+  employee     Employee         @relation(fields: [employeeId], references: [id])
+  status       SettlementStatus @default(DRAFT)
+
+  /// Exit facts, copied in and frozen at calculation.
+  lastWorkingDay DateTime
+  exitReason     ExitReason
+  serviceYears   Decimal    @db.Decimal(5, 2)
+
+  currency    Currency
+  fxRateToBdt Decimal  @db.Decimal(18, 6)
+
+  pendingSalary         Decimal @db.Decimal(14, 2)
+  gratuity              Decimal @default(0) @db.Decimal(14, 2)
+  noticePay             Decimal @default(0) @db.Decimal(14, 2)
+  expenseReimbursement  Decimal @default(0) @db.Decimal(14, 2)
+  /// Kept and always 0: dropping and re-adding a money column on a paid document is worse than a zero.
+  leaveEncashment       Decimal @default(0) @db.Decimal(14, 2)
+  outstandingDeductions Decimal @default(0) @db.Decimal(14, 2)
+  assetRecoveries       Decimal @default(0) @db.Decimal(14, 2)
+  finalAmount           Decimal @db.Decimal(14, 2)
+  finalAmountBdt        Decimal @db.Decimal(14, 2)
+
+  breakdown Json
+
+  calculatedBy  String?
+  calculatedAt  DateTime?
+  approvedBy    String?
+  approvedAt    DateTime?
+  paidBy        String?
+  paidAt        DateTime?
+  rejectionNote String?
+
+  pdfUrl      String?
+  emailedAt   DateTime?
+  generatedAt DateTime  @default(now())
+
+  claims            ExpenseClaim[]
+  assetRecoveryRows AssetRecovery[]
+
+  @@index([employeeId])
+  @@index([status])
+}

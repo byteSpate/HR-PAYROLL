@@ -5,6 +5,8 @@ import { fromDbScope, prisma, type Tx } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { z } from 'zod';
 import { writeAudit } from '@erp/audit';
+import { renderEmail, sendMail, serialFor } from '@erp/mail';
+import { env } from '../../env.js';
 import { loadPublicUser } from '../auth/auth.service.js';
 import { loadActor } from './actor.js';
 import { assertCanActOn, assertMayGrant, type Caller } from './guards.js';
@@ -153,4 +155,66 @@ export async function setUserStatus(userId: string, input: unknown, caller: Call
     await applyUserStatus(tx, userId, isActive, actor);
   });
   return loadPublicUser(prisma, userId);
+}
+
+/**
+ * Replaces the user's password with a fresh temporary one and mails it. The old password stops working, the
+ * user's sessions end, and they must change it on first sign-in. The password is returned once because the
+ * mail may not arrive, which is why the person is stuck.
+ */
+export async function resendCredentials(
+  userId: string,
+  caller: Caller,
+): Promise<{ id: string; email: string; temporaryPassword: string }> {
+  const temporaryPassword = generateTemporaryPassword();
+  const passwordHash = await hashPassword(temporaryPassword);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const actor = await loadActor(tx, caller.sub, 'user.manage');
+    const row = await tx.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, accessLevel: true },
+    });
+    if (!row) throw new AppError(404, 'User not found');
+    assertCanActOn(actor, row);
+    await tx.user.update({ where: { id: userId }, data: { passwordHash, mustChangePassword: true } });
+    // Whoever held the old password must not stay signed in on it.
+    await tx.refreshToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    await writeAudit(tx, {
+      entity: 'USER',
+      entityId: userId,
+      action: 'UPDATE',
+      changedBy: caller.sub,
+      before: {},
+      after: { mustChangePassword: true },
+    });
+    return row;
+  });
+
+  // After the commit: a mail outage must not undo a password change.
+  await sendCredentialsMail(userId, user.email, temporaryPassword);
+
+  return { id: userId, email: user.email, temporaryPassword };
+}
+
+/** The sign-in details, mailed to the person. Never throws: a mail outage must not undo the change that made it. */
+export async function sendCredentialsMail(userId: string, email: string, temporaryPassword: string): Promise<void> {
+  await sendMail({
+    to: email,
+    kind: 'CREDENTIALS',
+    subject: `Your ${env.COMPANY_NAME} account is ready`,
+    html: await renderEmail({
+      serial: serialFor('CREDENTIALS', userId),
+      subject: `Your ${env.COMPANY_NAME} account is ready`,
+      stamp: { label: 'Action required', tone: 'action' },
+      intro: 'Your account credentials have been reset. Here is how you sign in:',
+      facts: [
+        { label: 'Email address', value: email },
+        { label: 'Temporary password', value: temporaryPassword },
+      ],
+      prose: ["You'll be asked to change this password on first sign-in."],
+      action: { label: 'Sign in', href: `${env.CLIENT_ORIGIN}/login` },
+      footer: `You are receiving this because an account was created for you at ${env.COMPANY_NAME}.`,
+    }),
+  });
 }

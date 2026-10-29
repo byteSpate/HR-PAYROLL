@@ -11,7 +11,8 @@ import {
 } from "@remixicon/react"
 
 import { cn } from "@erp/ui/lib/cn"
-import { createUser, listRoleOptions, listUsers, setUserAccessLevel, setUserRole, setUserStatus } from "../api"
+import { createUser, listRoleOptions, listUsers, resendUserInvite, setUserAccessLevel, setUserRole, setUserStatus } from "../api"
+import { ResendPasswordDialog } from "./resend-password-dialog"
 import { ApiError } from "@erp/utils"
 import { useSession } from "@/lib/session"
 import { holds } from "./require-permission"
@@ -134,6 +135,7 @@ export function UsersPage() {
   const [newRole, setNewRole] = useState(NO_ROLE_CHOICE)
   const [created, setCreated] = useState<{ email: string; temporaryPassword: string } | null>(null)
   const [roleTarget, setRoleTarget] = useState<UserAccount | null>(null)
+  const [resendTarget, setResendTarget] = useState<UserAccount | null>(null)
   const [roleChoice, setRoleChoice] = useState(NO_ROLE_CHOICE)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState("")
@@ -290,6 +292,19 @@ export function UsersPage() {
                   Change role
                 </RowAction>
               )}
+              {/* Only while the person has not chosen a password, and only
+                  for an account that can sign in: the server refuses the
+                  rest, and a button that always refuses is a bug. */}
+              {u.mustChangePassword && u.isActive ? (
+                <RowAction
+                  onClick={() => {
+                    setError(null)
+                    setResendTarget(u)
+                  }}
+                >
+                  Resend password
+                </RowAction>
+              ) : null}
               {/* No control on your own row: deactivating yourself revokes
                   your own session, and the server refuses it with a 409. */}
               {u.id === user?.id ? null : (
@@ -558,6 +573,14 @@ export function UsersPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ResendPasswordDialog
+        open={!!resendTarget}
+        who={resendTarget?.email ?? ""}
+        send={() => resendUserInvite("", resendTarget!.id)}
+        onClose={() => setResendTarget(null)}
+        onSent={invalidate}
+      />
 
       <Dialog open={!!roleTarget} onOpenChange={(open) => !open && setRoleTarget(null)}>
         <DialogContent>

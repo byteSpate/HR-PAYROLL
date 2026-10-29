@@ -44,6 +44,14 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8),
 });
 
+export const emailChangeRequestSchema = z.object({
+  newEmail: z.string().trim().toLowerCase().pipe(z.email()),
+});
+
+export const emailChangeTokenSchema = z.object({
+  token: z.string().min(1),
+});
+
 export const publicUserSchema = z.object({
   id: z.string(),
   email: z.string(),

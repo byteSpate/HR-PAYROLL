@@ -7,6 +7,7 @@ import { cancelNationalIdChangeRequest, getMyProfile } from "../profile-api"
 import { useSession } from "@/lib/session"
 import type { EmployeeView } from "../types"
 import { AccountProfile } from "./account-profile"
+import { PendingEmailChangeNotice, SignInEmailCard } from "./change-email-dialog"
 import { DocumentsCard } from "./documents-card"
 import { EditMyDetailsDialog } from "./edit-my-details-dialog"
 import { NationalIdRequestDialog } from "./national-id-request-dialog"
@@ -54,6 +55,10 @@ export function MyProfilePage() {
 
   return (
     <>
+      {/* Above both branches: a change in flight is otherwise invisible, since
+          the address on screen is still the old one until it completes. */}
+      <PendingEmailChangeNotice />
+
       {/* The account branch carries its own header — the email is the heading
           there, and a generic "My Profile" above it was a second title saying
           less than the first. The staff branch still needs this one, since
@@ -74,6 +79,7 @@ export function MyProfilePage() {
       ) : (
         <StaffProfile
           employee={employee}
+          signInEmail={account.email}
           onRefresh={refresh}
           editOpen={editOpen}
           setEditOpen={setEditOpen}
@@ -85,11 +91,13 @@ export function MyProfilePage() {
 
 function StaffProfile({
   employee,
+  signInEmail,
   onRefresh,
   editOpen,
   setEditOpen,
 }: {
   employee: EmployeeView
+  signInEmail: string
   onRefresh: () => void
   editOpen: boolean
   setEditOpen: (open: boolean) => void
@@ -271,6 +279,12 @@ function StaffProfile({
             lockedHint="Recorded by an administrator. Speak to them if anything here is wrong."
           />
         ) : null}
+      </div>
+
+      {/* How you sign in, beside where you are signed in — the two questions
+          belong together, and neither belongs among the contact details. */}
+      <div className="mt-4">
+        <SignInEmailCard email={signInEmail} />
       </div>
 
       {/* Every role, not only the administrative ones: "is somebody else in my
