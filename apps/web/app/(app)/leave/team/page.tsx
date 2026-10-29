@@ -1,3 +1,10 @@
-import { LeaveList } from '@/modules/leave/components/leave-list';
+import { LeavePage } from '@/modules/leave/components/leave-page';
 import { RequirePermission } from '@/modules/settings/components/require-permission';
-export default function Page() { return <RequirePermission permission="leave.read:team"><LeaveList mode="status" /></RequirePermission>; }
+
+export default function Page() {
+  return (
+    <RequirePermission permission="leave.read:team">
+      <LeavePage section="team" />
+    </RequirePermission>
+  );
+}

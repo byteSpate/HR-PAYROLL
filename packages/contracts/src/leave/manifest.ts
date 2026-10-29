@@ -18,10 +18,6 @@ export const leave = defineModule({
           href: '/me/leave',
           icon: 'RiCalendarEventLine',
           permission: null,
-          children: [
-            { label: 'My Leave', href: '/me/leave', permission: null },
-            { label: 'Apply Leave', href: '/leave/apply', permission: null },
-          ],
         },
       ],
     },
@@ -36,7 +32,6 @@ export const leave = defineModule({
           permission: null,
           children: [
             { label: 'Leave Requests', href: '/leave/requests', permission: 'leave.read:team' },
-            { label: 'Leave Approvals', href: '/leave/approvals', permission: 'leave.approve:team' },
             { label: 'Team Status', href: '/leave/team', permission: 'leave.read:team' },
             { label: 'Leave Types', href: '/leave/types', permission: 'leave.config' },
           ],
