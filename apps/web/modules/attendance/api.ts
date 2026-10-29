@@ -123,7 +123,3 @@ export type ConfigKind = 'shifts' | 'holidays';
 export interface ConfigRow { id: string; name: string; date?: string; type?: string; startTime?: string; endTime?: string; graceMinutes?: number; breakMinutes?: number; weeklyOffDays?: number[]; effectiveFrom?: string | null; effectiveTo?: string | null }
 export const configList = (kind: ConfigKind) => api.request<ConfigRow[]>(`/attendance/${kind}`);
 
-export const manual = (body: { employeeId: string; date: string; checkIn: string; checkOut: string; note: string }) => api.request<AttendanceRow>('/attendance/manual', { method: 'POST', body });
-export const manualEmployees = () => api.request<{ id: string; fullName: string; employeeCode: string }[]>('/attendance/manual/employees');
-export const manualRecords = (date: string) => api.request<AttendanceRow[]>(`/attendance/manual/records?date=${encodeURIComponent(date)}`);
-export const correct = (id: string, body: { checkIn?: string; checkOut?: string; note: string }) => api.request<AttendanceRow>(`/attendance/${id}`, { method: 'PATCH', body });

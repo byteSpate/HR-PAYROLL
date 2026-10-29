@@ -1,6 +1,15 @@
 // What the signed-in person's own account page shows. Ported from HR-MNG-V1's MyProfileResponse
 // account block: the account is separate from the employee record, and someone with no employee
 // record (an admin) keeps their name and photo here.
+import type { PublicUser } from './schemas.js';
+
+/** One row of the Users page: the sign-in identity plus when it was opened and who, if anyone, it is. */
+export interface UserAccountView extends PublicUser {
+  createdAt: string;
+  /** Null for an account with no employee record, such as an administrator's. */
+  employee: { fullName: string; employeeCode: string } | null;
+}
+
 export interface AccountView {
   email: string;
   accessLevel: 'SUPER_ADMIN' | 'ADMIN' | 'STANDARD';

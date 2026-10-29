@@ -137,27 +137,19 @@ Only two points of view exist (see the ledger), so HR's `manager/team` is not po
 - [x] **Step 4:** Run; GREEN. Browser check as admin (account profile, edit name) and as staff (profile, edit details, directory, colleague card).
 - [x] **Step 5:** Commit `feat(employee): exact HR profile and directory for the employee view`.
 
-### Task A6: Settings (collapsible panels), Users, Activity
+### Task A6: Settings (collapsible panels) and Users (done), Activity (moved to D)
 
-**Files:** copy `components/settings` panels for modules that exist now (departments, leave types, shifts) and `ActivityPage` from `components/dashboard/activity-page.tsx` against `GET /api/audit`; pages `app/(app)/settings/<panel>/page.tsx`, `settings/users`, `settings/roles`, `settings/activity`. Panels for later modules arrive with their own tasks: asset categories (B4), cost categories (B5), exchange rates and payroll settings (C1).
+Settings is one sidebar item whose children are pages; modules add their own children and same-label expandable items merge (`mergeNavGroups`). Done: `SettingsPage` shell, Departments, Shifts, Leave types panels, HR's Users page over ERP's level-and-role model. Roles stays ERP's own page. Activity is HR's events feed, so it ships with events in Part D; Resend-password ships with mail in C3. Each later module adds its Settings child with its own task: asset categories (B4), cost categories (B5), exchange rates and payroll settings (C1).
 
-**Interfaces:** Settings is one collapsible item under `Administration`; each panel is a child page rendering the original panel component. Users and roles keep Plan 1's API.
+Server changes this needed, each test-first: shift update returns `{ shift, impact }`, the General shift is seeded and cannot be renamed or deleted, leave type update is partial and keeps HR's statutory floor, the users list carries `createdAt` and the linked employee.
 
-- [ ] **Step 1: Failing tests:** `filterNav` keeps only the Settings children the user may see; the Activity page lists an audit row for a department rename; the shifts panel creates a shift and refuses to delete one that has employees.
-- [ ] **Step 2:** Run; expect FAIL.
-- [ ] **Step 3:** Copy panels and pages. Move Plan 3's orphan `/attendance/shifts` into the Settings shifts panel; manual entry becomes reachable from Today's Attendance as in HR; remove both orphan routes.
-- [ ] **Step 4:** Run; expect PASS. Browser check every Settings child as admin and as Employee (children hidden).
-- [ ] **Step 5:** Commit `feat(settings): exact HR settings panels as collapsible pages`.
+- [x] **Steps 1-5** done; committed as `feat(settings): HR shifts and leave types panels as settings pages`, `feat(settings): HR settings shell and departments panel as a page` and the Users commit.
 
-### Task A7: Cleanup and ledger
+### Task A7: Cleanup and ledger (partly moved)
 
-**Files:** delete `packages/ui/src/page/**` and its `package.json` export; delete leftover fresh components; update the ledger (stages 2 to 5 done) and the Plan 3 follow-ups (mark closed items).
+Done in Part A: removed the fresh department, shifts, leave types, users, manual-entry and My Team pages, their helpers and tests; ledger updated. **Moved:** deleting `packages/ui/src/page/**` waits for the last fresh screens that use it (admin employees list, detail and add in Part C; dashboard, Roles and Activity in D), so the check `rg "@erp/ui/page" apps packages` becomes the closing step of Part D. The leave accrual move out of `attendance.grid.ts` is left as is: the grid's output is not HR's `derive` output, and unifying them is a behaviour change, not cleanup.
 
-- [ ] **Step 1: Failing check:** `rg "@erp/ui/page" apps packages` returns nothing.
-- [ ] **Step 2:** Run; expect hits (FAIL) while consumers remain.
-- [ ] **Step 3:** Remove the kit and update docs. Move leave accrual from `attendance.grid.ts` to `attendance.derive.ts` if the output matches; otherwise record why the old file stays.
-- [ ] **Step 4:** `pnpm typecheck && pnpm lint && pnpm build && pnpm test`; expect PASS.
-- [ ] **Step 5:** Commit `refactor(ui): remove page kit replaced by dashboard kit`. Push to both remotes and open the PR for Part A.
+- [x] Verified: `pnpm typecheck && pnpm lint && pnpm test` pass; Part A PR opened from `feat/exact-port-people`.
 
 ---
 

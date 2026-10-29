@@ -58,9 +58,13 @@ Done, tested (unit, API over HTTP, browser) and pushed:
 - A5, API half: the employee API now returns HR's `EmployeeView` (`work`, `personal` with `nationalIdChangeRequest`, `contact`, `employment` with `employeeCode`, `shift`, `accountActive`, `passwordPending`, `payroll`, `exit`, `documents`, `blockers`). The old employee screens were patched to read it.
 - A5, employee point of view: `/me` (HR's `MyProfilePage`, or `AccountProfile` for an account with no employee record, whose permissions panel lists the real grants) and `/me/directory`, with `profile-api.ts`, account and session endpoints, own avatar, display name that can be cleared, and `expiresAt` on document links. Moved on: admin employees list, detail and add, with salary structure, to Part C; insights and the activity feed to Part D; self change-email to C3.
 
-Still open in Part A:
+- A6 Settings: one sidebar item whose children are pages, each rendering HR's panel inside HR's tab strip (the strip is built from the same nav entries, so page and sidebar cannot disagree). Done: Departments (no cost nature, accounting is out of scope), Shifts (with the weekly-off impact notice and the undeletable General default, now a seeded row), Leave types (HR's statutory floor, partial update). Users is HR's page with ERP's data model: an account's level plus an administrator-made role instead of five fixed roles, and only the super admin may appoint an admin. Roles & Permissions stays ERP's own page, since roles are made by administrators here.
+- A7 cleanup: removed the fresh department, shifts, leave types, users, manual-entry and My Team pages and the helpers behind them.
 
-- A6 Settings, Users, Activity. A7 cleanup of `@erp/ui/page`.
+Moved to later parts, not dropped:
+
+- Activity (HR's events feed) with the events module in Part D. Resend-password with `@erp/mail` in C3. Asset categories (B), cost categories (B), exchange rates and payroll settings (C): each adds its own Settings child.
+- The `@erp/ui/page` kit stays until the last fresh screens that use it are replaced: admin employees list, detail and add (C), dashboard (D), Roles and Activity pages.
 
 ## Plan 3 code that deviates and will be replaced
 

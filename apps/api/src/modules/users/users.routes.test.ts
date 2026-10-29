@@ -93,6 +93,25 @@ describe('GET /api/users', () => {
     const none = await request(app).get('/api/users').query({ q: `${PREFIX}-nomatch` }).set(await userManager());
     expect(none.body).toEqual([]);
   });
+
+  it('says when each account was opened and which employee, if any, it belongs to', async () => {
+    const staff = await makeUser();
+    const department = await prisma.department.create({ data: { name: `${PREFIX}-dept-${Date.now()}` } });
+    const employee = await prisma.employee.create({
+      data: { userId: staff.id, employeeCode: `${PREFIX}-${Date.now()}`, fullName: 'Pat Staff', designation: 'Engineer', departmentId: department.id, employmentType: 'FULL_TIME', joiningDate: new Date('2026-01-01T00:00:00Z') },
+    });
+    const bare = await makeUser();
+    try {
+      const res = await request(app).get('/api/users').query({ q: PREFIX }).set(await userManager());
+      const byId = new Map<string, { createdAt: string; employee: unknown }>(res.body.map((u: { id: string; createdAt: string; employee: unknown }) => [u.id, u]));
+      expect(byId.get(staff.id)?.employee).toEqual({ fullName: 'Pat Staff', employeeCode: employee.employeeCode });
+      expect(byId.get(bare.id)?.employee).toBeNull();
+      expect(new Date(byId.get(bare.id)!.createdAt).toISOString()).toBe(bare.createdAt.toISOString());
+    } finally {
+      await prisma.employee.delete({ where: { id: employee.id } });
+      await prisma.department.delete({ where: { id: department.id } });
+    }
+  });
 });
 
 describe('POST /api/users', () => {

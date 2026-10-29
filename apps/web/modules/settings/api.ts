@@ -1,4 +1,4 @@
-import type { AccountView, PublicUser, SessionView } from '@erp/contracts/core';
+import type { AccountView, PublicUser, SessionView, UserAccountView } from '@erp/contracts/core';
 import { api } from '@/lib/api-client';
 
 export type Scope = 'own' | 'team' | 'department' | 'all';
@@ -28,7 +28,7 @@ export interface RoleInput {
   permissions: RoleGrant[];
 }
 
-export const listUsers = (q: string) => api.request<PublicUser[]>(`/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+export const listUsers = (q: string) => api.request<UserAccountView[]>(`/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
 
 export const createUser = (body: { email: string; displayName: string; roleId: string | null }) =>
   api.request<{ user: PublicUser; temporaryPassword: string }>('/users', { method: 'POST', body });

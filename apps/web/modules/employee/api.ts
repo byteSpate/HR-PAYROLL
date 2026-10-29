@@ -35,7 +35,6 @@ const fileForm = (file: File, extra: Record<string, string> = {}) => {
 export const listEmployees = (q?: string) => api.request<EmployeeView[]>(`/employees${query({ q })}`);
 export const directory = (q?: string, departmentId?: string) =>
   api.request<EmployeeView[]>(`/employees/directory${query({ q, departmentId })}`);
-export const myTeam = () => api.request<EmployeeView[]>('/employees/team');
 export const getMe = () => api.request<EmployeeView>('/employees/me');
 export const getEmployee = (id: string) => api.request<EmployeeView>(`/employees/${id}`);
 export const createEmployee = (body: CreateEmployeeInput) =>

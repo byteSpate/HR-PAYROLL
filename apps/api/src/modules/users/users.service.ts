@@ -1,5 +1,5 @@
 import { generateTemporaryPassword, hashPassword } from '@erp/auth';
-import type { PublicUser } from '@erp/contracts/core';
+import type { PublicUser, UserAccountView } from '@erp/contracts/core';
 import { createUserSchema, updateUserRoleSchema, updateUserStatusSchema } from '@erp/contracts/core';
 import { fromDbScope, prisma, type Tx } from '@erp/db';
 import { AppError } from '@erp/utils';
@@ -11,16 +11,18 @@ import { assertCanActOn, assertMayGrant, type Caller } from './guards.js';
 
 const emailSchema = z.email();
 
-export async function listUsers(q?: string): Promise<PublicUser[]> {
+export async function listUsers(q?: string): Promise<UserAccountView[]> {
   const term = q?.trim();
   const rows = await prisma.user.findMany({
     where: term
       ? { OR: [{ email: { contains: term, mode: 'insensitive' } }, { displayName: { contains: term, mode: 'insensitive' } }] }
       : {},
-    select: { id: true },
+    select: { id: true, createdAt: true, employee: { select: { fullName: true, employeeCode: true } } },
     orderBy: { email: 'asc' },
   });
-  return Promise.all(rows.map((r) => loadPublicUser(prisma, r.id)));
+  return Promise.all(
+    rows.map(async (r) => ({ ...(await loadPublicUser(prisma, r.id)), createdAt: r.createdAt.toISOString(), employee: r.employee })),
+  );
 }
 
 export function listRoleOptions() {
