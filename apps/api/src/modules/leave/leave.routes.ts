@@ -4,7 +4,7 @@ import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
-import { scopeForViewer } from '../attendance/attendance.approval.js';
+import { scopeForViewer } from '../employee/employee.scope.js';
 import { adjustBalance, deleteLeaveType, createLeaveType, updateLeaveType } from './leave.admin.js';
 import { applyForLeave, balancesFor, cancelLeave, decideLeave, previewLeave } from './leave.service.js';
 import { getHalfDayWindow, getTeamStatus, listRequests, myBalances, requestItem } from './leave.wire.js';

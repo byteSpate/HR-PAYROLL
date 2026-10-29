@@ -6,7 +6,7 @@ import { emit } from '@erp/events';
 import { approverUserIds, notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
-import { scopeForViewer } from './attendance.approval.js';
+import { scopeForViewer } from '../employee/employee.scope.js';
 import { employeeForUser } from './attendance.me.js';
 import { computeIsEarlyOut, computeIsLate, elapsedHours, MAX_REGULARISE_DAYS, officeInstantOf, officeToday } from './attendance.time.js';
 import { shiftFor } from './attendance.punch.js';

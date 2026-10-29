@@ -56,16 +56,16 @@ enum AttendanceSource {
 }
 
 model Attendance {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id])
+  employee    Employee  @relation(fields: [employeeId], references: [id])
   // The office-local calendar day, not the instant: a punch at 23:30 UTC belongs to the next Dhaka day.
-  date        DateTime @db.Date
+  date        DateTime  @db.Date
   checkIn     DateTime?
   checkOut    DateTime?
   workedHours Float?
-  isLate      Boolean  @default(false)
-  isEarlyOut  Boolean  @default(false)
+  isLate      Boolean   @default(false)
+  isEarlyOut  Boolean   @default(false)
 
   source AttendanceSource @default(WEB)
 

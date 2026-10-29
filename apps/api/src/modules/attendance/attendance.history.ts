@@ -2,7 +2,7 @@ import type { AttendanceDay, AuditEntry } from '@erp/contracts/attendance';
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
-import { scopeForViewer } from './attendance.approval.js';
+import { scopeForViewer } from '../employee/employee.scope.js';
 import { buildDayGrid } from './attendance.derive.js';
 import { resolveRange } from './attendance.range.js';
 import { ROSTER_SELECT, toGridEmployee } from './attendance.summary.js';

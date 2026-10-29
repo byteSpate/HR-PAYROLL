@@ -28,6 +28,10 @@
       "types": "./dist/exchange/index.d.ts",
       "default": "./dist/exchange/index.js"
     },
+    "./expense": {
+      "types": "./dist/expense/index.d.ts",
+      "default": "./dist/expense/index.js"
+    },
     "./notification": {
       "types": "./dist/notification/index.d.ts",
       "default": "./dist/notification/index.js"

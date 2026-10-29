@@ -8,7 +8,7 @@ import { officeToday } from '@erp/export';
 import { approverUserIds, notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
-import { scopeForViewer } from '../attendance/attendance.approval.js';
+import { scopeForViewer } from '../employee/employee.scope.js';
 import { shiftFor } from '../attendance/attendance.punch.js';
 import { computeEarnedAccrual } from './leave.accrual.js';
 import { countChargedDays } from './leave.dates.js';

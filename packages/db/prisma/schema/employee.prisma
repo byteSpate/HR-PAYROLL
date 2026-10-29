@@ -92,6 +92,7 @@ model Employee {
   changeRequests EmployeeChangeRequest[]
   attendances    Attendance[]
   leaveRequests  LeaveRequest[]
+  expenseClaims  ExpenseClaim[]
   leaveBalances  LeaveBalance[]
 
   @@index([shiftId])

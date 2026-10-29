@@ -1,7 +1,6 @@
 import { assertMayDecide, assertPending, decisionStamp } from '@erp/approvals';
-import { scopeFor } from '@erp/auth';
 import { writeAudit } from '@erp/audit';
-import { prisma, type Prisma } from '@erp/db';
+import { prisma } from '@erp/db';
 import { emit } from '@erp/events';
 import { notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
@@ -10,15 +9,7 @@ import { exceptionsFor } from './attendance.exceptions.js';
 import { shiftFor } from './attendance.punch.js';
 import { AGING_WARN_DAYS, officeToday, toMinutes } from './attendance.time.js';
 import type { Viewer } from '../employee/employee.access.js';
-
-export async function scopeForViewer(viewer: Viewer, permission: string): Promise<Prisma.EmployeeWhereInput> {
-  const scope = scopeFor(viewer, permission);
-  if (scope === 'all') return {};
-  const me = await prisma.employee.findUnique({ where: { userId: viewer.sub }, select: { id: true, departmentId: true } });
-  if (scope === 'department' && me) return { departmentId: me.departmentId };
-  if (scope === 'team' && me) return { reportingManagerId: me.id };
-  throw new AppError(403, 'Forbidden');
-}
+import { scopeForViewer } from '../employee/employee.scope.js';
 
 type ListedRow = Awaited<ReturnType<typeof listAttendance>>[number];
 
