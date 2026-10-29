@@ -50,6 +50,7 @@ export const STARTER_ROLES: StarterRoleDef[] = [
       { key: 'department.read', scope: null },
       { key: 'employee.read.financial', scope: null },
       { key: 'employee.export', scope: null },
+      { key: 'exchange.config', scope: null },
     ],
   },
   { name: 'Employee', description: 'Baseline role for every staff member', grants: [] },

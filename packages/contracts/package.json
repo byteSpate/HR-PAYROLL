@@ -24,6 +24,10 @@
       "types": "./dist/employee/index.d.ts",
       "default": "./dist/employee/index.js"
     },
+    "./exchange": {
+      "types": "./dist/exchange/index.d.ts",
+      "default": "./dist/exchange/index.js"
+    },
     "./notification": {
       "types": "./dist/notification/index.d.ts",
       "default": "./dist/notification/index.js"
