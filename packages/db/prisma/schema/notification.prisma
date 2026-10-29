@@ -1,17 +1,17 @@
 // In-app notices. Email delivery arrives with the worker and reads these same rows.
 model Notification {
-  id       String  @id @default(uuid())
-  userId   String
-  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   /// Machine key such as "leave.requested"; the web picks an icon from it.
-  type     String
-  title    String
-  body     String?
+  type      String
+  title     String
+  body      String?
   /// Where clicking the notice goes.
-  href     String?
+  href      String?
   /// The record it is about, so a repeat for the same record can be recognised.
-  entity   String?
-  entityId String?
+  entity    String?
+  entityId  String?
   readAt    DateTime?
   createdAt DateTime  @default(now())
 

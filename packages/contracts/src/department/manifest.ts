@@ -18,7 +18,14 @@ export const department = defineModule({
           href: '/settings/departments',
           icon: 'RiSettingsLine',
           permission: null,
-          children: [{ label: 'Departments', href: '/settings/departments', permission: 'department.manage', icon: 'RiBuilding2Line' }],
+          children: [
+            {
+              label: 'Departments',
+              href: '/settings/departments',
+              permission: 'department.manage',
+              icon: 'RiBuilding2Line',
+            },
+          ],
         },
       ],
     },

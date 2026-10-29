@@ -11,7 +11,20 @@ export type AuditAction =
   | 'EXPORT'
   | 'EXIT'
   | 'ACTIVATE'
-  | 'DEACTIVATE';
+  | 'DEACTIVATE'
+  | 'SUBMIT'
+  | 'ORDER'
+  | 'FULFIL'
+  | 'ASSIGN'
+  | 'RETURN'
+  | 'ACKNOWLEDGE'
+  | 'RETIRE'
+  | 'MARK_LOST'
+  | 'CAPITALISE'
+  | 'PAY'
+  | 'SEND_REPAIR'
+  | 'RECEIVE_REPAIR'
+  | 'WAIVE';
 
 export interface AuditEntry {
   entity: string;
@@ -21,6 +34,8 @@ export interface AuditEntry {
   /** Only the fields that changed, not whole snapshots. */
   before?: Prisma.InputJsonValue;
   after?: Prisma.InputJsonValue;
+  /** Why, in the decider's own words; a request's timeline reads it back. */
+  note?: string | null;
 }
 
 // Always called with the transaction that makes the change: a write without its audit row is a bug.

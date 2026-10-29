@@ -1,0 +1,21 @@
+enum Currency {
+  BDT
+  USD
+}
+
+model ExchangeRate {
+  id            String   @id @default(uuid())
+  // Always stored in one canonical direction: base USD, quote BDT. The inverse is derived as 1/rate,
+  // never stored: two rows would drift apart and a round trip would not return the original figure.
+  base          Currency
+  quote         Currency
+  // How many `quote` units one `base` unit buys. A rate is a ratio, not money, so six decimals.
+  rate          Decimal  @db.Decimal(18, 6)
+  // A calendar date at UTC midnight, the convention attendance and leave use.
+  effectiveFrom DateTime @db.Date
+  createdBy     String
+  createdAt     DateTime @default(now())
+
+  @@unique([base, quote, effectiveFrom])
+  @@index([base, quote, effectiveFrom])
+}

@@ -1,6 +1,7 @@
 import multer, { MulterError } from 'multer';
 import type { RequestHandler } from 'express';
 import { AppError } from '@erp/utils';
+import { requireStorage } from './storage.js';
 
 export interface UploadLimits {
   maxBytes: number;
@@ -31,3 +32,9 @@ export function uploadSingle(field: string, limits: UploadLimits): RequestHandle
     });
   };
 }
+
+/** Run before the upload handler, so a server with no file storage answers 503 at once instead of after buffering the file. */
+export const storageReady: RequestHandler = (_req, _res, next) => {
+  requireStorage();
+  next();
+};

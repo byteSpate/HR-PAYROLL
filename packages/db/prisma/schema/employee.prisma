@@ -88,11 +88,15 @@ model Employee {
   shiftId String?
   shift   Shift?  @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
-  documents      Document[]
-  changeRequests EmployeeChangeRequest[]
-  attendances    Attendance[]
-  leaveRequests  LeaveRequest[]
-  leaveBalances  LeaveBalance[]
+  documents        Document[]
+  changeRequests   EmployeeChangeRequest[]
+  attendances      Attendance[]
+  leaveRequests    LeaveRequest[]
+  expenseClaims    ExpenseClaim[]
+  assetAssignments AssetAssignment[]
+  assetRequests    AssetRequest[]
+  assetRecoveries  AssetRecovery[]
+  leaveBalances    LeaveBalance[]
 
   @@index([shiftId])
   @@index([reportingManagerId])

@@ -1,0 +1,63 @@
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  // Set only by the system when a payroll run or a settlement consumes the claim, never by a person.
+  REIMBURSED
+}
+
+model ExpenseCategory {
+  id     String         @id @default(uuid())
+  code   String         @unique
+  name   String         @unique
+  claims ExpenseClaim[]
+}
+
+model ExpenseClaim {
+  id           String              @id @default(uuid())
+  employeeId   String
+  employee     Employee            @relation(fields: [employeeId], references: [id])
+  categoryId   String
+  category     ExpenseCategory     @relation(fields: [categoryId], references: [id])
+  /// What the claim is, in a few words ("Water jar"). A category alone cannot tell two claims apart.
+  name         String
+  description  String?
+  amount       Decimal             @db.Decimal(14, 2)
+  currency     Currency            @default(BDT)
+  /// When the money was spent, distinct from when it was claimed: a July taxi fare filed in August is judged on its July date.
+  expenseDate  DateTime            @db.Date
+  /// Journey ends, only for categories that carry a route.
+  travelFrom   String?
+  travelTo     String?
+  status       ExpenseStatus       @default(PENDING)
+  /// BDT per one unit of `currency` on `expenseDate`, frozen at approval and not the payroll run's rate.
+  fxRateToBdt  Decimal?            @db.Decimal(18, 6)
+  decidedBy    String?
+  decidedAt    DateTime?
+  /// Required on reject.
+  decisionNote String?
+  /// The payslip or settlement that paid it. Plain columns for now: the payroll migration adds their foreign keys.
+  payslipId    String?
+  settlementId String?
+  attachments  ExpenseAttachment[]
+  createdAt    DateTime            @default(now())
+
+  @@index([status])
+  @@index([employeeId, status])
+  @@index([expenseDate])
+}
+
+/// A receipt on a claim. Holds the storage id, not a URL: delivery URLs are signed per request and expire.
+model ExpenseAttachment {
+  id         String       @id @default(uuid())
+  claimId    String
+  claim      ExpenseClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  publicId   String       @unique
+  fileName   String
+  bytes      Int
+  format     String
+  uploadedBy String?
+  uploadedAt DateTime     @default(now())
+
+  @@index([claimId, uploadedAt])
+}

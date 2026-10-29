@@ -25,46 +25,46 @@
  *   want of a fraction.
  */
 
-import type { EmploymentType, LeaveAccrualBasis } from "../generated/prisma/client.js"
-import type { Db } from "../client.js"
+import type { EmploymentType, LeaveAccrualBasis } from '../generated/prisma/client.js';
+import type { Db } from '../client.js';
 
 /** §117: one day of earned leave for every eighteen days actually worked. */
-export const EARNED_LEAVE_DAYS_PER_DAY = 18
+export const EARNED_LEAVE_DAYS_PER_DAY = 18;
 
 /** §117: accumulated earned leave is capped at sixty days. */
-export const EARNED_LEAVE_MAX_ACCRUAL = 60
+export const EARNED_LEAVE_MAX_ACCRUAL = 60;
 
 /** §117: nothing accrues until one year of continuous service is complete. */
-export const EARNED_LEAVE_MIN_SERVICE_MONTHS = 12
+export const EARNED_LEAVE_MIN_SERVICE_MONTHS = 12;
 
 /** §45/§46: maternity benefit requires six months' service with the employer. */
-export const MATERNITY_MIN_SERVICE_MONTHS = 6
+export const MATERNITY_MIN_SERVICE_MONTHS = 6;
 
 /** §46 as amended (Nov 2025): 60 days before delivery and 60 days after. */
-export const MATERNITY_DAYS = 120
+export const MATERNITY_DAYS = 120;
 
-const ALL_STAFF: EmploymentType[] = ["FULL_TIME", "PART_TIME", "CONTRACT"]
-const EVERYONE: EmploymentType[] = ["FULL_TIME", "PART_TIME", "CONTRACT", "INTERN"]
+const ALL_STAFF: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT'];
+const EVERYONE: EmploymentType[] = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN'];
 
 export interface LeaveTypeDefinition {
-  code: string
-  name: string
-  isPaid: boolean
-  annualQuota: number
-  carryForwardPct: number
-  maxConsecutive: number | null
-  allowsBackdating: boolean
-  eligibleFor: EmploymentType[]
-  statutory: boolean
-  countsHolidays: boolean
-  accrualBasis: LeaveAccrualBasis
-  minServiceMonths: number
-  maxAccrual: number | null
+  code: string;
+  name: string;
+  isPaid: boolean;
+  annualQuota: number;
+  carryForwardPct: number;
+  maxConsecutive: number | null;
+  allowsBackdating: boolean;
+  eligibleFor: EmploymentType[];
+  statutory: boolean;
+  countsHolidays: boolean;
+  accrualBasis: LeaveAccrualBasis;
+  minServiceMonths: number;
+  maxAccrual: number | null;
   /**
    * Company policy layered on the Act, which speaks only in whole days.
    * False where a half is incoherent rather than merely unusual.
    */
-  allowsHalfDay: boolean
+  allowsHalfDay: boolean;
 }
 
 /**
@@ -76,8 +76,8 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
   {
     // §115. Ten days a year, and expressly not accumulable — an unused
     // casual day is gone at year end, hence carryForwardPct 0.
-    code: "CASUAL",
-    name: "Casual",
+    code: 'CASUAL',
+    name: 'Casual',
     isPaid: true,
     annualQuota: 10,
     carryForwardPct: 0,
@@ -86,7 +86,7 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     eligibleFor: ALL_STAFF,
     statutory: true,
     countsHolidays: false,
-    accrualBasis: "PRO_RATED",
+    accrualBasis: 'PRO_RATED',
     minServiceMonths: 0,
     maxAccrual: null,
     allowsHalfDay: true,
@@ -94,8 +94,8 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
   {
     // §116. Fourteen days a year on full wages. Backdatable for the same
     // reason it always was: you cannot schedule getting ill.
-    code: "SICK",
-    name: "Sick",
+    code: 'SICK',
+    name: 'Sick',
     isPaid: true,
     annualQuota: 14,
     carryForwardPct: 0,
@@ -104,7 +104,7 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     eligibleFor: ALL_STAFF,
     statutory: true,
     countsHolidays: false,
-    accrualBasis: "PRO_RATED",
+    accrualBasis: 'PRO_RATED',
     minServiceMonths: 0,
     maxAccrual: null,
     allowsHalfDay: true,
@@ -116,8 +116,8 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     //
     // carryForwardPct is 100 because unused earned leave carries in full up
     // to the sixty-day ceiling; it is the one type the Act lets accumulate.
-    code: "EARNED",
-    name: "Earned",
+    code: 'EARNED',
+    name: 'Earned',
     isPaid: true,
     annualQuota: 0,
     carryForwardPct: 100,
@@ -126,7 +126,7 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     eligibleFor: ALL_STAFF,
     statutory: true,
     countsHolidays: true,
-    accrualBasis: "EARNED",
+    accrualBasis: 'EARNED',
     minServiceMonths: EARNED_LEAVE_MIN_SERVICE_MONTHS,
     maxAccrual: EARNED_LEAVE_MAX_ACCRUAL,
     // §117 leave is drawn in days; a fractional numerator in the accrual
@@ -148,8 +148,8 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     // so a 120-day leave starting after early September has to be filed as
     // two requests. The balance is per leave year, which is what makes the
     // single-year rule load-bearing everywhere else.
-    code: "MATERNITY",
-    name: "Maternity",
+    code: 'MATERNITY',
+    name: 'Maternity',
     isPaid: true,
     annualQuota: MATERNITY_DAYS,
     carryForwardPct: 0,
@@ -158,7 +158,7 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     eligibleFor: ALL_STAFF,
     statutory: true,
     countsHolidays: true,
-    accrualBasis: "PER_EVENT",
+    accrualBasis: 'PER_EVENT',
     minServiceMonths: MATERNITY_MIN_SERVICE_MONTHS,
     maxAccrual: null,
     // §46 grants 120 days per delivery. Half of one of them is not a thing.
@@ -168,8 +168,8 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     // Not statutory — the Act has no unpaid-leave provision. It is the
     // fallback that keeps someone whose paid allowance is spent able to take
     // time off at all, so interns get it too.
-    code: "LWP",
-    name: "Leave Without Pay",
+    code: 'LWP',
+    name: 'Leave Without Pay',
     isPaid: false,
     annualQuota: 0,
     carryForwardPct: 0,
@@ -178,7 +178,7 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     eligibleFor: EVERYONE,
     statutory: false,
     countsHolidays: false,
-    accrualBasis: "NONE",
+    accrualBasis: 'NONE',
     minServiceMonths: 0,
     maxAccrual: null,
     allowsHalfDay: true,
@@ -188,8 +188,8 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     // deleted: it has requests filed against it, and dropping a benefit
     // already granted is not something a compliance change should do
     // silently. Non-statutory, so the seed leaves it alone from here.
-    code: "PERSONAL",
-    name: "Personal",
+    code: 'PERSONAL',
+    name: 'Personal',
     isPaid: true,
     annualQuota: 5,
     carryForwardPct: 0,
@@ -198,12 +198,12 @@ export const LEAVE_TYPE_CATALOGUE: LeaveTypeDefinition[] = [
     eligibleFor: ALL_STAFF,
     statutory: false,
     countsHolidays: false,
-    accrualBasis: "PRO_RATED",
+    accrualBasis: 'PRO_RATED',
     minServiceMonths: 0,
     maxAccrual: null,
     allowsHalfDay: true,
   },
-]
+];
 
 export async function seedLeaveTypes(db: Db): Promise<void> {
   for (const data of LEAVE_TYPE_CATALOGUE) {

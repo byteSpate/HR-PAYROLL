@@ -1,10 +1,19 @@
 import { defineModule } from '../module.js';
 import { LEAVE_EVENTS } from './events.js';
 export const leave = defineModule({
-  name: 'leave', deps: ['core', 'employee', 'attendance'],
+  name: 'leave',
+  deps: ['core', 'employee', 'attendance'],
   permissions: {
-    'leave.read': { label: 'View leave requests', scopes: ['team', 'department', 'all'], managerDefault: true },
-    'leave.approve': { label: 'Approve or reject leave', scopes: ['team', 'department', 'all'], managerDefault: true },
+    'leave.read': {
+      label: 'View leave requests',
+      scopes: ['team', 'department', 'all'],
+      managerDefault: true,
+    },
+    'leave.approve': {
+      label: 'Approve or reject leave',
+      scopes: ['team', 'department', 'all'],
+      managerDefault: true,
+    },
     'leave.manage': { label: 'Manage leave requests', scopes: ['department', 'all'] },
     'leave.config': { label: 'Manage leave policies' },
   },
@@ -46,9 +55,17 @@ export const leave = defineModule({
           href: '/settings/leave-types',
           icon: 'RiSettingsLine',
           permission: null,
-          children: [{ label: 'Leave types', href: '/settings/leave-types', permission: 'leave.config', icon: 'RiCalendarCheckLine' }],
+          children: [
+            {
+              label: 'Leave types',
+              href: '/settings/leave-types',
+              permission: 'leave.config',
+              icon: 'RiCalendarCheckLine',
+            },
+          ],
         },
       ],
     },
-  ], events: LEAVE_EVENTS,
+  ],
+  events: LEAVE_EVENTS,
 });

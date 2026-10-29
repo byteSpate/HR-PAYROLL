@@ -1,13 +1,29 @@
+import { asset } from './asset/manifest.js';
 import { attendance } from './attendance/manifest.js';
 import { core } from './core/manifest.js';
+import { cost } from './cost/manifest.js';
 import { department } from './department/manifest.js';
 import { employee } from './employee/manifest.js';
+import { exchange } from './exchange/manifest.js';
+import { expense } from './expense/manifest.js';
 import type { ModuleManifest, Permission, PermissionDef, Scope } from './module.js';
 import { leave } from './leave/manifest.js';
 import { notification } from './notification/manifest.js';
 
-// Core first; later plans append their manifests here.
-export const modules: readonly ModuleManifest[] = [core, department, employee, notification, attendance, leave];
+// Core first; later plans append their manifests here. Settings tabs follow this order, so finance panels
+// such as exchange rates stay last.
+export const modules: readonly ModuleManifest[] = [
+  core,
+  department,
+  employee,
+  notification,
+  attendance,
+  leave,
+  expense,
+  asset,
+  cost,
+  exchange,
+];
 
 function findCycle(byName: Map<string, ModuleManifest>): string[] {
   const state = new Map<string, 'visiting' | 'done'>();

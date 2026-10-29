@@ -4,16 +4,19 @@ enum LeaveAccrualBasis {
   EARNED
   NONE
 }
+
 enum LeaveStatus {
   PENDING
   APPROVED
   REJECTED
   CANCELLED
 }
+
 enum LeaveSession {
   FIRST_HALF
   SECOND_HALF
 }
+
 model LeaveType {
   id               String            @id @default(uuid())
   code             String            @unique
@@ -33,6 +36,7 @@ model LeaveType {
   requests         LeaveRequest[]
   balances         LeaveBalance[]
 }
+
 model LeaveBalance {
   id          String    @id @default(uuid())
   employeeId  String
@@ -43,8 +47,10 @@ model LeaveBalance {
   accrued     Float     @default(0)
   used        Float     @default(0)
   balance     Float     @default(0)
+
   @@unique([employeeId, leaveTypeId, year])
 }
+
 model LeaveRequest {
   id           String       @id @default(uuid())
   employeeId   String
@@ -63,6 +69,7 @@ model LeaveRequest {
   decidedAt    DateTime?
   decisionNote String?
   createdAt    DateTime     @default(now())
+
   @@index([employeeId, startDate, endDate])
   @@index([status])
 }

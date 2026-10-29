@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-export const ATTENDANCE_EVENTS = ['attendance.approved', 'attendance.rejected', 'attendance.corrected'] as const;
+export const ATTENDANCE_EVENTS = [
+  'attendance.approved',
+  'attendance.rejected',
+  'attendance.corrected',
+] as const;
 
 // `selfDecided` is true when an admin decided their own record, so the audit trail and any consumer
 // can see the decider and the subject are the same person.

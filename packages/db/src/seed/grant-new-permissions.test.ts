@@ -19,7 +19,10 @@ const roles: StarterRoleDef[] = [
 ];
 
 async function grantsOf(name: string) {
-  const role = await prisma.role.findUniqueOrThrow({ where: { name }, include: { permissions: true } });
+  const role = await prisma.role.findUniqueOrThrow({
+    where: { name },
+    include: { permissions: true },
+  });
   return role.permissions.map((p) => [p.permissionKey, p.scope]).sort();
 }
 
@@ -34,7 +37,9 @@ afterEach(cleanup);
 describe('grantNewPermissions', () => {
   it('grants a newly declared key to the starter roles that list it, at the listed scope', async () => {
     await prisma.role.create({ data: { name: ROLE } });
-    await prisma.permission.create({ data: { key: 'zztestgrant.y', label: 'y', module: 'zz', scopes: ['ALL'] } });
+    await prisma.permission.create({
+      data: { key: 'zztestgrant.y', label: 'y', module: 'zz', scopes: ['ALL'] },
+    });
 
     await grantNewPermissions(prisma, ['zztestgrant.y'], roles);
 
@@ -59,13 +64,23 @@ describe('grantNewPermissions', () => {
   it('skips roles that do not exist and keys no role lists', async () => {
     await prisma.permission.create({ data: { key: 'zztestgrant.x', label: 'x', module: 'zz' } });
 
-    await expect(grantNewPermissions(prisma, ['zztestgrant.x', 'zztestgrant.none'], roles)).resolves.toBeUndefined();
+    await expect(
+      grantNewPermissions(prisma, ['zztestgrant.x', 'zztestgrant.none'], roles),
+    ).resolves.toBeUndefined();
   });
 
   it('works with syncPermissions output', async () => {
     await prisma.role.create({ data: { name: ROLE } });
-    const existing = (await prisma.permission.findMany()).map((p) => ({ key: p.key, label: p.label, module: p.module, scopes: p.scopes.map(fromDbScope) }));
-    const { added } = await syncPermissions(prisma, [...existing, { key: 'zztestgrant.x', label: 'x', module: 'zz' }]);
+    const existing = (await prisma.permission.findMany()).map((p) => ({
+      key: p.key,
+      label: p.label,
+      module: p.module,
+      scopes: p.scopes.map(fromDbScope),
+    }));
+    const { added } = await syncPermissions(prisma, [
+      ...existing,
+      { key: 'zztestgrant.x', label: 'x', module: 'zz' },
+    ]);
 
     await grantNewPermissions(prisma, added, roles);
 

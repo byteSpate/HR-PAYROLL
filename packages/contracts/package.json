@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./asset": {
+      "types": "./dist/asset/index.d.ts",
+      "default": "./dist/asset/index.js"
+    },
     "./attendance": {
       "types": "./dist/attendance/index.d.ts",
       "default": "./dist/attendance/index.js"
@@ -16,6 +20,10 @@
       "types": "./dist/core/index.d.ts",
       "default": "./dist/core/index.js"
     },
+    "./cost": {
+      "types": "./dist/cost/index.d.ts",
+      "default": "./dist/cost/index.js"
+    },
     "./department": {
       "types": "./dist/department/index.d.ts",
       "default": "./dist/department/index.js"
@@ -23,6 +31,14 @@
     "./employee": {
       "types": "./dist/employee/index.d.ts",
       "default": "./dist/employee/index.js"
+    },
+    "./exchange": {
+      "types": "./dist/exchange/index.d.ts",
+      "default": "./dist/exchange/index.js"
+    },
+    "./expense": {
+      "types": "./dist/expense/index.d.ts",
+      "default": "./dist/expense/index.js"
     },
     "./notification": {
       "types": "./dist/notification/index.d.ts",

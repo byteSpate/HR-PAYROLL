@@ -15,7 +15,9 @@ describe('employee contracts', () => {
     expect(perms['employee.read']?.scopes).toEqual(['team', 'department', 'all']);
     expect(perms['employee.update']?.scopes).toEqual(['department', 'all']);
     expect(perms['employee.read.financial']?.scopes).toEqual([]);
-    expect(modules.find((m) => m.name === 'employee')?.permissions['employee.read']?.managerDefault).toBe(true);
+    expect(
+      modules.find((m) => m.name === 'employee')?.permissions['employee.read']?.managerDefault,
+    ).toBe(true);
   });
 
   it('never lets an employee edit their own bank details or national id', () => {
@@ -36,7 +38,9 @@ describe('employee contracts', () => {
       joiningDate: '2026-01-05',
     });
     expect(ok.success && ok.data.email).toBe('a@example.com');
-    expect(createEmployeeSchema.safeParse({ ...ok.data, joiningDate: '05/01/2026' }).success).toBe(false);
+    expect(createEmployeeSchema.safeParse({ ...ok.data, joiningDate: '05/01/2026' }).success).toBe(
+      false,
+    );
   });
 
   it('rejects unknown keys on update so a typo is not silently ignored', () => {
@@ -44,7 +48,11 @@ describe('employee contracts', () => {
   });
 
   it('requires a valid exit reason and date', () => {
-    expect(exitSchema.safeParse({ lastWorkingDay: '2026-03-31', exitReason: 'RESIGNATION' }).success).toBe(true);
-    expect(exitSchema.safeParse({ lastWorkingDay: '2026-03-31', exitReason: 'QUIT' }).success).toBe(false);
+    expect(
+      exitSchema.safeParse({ lastWorkingDay: '2026-03-31', exitReason: 'RESIGNATION' }).success,
+    ).toBe(true);
+    expect(exitSchema.safeParse({ lastWorkingDay: '2026-03-31', exitReason: 'QUIT' }).success).toBe(
+      false,
+    );
   });
 });

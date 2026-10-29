@@ -3,7 +3,7 @@ import type { DecidedBy, HalfDayWindow, LeaveBalanceItem, LeaveRequestItem, Team
 import { prisma, type Prisma } from '@erp/db';
 import { formatDateOnly, officeToday } from '@erp/export';
 import { AppError } from '@erp/utils';
-import { scopeForViewer } from '../attendance/attendance.approval.js';
+import { scopeForViewer } from '../employee/employee.scope.js';
 import { employeeForUser } from '../attendance/attendance.me.js';
 import { shiftFor } from '../attendance/attendance.punch.js';
 import { shiftMidpoint } from '../attendance/attendance.time.js';

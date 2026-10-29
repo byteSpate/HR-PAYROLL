@@ -28,7 +28,10 @@ export const shiftInputSchema = z
     effectiveFrom: dateOnly.nullable().optional(),
     effectiveTo: dateOnly.nullable().optional(),
   })
-  .refine((s) => !s.effectiveFrom === !s.effectiveTo, { message: 'Give both dates of a dated shift, or neither', path: ['effectiveTo'] })
+  .refine((s) => !s.effectiveFrom === !s.effectiveTo, {
+    message: 'Give both dates of a dated shift, or neither',
+    path: ['effectiveTo'],
+  })
   .refine((s) => !s.effectiveFrom || !s.effectiveTo || s.effectiveFrom <= s.effectiveTo, {
     message: 'The end date is before the start date',
     path: ['effectiveTo'],
@@ -41,7 +44,9 @@ export const holidayInputSchema = z.object({
 });
 
 /** A holiday change names only what it changes. No defaults: an omitted type must not reset to GENERAL. */
-export const holidayPatchSchema = z.object({ name: text(120), date: dateOnly, type: z.enum(holidayTypes) }).partial();
+export const holidayPatchSchema = z
+  .object({ name: text(120), date: dateOnly, type: z.enum(holidayTypes) })
+  .partial();
 
 export type ShiftInput = z.infer<typeof shiftInputSchema>;
 export type HolidayInput = z.infer<typeof holidayInputSchema>;

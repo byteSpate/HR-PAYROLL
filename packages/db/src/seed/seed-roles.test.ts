@@ -8,7 +8,10 @@ import { syncPermissions } from './sync-permissions.js';
 const names = STARTER_ROLES.map((r) => r.name);
 
 async function reset() {
-  await prisma.user.updateMany({ where: { role: { name: { in: names } } }, data: { roleId: null } });
+  await prisma.user.updateMany({
+    where: { role: { name: { in: names } } },
+    data: { roleId: null },
+  });
   await prisma.role.deleteMany({ where: { name: { in: names } } });
 }
 
@@ -19,7 +22,10 @@ describe('seedRoles', () => {
     await seedRoles(prisma);
     await seedRoles(prisma);
 
-    const roles = await prisma.role.findMany({ where: { name: { in: names } }, include: { permissions: true } });
+    const roles = await prisma.role.findMany({
+      where: { name: { in: names } },
+      include: { permissions: true },
+    });
     expect(roles.map((r) => r.name).sort()).toEqual([...names].sort());
     const hr = roles.find((r) => r.name === 'HR Admin')!;
     const hrDef = STARTER_ROLES.find((r) => r.name === 'HR Admin')!;

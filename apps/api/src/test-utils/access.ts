@@ -21,8 +21,14 @@ export async function ensureTestSuperAdmin() {
   });
 }
 
-export function bearer(sub: string, accessLevel: AccessLevel, grants: string[] = []): { Authorization: string } {
-  return { Authorization: `Bearer ${signAccessToken({ sub, accessLevel, grants }, env.JWT_ACCESS_SECRET, '5m')}` };
+export function bearer(
+  sub: string,
+  accessLevel: AccessLevel,
+  grants: string[] = [],
+): { Authorization: string } {
+  return {
+    Authorization: `Bearer ${signAccessToken({ sub, accessLevel, grants }, env.JWT_ACCESS_SECRET, '5m')}`,
+  };
 }
 
 let actorSeq = 0;
@@ -63,5 +69,7 @@ export async function makeActor(prefix: string, accessLevel: AccessLevel, grants
 
 export async function cleanActors(prefix: string) {
   await prisma.user.deleteMany({ where: { email: { startsWith: `${prefix}-actor-` } } });
-  await prisma.role.deleteMany({ where: { name: { startsWith: `${prefix.toUpperCase()}_ACTOR_` } } });
+  await prisma.role.deleteMany({
+    where: { name: { startsWith: `${prefix.toUpperCase()}_ACTOR_` } },
+  });
 }

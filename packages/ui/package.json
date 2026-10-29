@@ -11,7 +11,8 @@
     "./page": "./src/page/index.ts",
     "./dashboard": "./src/dashboard/index.ts",
     "./lib/cn": "./src/lib/cn.ts",
-    "./lib/dates": "./src/lib/dates.ts"
+    "./lib/dates": "./src/lib/dates.ts",
+    "./lib/money": "./src/lib/money.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

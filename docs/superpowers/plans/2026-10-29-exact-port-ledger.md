@@ -66,6 +66,30 @@ Moved to later parts, not dropped:
 - Activity (the original's events feed) with the events module in Part D. Resend-password with `@erp/mail` in C3. Asset categories (B), cost categories (B), exchange rates and payroll settings (C): each adds its own Settings child.
 - The `@erp/ui/page` kit stays until the last fresh screens that use it are replaced: admin employees list, detail and add (C), dashboard (D), Roles and Activity pages.
 
+## Progress (Plan 4, Part B, branch `feat/expense-asset-cost`)
+
+Done, tested (unit, API over HTTP, browser) and pushed:
+
+- B0 (added): the `exchange` module (rates, resolution that never defaults to 1, Settings panel) and the money helpers (`@erp/db`, `@erp/ui/lib/money`). Expense reads rates through it, and payroll will too; payroll reads expense claims, so the rates could not live in payroll.
+- B1 Expense backend: claims, categories (seeded with the seven standard ones), scoped reads (an out-of-scope claim is a 404), amend and withdraw own pending claims, approve, reject and batch approve at the spend-date rate (frozen, `expense.claim.approved` carries the BDT amount), receipts through `@erp/attachments`, reports (JSON, CSV, PDF) and outstanding reimbursements. REIMBURSED is set only by `reimburseClaims`, which payroll and settlement call inside their own transaction. `scopeForViewer` and `storageReady` moved into the shared places (employee module, `@erp/attachments`).
+- B2 Expense UI: the original `ExpensePage` at `/expenses` (everybody's) and `/me/expenses` (a person's own), chosen by a `view` prop; permissions decide the approve controls.
+
+Deviations to remember: `paidOn` in the report and the `payslip` join on a claim stay empty until payroll exists (Part C adds them); HR-MNG-V1's legacy `receiptUrl` and `legacyCategoryText` columns are not carried; decision emails wait for `@erp/mail` (C3), and the claimant gets an in-app notice meanwhile.
+
+Review fixes on B0 to B2, decided here so later modules follow them:
+
+- Anything that changes a record or decides on it takes the record's row lock and re-reads it inside its own transaction (`expense.lock.ts`). A status read before the transaction proves nothing, so a loser of a race with an approval gets a 409, and a decision uses the figures as they stand once it holds the lock. Files are removed from storage only after the database change has committed. Assets, costs and payroll use the same pattern.
+- Reading a record includes the permission to decide on it: `scopeForViewer` takes several permissions and returns the union, and expense lists and opens claims for `expense.read` or `expense.approve`. An approver needs no separate read grant.
+- Money and rates travel and validate as decimal strings (`positiveDecimal` in `@erp/contracts`, checked against the column's precision), never as floats. A JSON number is accepted through its shortest decimal form.
+
+Part B completed on the same branch:
+
+- B3/B4 Assets: categories, register, custody (append-only, one open holder per asset by a partial unique index), requests (approve, reject, withdraw, order, fulfil, timeline), repairs, recoveries (waive, never delete), exit checklist and `sweepRecoveriesCollected` for settlement, files, import and export, and the screens at `/assets` (register), `/assets/ledger`, `/me/assets` and Settings, Asset categories. Request approval is the `asset.approve` grant instead of Super Admin alone.
+- B5 Costs: categories, commitments, bills, pay, summary, receipts, import, export, and the screens at `/costs` (sidebar "Expenses") with Settings, Cost categories. Events `cost.bill.accrued` and `cost.bill.paid`.
+- B6 Depreciation and value: runs (draft, post, reverse, delete), preflight, and the asset value report at `/assets/depreciation` and `/assets/value`. Events `depreciation.run.finalized` and `depreciation.run.reversed`.
+
+Deviations to remember: the ledger writes (capitalise, pay, dispose, depreciation posting, cost accrual and payment) are events with the figures a bookkeeper needs, since accounting is out of scope. A new permission `asset.capitalise` (capitalise, pay, dispose, depreciation) and `asset.value` were added beside the planned four; cost permissions are on/off because a company cost has no owner to scope by. Depreciation rate is a column on the asset category (yearly percent of the book value at the start of the financial year, July start), because there is no chart of accounts to hold it; the original takes it from the account. A reversed run frees its month (partial unique index) and only the latest posted run can be reversed. Book value counts posted runs only. Cost and the frozen BDT figures are left out of an asset read for anyone who cannot see costs, where the original left the BDT figures in. Capitalised cost and currency cannot be edited. Foreign-currency operating costs are refused, as in the original. The "recover from payroll" action and its payroll-settings switch wait for payroll (Part C); the screen has no button for it until then. Asset category settings gained the kind (IT or not), the registered-one-by-one switch and the depreciation rate, which the original's form lacked while its API required them. The depreciation and cost tables share the new `IdCounter` series table with asset tags.
+
 ## Plan 3 code that deviates and will be replaced
 
 `apps/web/modules/attendance`, `apps/web/modules/leave`, the `@erp/ui/page` kit (signatures differ from the original `StatCard`, `PageHeader`), the employee and department pages from Plan 2, and the nav manifests for attendance and leave.

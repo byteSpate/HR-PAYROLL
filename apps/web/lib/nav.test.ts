@@ -45,6 +45,15 @@ describe('mergeNavGroups', () => {
 });
 
 describe('real navGroups', () => {
+  it('puts everybody’s expenses under Payroll & finance and a person’s own under Workspace', () => {
+    const finance = navGroups.find((g) => g.label === 'Payroll & finance');
+    expect(finance?.items.map((i) => [i.label, i.href])).toContainEqual(['Employee expenses', '/expenses']);
+    expect(navGroups.find((g) => g.label === 'Workspace')?.items.map((i) => i.href)).toContain('/me/expenses');
+    const order = navGroups.map((g) => g.label);
+    expect(order.indexOf('Overview')).toBeLessThan(order.indexOf('Payroll & finance'));
+    expect(order.indexOf('Payroll & finance')).toBeLessThan(order.indexOf('Administration'));
+  });
+
   it('has one Workspace heading holding personal pages from several modules', () => {
     const workspace = navGroups.filter((g) => g.label === 'Workspace');
     expect(workspace).toHaveLength(1);
