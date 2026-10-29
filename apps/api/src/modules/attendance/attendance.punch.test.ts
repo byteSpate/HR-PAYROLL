@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { prisma } from '@erp/db';
-import { checkIn, checkOut, myAttendance } from './attendance.punch.js';
+import { checkIn, checkOut } from './attendance.punch.js';
+import { getMyAttendance } from './attendance.me.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
 
 const prefix = 'zzpunch';
@@ -40,9 +41,25 @@ describe('attendance punching', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-03-01T23:30:00Z'));
     const row = await checkIn(actor.user.id);
-    expect(row).toMatchObject({ approval: 'PENDING', isLate: false });
-    expect(row.date.toISOString()).toBe('2026-03-02T00:00:00.000Z');
-    expect(await prisma.notification.count({ where: { userId: other.user.id, entityId: row.id } })).toBe(1);
+    expect(row).toMatchObject({ approval: 'PENDING', isLate: false, date: '2026-03-02', status: 'PRESENT' });
+    expect(row.shift).toMatchObject({ startTime: '09:00', graceMinutes: 15 });
+    expect(await prisma.notification.count({ where: { userId: other.user.id, entityId: row.attendanceId } })).toBe(1);
+  });
+  it('judges a first-half leave day against the half actually worked', async () => {
+    const type = await prisma.leaveType.create({ data: { code: `${prefix}-hl`, name: `${prefix} half`, annualQuota: 10 } });
+    await prisma.leaveRequest.create({ data: {
+      employeeId, leaveTypeId: type.id, startDate: new Date('2026-03-02T00:00:00Z'), endDate: new Date('2026-03-02T00:00:00Z'),
+      startSession: 'FIRST_HALF', endSession: 'FIRST_HALF', chargedDays: 0.5, status: 'APPROVED',
+    } });
+    try {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-03-02T07:40:00Z'));
+      const row = await checkIn(actor.user.id);
+      expect(row).toMatchObject({ isLate: false, onApprovedLeave: true, leaveTypeName: `${prefix} half` });
+    } finally {
+      await prisma.leaveRequest.deleteMany({ where: { employeeId } });
+      await prisma.leaveType.delete({ where: { id: type.id } });
+    }
   });
   it('allows only one of two concurrent check-ins', async () => {
     const outcomes = await Promise.all([status(checkIn(actor.user.id)), status(checkIn(actor.user.id))]);
@@ -65,7 +82,7 @@ describe('attendance punching', () => {
     await checkIn(actor.user.id);
     vi.setSystemTime(new Date('2026-03-02T18:30:00Z'));
     const row = await checkOut(actor.user.id);
-    expect(row.date.toISOString()).toBe('2026-03-02T00:00:00.000Z');
+    expect(row.date).toBe('2026-03-02');
     expect(row.isEarlyOut).toBe(false);
     vi.setSystemTime(new Date('2026-03-03T03:00:00Z'));
     await checkIn(actor.user.id);
@@ -79,8 +96,8 @@ describe('attendance punching', () => {
       { employeeId, date: new Date('2026-03-02T00:00:00Z') },
       { employeeId, date: new Date('2026-04-02T00:00:00Z') },
     ] });
-    const rows = await myAttendance(actor.user.id, '2026-03');
+    const rows = (await getMyAttendance(actor.user.id, '2026-03-01', '2026-03-31')).filter((day) => day.attendanceId);
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.date.toISOString()).toBe('2026-03-02T00:00:00.000Z');
+    expect(rows[0]?.date).toBe('2026-03-02');
   });
 });

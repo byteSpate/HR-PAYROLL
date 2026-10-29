@@ -7,7 +7,8 @@ import { approverUserIds, notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
 import { scopeForViewer } from './attendance.approval.js';
-import { computeIsEarlyOut, computeIsLate, elapsedHours, officeInstantOf } from './attendance.time.js';
+import { employeeForUser } from './attendance.me.js';
+import { computeIsEarlyOut, computeIsLate, elapsedHours, MAX_REGULARISE_DAYS, officeInstantOf, officeToday } from './attendance.time.js';
 import { shiftFor } from './attendance.punch.js';
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -23,20 +24,29 @@ async function times(employeeId: string, date: Date, input: z.infer<typeof editS
   return { checkIn, checkOut, workedHours: checkIn && checkOut ? elapsedHours(checkIn, checkOut) : null, isLate: checkIn ? computeIsLate(checkIn, shift) : false, isEarlyOut: checkOut ? computeIsEarlyOut(checkOut, date, shift) : false };
 }
 
-export async function regulariseAttendance(userId: string, input: unknown) {
-  const body = regulariseSchema.parse(input);
-  const employee = await prisma.employee.findUnique({ where: { userId } });
-  if (!employee) throw new AppError(403, 'An employee record is required');
-  const date = new Date(`${body.date}T00:00:00.000Z`);
-  const old = await prisma.attendance.findUnique({ where: { employeeId_date: { employeeId: employee.id, date } } });
-  const calculated = await times(employee.id, date, body, old ?? undefined);
-  return prisma.$transaction(async (tx) => {
-    const row = await tx.attendance.upsert({ where: { employeeId_date: { employeeId: employee.id, date } }, create: { employeeId: employee.id, date, ...calculated, regularisedAt: new Date(), regularisedNote: body.note }, update: { ...calculated, approval: 'PENDING', decidedBy: null, decidedAt: null, decisionNote: null, regularisedAt: new Date(), regularisedNote: body.note } });
-    await tx.attendanceAudit.create({ data: { attendanceId: row.id, action: 'REGULARISE', changedBy: userId, before: old ? snapshot(old) : undefined, after: snapshot(row), note: body.note } });
+/**
+ * The employee fixing their own day, most often a forgotten check-out. They supply a time nobody
+ * witnessed, so the record goes back to PENDING and the audit row records who typed it. A day
+ * nobody punched has no record to amend: entering it is HR's, through `manualAttendance`.
+ */
+export async function regulariseAttendance(userId: string, id: string, input: unknown): Promise<{ id: string; approval: 'PENDING' }> {
+  const body = editSchema.parse(input);
+  const employee = await employeeForUser(userId);
+  const old = await prisma.attendance.findUnique({ where: { id } });
+  if (!old) throw new AppError(404, 'Attendance record not found');
+  if (old.employeeId !== employee.id) throw new AppError(403, 'You can only amend your own attendance');
+  if (old.approval === 'APPROVED') throw new AppError(409, 'This record has already been approved; ask HR to correct it');
+  const ageDays = Math.round((officeToday().getTime() - old.date.getTime()) / 86_400_000);
+  if (ageDays > MAX_REGULARISE_DAYS) throw new AppError(409, `You can only amend the last ${MAX_REGULARISE_DAYS} days; ask HR to correct this one`);
+  const calculated = await times(employee.id, old.date, body, old);
+  await prisma.$transaction(async (tx) => {
+    // Back to PENDING whatever it was: the numbers changed and the approver has not seen the new ones.
+    const row = await tx.attendance.update({ where: { id }, data: { ...calculated, approval: 'PENDING', decidedBy: null, decidedAt: null, decisionNote: null, regularisedAt: new Date(), regularisedNote: body.note } });
+    await tx.attendanceAudit.create({ data: { attendanceId: id, action: 'REGULARISE', changedBy: userId, before: snapshot(old), after: snapshot(row), note: body.note } });
     const users = await approverUserIds(tx, employee.id, 'attendance.approve');
-    await notify(tx, users.map((id) => ({ userId: id, type: 'attendance.regularised', title: 'Attendance needs review', href: '/attendance/approvals', entity: 'ATTENDANCE', entityId: row.id })));
-    return row;
+    await notify(tx, users.map((user) => ({ userId: user, type: 'attendance.regularised', title: 'Attendance needs review', href: '/attendance/approvals', entity: 'ATTENDANCE', entityId: id })));
   });
+  return { id, approval: 'PENDING' };
 }
 
 export async function correctAttendance(viewer: Viewer, id: string, input: unknown) {

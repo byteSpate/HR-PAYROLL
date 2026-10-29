@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@erp/db';
 import { regulariseAttendance, correctAttendance } from './attendance.edit.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
+import { officeToday } from './attendance.time.js';
 
 const prefix = 'zzattedit';
 let user: Awaited<ReturnType<typeof makeActor>>;
@@ -36,11 +37,21 @@ afterAll(async () => {
 
 describe('attendance edits', () => {
   it('regularises an own record back to pending and notifies the manager', async () => {
-    rowId = (await prisma.attendance.create({ data: { employeeId, date: new Date('2026-03-02T00:00:00Z'), approval: 'REJECTED' } })).id;
-    const row = await regulariseAttendance(user.user.id, { date: '2026-03-02', checkIn: '09:00', checkOut: '18:00', note: 'Forgot to punch' });
+    const date = new Date(officeToday().getTime() - 3 * 86_400_000);
+    rowId = (await prisma.attendance.create({ data: { employeeId, date, approval: 'REJECTED' } })).id;
+    const result = await regulariseAttendance(user.user.id, rowId, { checkIn: '09:00', checkOut: '18:00', note: 'Forgot to punch' });
+    expect(result).toEqual({ id: rowId, approval: 'PENDING' });
+    const row = await prisma.attendance.findUniqueOrThrow({ where: { id: rowId } });
     expect(row).toMatchObject({ approval: 'PENDING', regularisedNote: 'Forgot to punch', workedHours: 9 });
     expect(row.regularisedAt).toBeInstanceOf(Date);
     expect(await prisma.notification.count({ where: { userId: manager.user.id, entityId: rowId } })).toBe(1);
+  });
+  it('refuses another person’s record and a record that does not exist', async () => {
+    const date = new Date(officeToday().getTime() - 3 * 86_400_000);
+    rowId = (await prisma.attendance.create({ data: { employeeId, date, checkIn: new Date(date.getTime() + 3 * 3_600_000) } })).id;
+    const status = (p: Promise<unknown>) => p.then(() => 0, (e: { status?: number }) => e.status);
+    expect(await status(regulariseAttendance(manager.user.id, rowId, { checkOut: '18:00', note: 'Not mine' }))).toBe(403);
+    expect(await status(regulariseAttendance(user.user.id, 'no-such-id', { checkOut: '18:00', note: 'Missing' }))).toBe(404);
   });
   it('correction records old and new times in an attendance audit', async () => {
     const old = new Date('2026-03-02T03:00:00Z');

@@ -11,7 +11,7 @@ import { getAttendanceReport, reportFilename, reportToCsv } from './attendance.r
 import { renderAttendanceReportPdf } from './attendance.report.pdf.js';
 import { getAuditTrail, getEmployeeAttendance } from './attendance.history.js';
 import { getDailySummary, getMonthlySummary } from './attendance.summary.js';
-import { correctAttendance, manualAttendance, regulariseAttendance } from './attendance.edit.js';
+import { correctAttendance, manualAttendance } from './attendance.edit.js';
 
 export const attendanceRouter = Router();
 attendanceRouter.use(requireAuth);
@@ -86,7 +86,6 @@ attendanceRouter.post('/bulk-decide', requirePermission('attendance.approve'), a
   }
   res.json({ results });
 });
-attendanceRouter.post('/regularise', async (req, res) => res.json(await regulariseAttendance(req.user!.sub, req.body)));
 attendanceRouter.get('/manual/employees', requirePermission('attendance.manage'), async (req, res) => { const scope = await scopeForViewer(req.user!, 'attendance.manage'); res.json(await prisma.employee.findMany({ where: scope, select: { id: true, fullName: true, employeeCode: true }, orderBy: { fullName: 'asc' } })); });
 attendanceRouter.get('/manual/records', requirePermission('attendance.manage'), async (req, res) => res.json(await listAttendance(req.user!, 'attendance.manage', { date: text(req.query['date']) })));
 attendanceRouter.post('/manual', requirePermission('attendance.manage'), async (req, res) => res.status(201).json(await manualAttendance(req.user!, req.body)));
