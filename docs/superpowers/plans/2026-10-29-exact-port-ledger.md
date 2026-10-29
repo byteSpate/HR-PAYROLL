@@ -76,6 +76,12 @@ Done, tested (unit, API over HTTP, browser) and pushed:
 
 Deviations to remember: `paidOn` in the report and the `payslip` join on a claim stay empty until payroll exists (Part C adds them); HR-MNG-V1's legacy `receiptUrl` and `legacyCategoryText` columns are not carried; decision emails wait for `@erp/mail` (C3), and the claimant gets an in-app notice meanwhile.
 
+Review fixes on B0 to B2, decided here so later modules follow them:
+
+- Anything that changes a record or decides on it takes the record's row lock and re-reads it inside its own transaction (`expense.lock.ts`). A status read before the transaction proves nothing, so a loser of a race with an approval gets a 409, and a decision uses the figures as they stand once it holds the lock. Files are removed from storage only after the database change has committed. Assets, costs and payroll use the same pattern.
+- Reading a record includes the permission to decide on it: `scopeForViewer` takes several permissions and returns the union, and expense lists and opens claims for `expense.read` or `expense.approve`. An approver needs no separate read grant.
+- Money and rates travel and validate as decimal strings (`positiveDecimal` in `@erp/contracts`, checked against the column's precision), never as floats. A JSON number is accepted through its shortest decimal form.
+
 Still open in Part B: B3 and B4 assets, B5 costs, B6 depreciation.
 
 ## Plan 3 code that deviates and will be replaced

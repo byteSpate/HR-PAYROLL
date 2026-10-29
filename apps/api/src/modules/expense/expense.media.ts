@@ -5,6 +5,7 @@ import { DEFAULT_URL_TTL_SECONDS } from '@erp/attachments';
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
+import { lockOwnPending } from './expense.lock.js';
 import { employeeOf, getClaim } from './expense.service.js';
 
 // Receipts live in file storage as authenticated assets; the database keeps only the storage id, and every
@@ -27,29 +28,32 @@ async function readable(viewer: Viewer, claimId: string): Promise<void> {
 }
 
 /**
- * A claim whose receipts the viewer may change: only the owner, and only while it is pending. Evidence
- * behind a decision somebody already made must not move underneath it, so a decided claim refuses everyone.
+ * A first look at whether the viewer may change a claim's receipts: only the owner, and only while it is
+ * pending. It exists to refuse early, before a file is stored. It decides nothing: the write repeats the
+ * question under the claim's lock, because an approval can land between the two.
  */
-async function writable(viewer: Viewer, claimId: string): Promise<void> {
+async function writable(viewer: Viewer, claimId: string): Promise<string> {
   const self = await employeeOf(viewer.sub);
   const claim = await prisma.expenseClaim.findUnique({ where: { id: claimId }, select: { employeeId: true, status: true } });
   if (!claim || claim.employeeId !== self.id) throw new AppError(404, 'Expense claim not found');
   if (claim.status !== 'PENDING') throw new AppError(409, `This claim is already ${claim.status.toLowerCase()}, so its receipts can no longer be changed.`);
+  return self.id;
 }
 
 export async function uploadReceipt(viewer: Viewer, claimId: string, file: UploadFile | undefined): Promise<ExpenseReceipt> {
   // Validated before anything is stored: uploading first would leave a file nothing points at.
-  await writable(viewer, claimId);
+  const ownerId = await writable(viewer, claimId);
   if (!file) throw new AppError(400, 'Choose a file to upload');
   const stored = await requireStorage().upload(file, `hr/expenses/${claimId}`);
   try {
     return await prisma.$transaction(async (tx) => {
+      await lockOwnPending(tx, ownerId, claimId, 'its receipts');
       const row = await tx.expenseAttachment.create({ data: { claimId, publicId: stored.publicId, fileName: stored.fileName, bytes: stored.bytes, format: stored.format, uploadedBy: viewer.sub } });
       await writeAudit(tx, { entity: 'EXPENSE_CLAIM', entityId: claimId, action: 'CREATE', changedBy: viewer.sub, after: { receipt: stored.fileName } });
       return toItem(row);
     });
   } catch (err) {
-    // The file exists already; a failed write must not leave it dangling.
+    // The file exists already; a failed write, or a claim approved meanwhile, must not leave it dangling.
     await getStorage()?.remove(stored.publicId);
     throw err;
   }
@@ -72,12 +76,13 @@ export async function receiptUrl(viewer: Viewer, receiptId: string): Promise<{ u
 export async function deleteReceipt(viewer: Viewer, receiptId: string): Promise<void> {
   const receipt = await prisma.expenseAttachment.findUnique({ where: { id: receiptId } });
   if (!receipt) throw new AppError(404, 'Receipt not found');
-  await writable(viewer, receipt.claimId);
-  // The file first, outside the transaction: the other order can leave a file nothing points at, while this one
-  // can at worst leave a row pointing at a removed file, which the URL endpoint surfaces as a clean 404.
-  await getStorage()?.remove(receipt.publicId);
+  const ownerId = await writable(viewer, receipt.claimId);
   await prisma.$transaction(async (tx) => {
+    await lockOwnPending(tx, ownerId, receipt.claimId, 'its receipts');
     await tx.expenseAttachment.delete({ where: { id: receiptId } });
     await writeAudit(tx, { entity: 'EXPENSE_CLAIM', entityId: receipt.claimId, action: 'DELETE', changedBy: viewer.sub, before: { receipt: receipt.fileName } });
   });
+  // The file goes after the row, so a claim that was approved first keeps its evidence. A file that cannot be
+  // removed is left unreferenced, which costs storage and never a record.
+  await getStorage()?.remove(receipt.publicId).catch(() => undefined);
 }

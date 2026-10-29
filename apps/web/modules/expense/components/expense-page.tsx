@@ -180,6 +180,8 @@ export function ExpensePage({ view }: { view: "me" | "company" }) {
   const isStaff = view === "me"
   const isReviewer = view === "company" && !!user && holds(user, "expense.approve")
   const isAdmin = view === "company" && !!user && holds(user, "expense.read")
+  // Whoever may decide on a claim may read it, so an approver is not left with an empty queue for want of a read grant.
+  const canList = isAdmin || isReviewer
 
   const mineQuery = useQuery({
     queryKey: ["expenses", "me"],
@@ -190,7 +192,7 @@ export function ExpensePage({ view }: { view: "me" | "company" }) {
   const allQuery = useQuery({
     queryKey: ["expenses", "all"],
     queryFn: () => listExpenseClaims(accessToken!),
-    enabled: isAuthed && isAdmin,
+    enabled: isAuthed && canList,
   })
   const categoriesQuery = useQuery({ queryKey: ["expense-categories"], queryFn: () => listExpenseCategories(accessToken!), enabled: isAuthed })
 
@@ -498,9 +500,9 @@ export function ExpensePage({ view }: { view: "me" | "company" }) {
           company's own costs, so theirs has to say whose these are. */}
       <PageHeader
         kicker="Workspace"
-        title={isAdmin ? "Employee expenses" : "Expenses"}
+        title={canList ? "Employee expenses" : "Expenses"}
         sub={
-          isAdmin
+          canList
             ? "Claims submitted by staff — approvals and reimbursements"
             : "Claims, approvals and reimbursements"
         }
@@ -550,7 +552,7 @@ export function ExpensePage({ view }: { view: "me" | "company" }) {
           <OutstandingReimbursementsPanel accessToken={accessToken!} />
         ) : null}
 
-        {isAdmin ? (
+        {canList ? (
           <div className="space-y-4">
             <div className="text-[15px] font-bold">All claims</div>
 

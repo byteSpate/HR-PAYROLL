@@ -9,6 +9,7 @@ import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
 import { scopeForViewer } from '../employee/employee.scope.js';
 import { resolveRateOrThrow } from '../exchange/exchange.fx.js';
+import { lockClaim } from './expense.lock.js';
 import { CLAIM_INCLUDE, claimView } from './expense.view.js';
 
 /**
@@ -27,14 +28,16 @@ async function claimToDecide(viewer: Viewer, id: string) {
 }
 
 async function approveOne(viewer: Viewer, id: string, note?: string): Promise<ExpenseClaim> {
-  const { claim, selfDecided } = await claimToDecide(viewer, id);
-  // Stops with a 409 naming the currency and date when no rate covers the spend date; never defaults to 1.
-  const fxRateToBdt = await resolveRateOrThrow(claim.currency, claim.expenseDate);
+  const { selfDecided } = await claimToDecide(viewer, id);
   const stamp = decisionStamp(viewer.sub, note);
 
   return prisma.$transaction(async (tx) => {
-    const changed = await tx.expenseClaim.updateMany({ where: { id, status: 'PENDING' }, data: { status: 'APPROVED', fxRateToBdt, decidedBy: stamp.decidedBy, decidedAt: stamp.decidedAt, decisionNote: stamp.decisionNote } });
-    if (!changed.count) throw new AppError(409, 'This request has already been decided');
+    // The figures decided on are the ones under the lock, so an edit that landed first is the amount approved.
+    const claim = await lockClaim(tx, id);
+    assertPending(claim.status);
+    // Stops with a 409 naming the currency and date when no rate covers the spend date; never defaults to 1.
+    const fxRateToBdt = await resolveRateOrThrow(claim.currency, claim.expenseDate);
+    await tx.expenseClaim.update({ where: { id }, data: { status: 'APPROVED', fxRateToBdt, decidedBy: stamp.decidedBy, decidedAt: stamp.decidedAt, decisionNote: stamp.decisionNote } });
     const amount = claim.amount.toFixed(2);
     await writeAudit(tx, { entity: 'EXPENSE_CLAIM', entityId: id, action: 'APPROVE', changedBy: viewer.sub, before: { status: 'PENDING' }, after: { status: 'APPROVED', fxRateToBdt: fxRateToBdt.toFixed(6), decisionNote: stamp.decisionNote } });
     await emit(tx, 'expense.claim.approved', {
@@ -61,12 +64,13 @@ export function approveClaim(viewer: Viewer, id: string, input: unknown): Promis
 
 export async function rejectClaim(viewer: Viewer, id: string, input: unknown): Promise<ExpenseClaim> {
   const { note } = rejectClaimBody.parse(input);
-  const { claim, selfDecided } = await claimToDecide(viewer, id);
+  const { selfDecided } = await claimToDecide(viewer, id);
   const stamp = decisionStamp(viewer.sub, note);
 
   return prisma.$transaction(async (tx) => {
-    const changed = await tx.expenseClaim.updateMany({ where: { id, status: 'PENDING' }, data: { status: 'REJECTED', decidedBy: stamp.decidedBy, decidedAt: stamp.decidedAt, decisionNote: stamp.decisionNote } });
-    if (!changed.count) throw new AppError(409, 'This request has already been decided');
+    const claim = await lockClaim(tx, id);
+    assertPending(claim.status);
+    await tx.expenseClaim.update({ where: { id }, data: { status: 'REJECTED', decidedBy: stamp.decidedBy, decidedAt: stamp.decidedAt, decisionNote: stamp.decisionNote } });
     await writeAudit(tx, { entity: 'EXPENSE_CLAIM', entityId: id, action: 'REJECT', changedBy: viewer.sub, before: { status: 'PENDING' }, after: { status: 'REJECTED', decisionNote: stamp.decisionNote } });
     await emit(tx, 'expense.claim.rejected', { claimId: id, employeeId: claim.employeeId, category: claim.category.name, amount: claim.amount.toFixed(2), currency: claim.currency, actorUserId: viewer.sub, note: stamp.decisionNote, selfDecided });
     await notify(tx, { userId: (await tx.employee.findUniqueOrThrow({ where: { id: claim.employeeId }, select: { userId: true } })).userId, type: 'expense.claim.rejected', title: 'Expense claim rejected', body: stamp.decisionNote ?? undefined, href: '/me/expenses', entity: 'EXPENSE_CLAIM', entityId: id });

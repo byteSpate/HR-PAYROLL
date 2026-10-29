@@ -66,7 +66,7 @@ expenseRouter.get('/outstanding-reimbursements', requirePermission('expense.mana
 expenseRouter.get('/me', async (req, res) => {
   res.json(await service.getMyClaims(req.user!));
 });
-expenseRouter.get('/', requirePermission('expense.read'), async (req, res) => {
+expenseRouter.get('/', requirePermission(['expense.read', 'expense.approve']), async (req, res) => {
   res.json(await service.listClaims(req.user!, claimQuery.parse(req.query)));
 });
 expenseRouter.post('/', async (req, res) => {

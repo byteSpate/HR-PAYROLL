@@ -66,4 +66,12 @@ describe('ExpensePage', () => {
     renderPage('company');
     expect((await screen.findAllByRole('button', { name: 'Approve' })).length).toBeGreaterThan(0);
   });
+
+  it('gives an approver without expense.read the claims they are asked to decide', async () => {
+    grants = ['expense.approve'];
+    renderPage('company');
+    expect((await screen.findAllByText('Client lunch')).length).toBeGreaterThan(0);
+    expect(api.listExpenseClaims).toHaveBeenCalled();
+    expect((await screen.findAllByRole('button', { name: 'Approve' })).length).toBeGreaterThan(0);
+  });
 });

@@ -8,6 +8,7 @@ import { approverUserIds, notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
 import { scopeForViewer } from '../employee/employee.scope.js';
+import { lockOwnPending } from './expense.lock.js';
 import { CLAIM_INCLUDE, claimView } from './expense.view.js';
 
 /** Long enough to cover an approval delay across a month boundary, short enough that a claim cannot surface against a closed payroll month. */
@@ -28,6 +29,9 @@ function assertSpendDate(date: Date): void {
     throw new AppError(400, `This expense is ${ageDays} days old. Claims must be submitted within ${MAX_CLAIM_AGE_DAYS} days of the spend date.`);
   }
 }
+
+/** Whoever may decide on a claim may read it, so an approver needs no separate read grant to see what they are asked to approve. */
+const READERS = ['expense.read', 'expense.approve'] as const;
 
 export async function createClaim(viewer: Viewer, input: unknown): Promise<ExpenseClaim> {
   const body = createClaimBody.parse(input);
@@ -70,7 +74,7 @@ export async function getMyClaims(viewer: Viewer): Promise<ExpenseClaim[]> {
 }
 
 export async function listClaims(viewer: Viewer, query: ClaimQuery): Promise<ExpenseClaim[]> {
-  const employee = await scopeForViewer(viewer, 'expense.read');
+  const employee = await scopeForViewer(viewer, READERS);
   const rows = await prisma.expenseClaim.findMany({
     where: { employee, ...(query.status ? { status: query.status } : {}), ...(query.employeeId ? { employeeId: query.employeeId } : {}) },
     include: CLAIM_INCLUDE,
@@ -85,31 +89,22 @@ export async function getClaim(viewer: Viewer, id: string): Promise<ExpenseClaim
   if (!row) throw new AppError(404, 'Expense claim not found');
   const self = await prisma.employee.findUnique({ where: { userId: viewer.sub }, select: { id: true } });
   if (row.employeeId === self?.id) return claimView(row);
-  const scope = await scopeForViewer(viewer, 'expense.read').catch(() => null);
+  const scope = await scopeForViewer(viewer, READERS).catch(() => null);
   const reaches = scope !== null && (await prisma.employee.count({ where: { AND: [scope, { id: row.employeeId }] } })) > 0;
   if (!reaches) throw new AppError(404, 'Expense claim not found');
   return claimView(row);
 }
 
-/**
- * Owner-and-PENDING only. Once a claim is decided its figures are the basis of that decision, and a
- * reimbursed one is joined to a payslip that has paid it. Another person's claim is a 404.
- */
-async function ownPendingClaim(viewer: Viewer, id: string) {
-  const self = await employeeOf(viewer.sub);
-  const claim = await prisma.expenseClaim.findUnique({ where: { id } });
-  if (!claim || claim.employeeId !== self.id) throw new AppError(404, 'Expense claim not found');
-  if (claim.status !== 'PENDING') throw new AppError(409, `This claim has already been ${claim.status.toLowerCase()}, so it can no longer be changed.`);
-  return claim;
-}
-
 export async function updateClaim(viewer: Viewer, id: string, input: unknown): Promise<ExpenseClaim> {
   const body = updateClaimBody.parse(input);
-  const claim = await ownPendingClaim(viewer, id);
-  const expenseDate = body.expenseDate === undefined ? claim.expenseDate : parseDateOnly(body.expenseDate);
-  if (body.expenseDate !== undefined) assertSpendDate(expenseDate);
+  const self = await employeeOf(viewer.sub);
+  const newDate = body.expenseDate === undefined ? undefined : parseDateOnly(body.expenseDate);
+  if (newDate) assertSpendDate(newDate);
 
   return prisma.$transaction(async (tx) => {
+    // Under the claim's lock: an approval that lands first is seen here, and this edit is refused.
+    const claim = await lockOwnPending(tx, self.id, id, 'it');
+    const expenseDate = newDate ?? claim.expenseDate;
     const categoryId = body.categoryId ?? claim.categoryId;
     const category = await tx.expenseCategory.findUnique({ where: { id: categoryId } });
     if (!category) throw new AppError(400, 'Choose a valid expense category');
@@ -137,13 +132,16 @@ export async function updateClaim(viewer: Viewer, id: string, input: unknown): P
 
 /** A hard delete: a pending claim nobody has acted on has no history worth a fifth status, and the audit row records that it existed. */
 export async function deleteClaim(viewer: Viewer, id: string): Promise<void> {
-  const claim = await ownPendingClaim(viewer, id);
-  // The attachment rows cascade with the claim, which would leave their files behind with nothing pointing at them.
-  // Removed first and outside the transaction: a file removed for a claim that then fails to delete is recoverable, the reverse is not.
-  const receipts = await prisma.expenseAttachment.findMany({ where: { claimId: id }, select: { publicId: true } });
-  for (const receipt of receipts) await getStorage()?.remove(receipt.publicId);
-  await prisma.$transaction(async (tx) => {
+  const self = await employeeOf(viewer.sub);
+  const receipts = await prisma.$transaction(async (tx) => {
+    const claim = await lockOwnPending(tx, self.id, id, 'it');
+    const files = await tx.expenseAttachment.findMany({ where: { claimId: id }, select: { publicId: true } });
     await writeAudit(tx, { entity: 'EXPENSE_CLAIM', entityId: id, action: 'DELETE', changedBy: viewer.sub, before: { name: claim.name, amount: claim.amount.toFixed(2), currency: claim.currency, expenseDate: formatDateOnly(claim.expenseDate) } });
     await tx.expenseClaim.delete({ where: { id } });
+    return files;
   });
+  // The attachment rows cascaded with the claim; their files go once the delete has committed. A claim
+  // that lost a race to an approval must keep its evidence, so nothing is removed before that is known.
+  // A file that cannot be removed is left behind unreferenced, which costs storage and never a record.
+  await Promise.allSettled(receipts.map((receipt) => getStorage()?.remove(receipt.publicId)));
 }

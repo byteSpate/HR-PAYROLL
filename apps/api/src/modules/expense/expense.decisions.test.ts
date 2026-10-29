@@ -138,6 +138,25 @@ describe('approving a batch', () => {
   });
 });
 
+describe('reading what you are asked to approve', () => {
+  it('lets an approver list and open the claims in their approval scope without expense.read, and nothing beyond it', async () => {
+    const hers = await file(alice, { name: 'Team lunch for the approver' });
+    const elsewhere = await file(outsider, { name: 'Outside the approver’s team' });
+    const listed = await request(app).get('/api/expenses').query({ status: 'PENDING' }).set(manager.header);
+    expect(listed.status).toBe(200);
+    const ids = listed.body.map((c: { id: string }) => c.id);
+    expect(ids).toContain(hers.id);
+    expect(ids).not.toContain(elsewhere.id);
+    expect((await request(app).get(`/api/expenses/${hers.id}`).set(manager.header)).status).toBe(200);
+    expect((await request(app).get(`/api/expenses/${elsewhere.id}`).set(manager.header)).status).toBe(404);
+    expect((await request(app).get(`/api/expenses/${hers.id}/receipts`).set(manager.header)).status).toBe(200);
+  });
+
+  it('still refuses a person who neither reads nor approves', async () => {
+    expect((await request(app).get('/api/expenses').set(outsider.header)).status).toBe(403);
+  });
+});
+
 describe('reimbursing', () => {
   it('is only ever done by the system, for approved claims, and emits the event', async () => {
     const approved = await file(alice);
