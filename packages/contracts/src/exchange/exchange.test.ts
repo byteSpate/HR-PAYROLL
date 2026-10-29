@@ -9,7 +9,7 @@ describe('exchange contracts', () => {
   });
 
   it('accepts a rate between two different currencies', () => {
-    expect(exchangeRateBody.parse({ base: 'USD', quote: 'BDT', rate: '122.5', effectiveFrom: '2026-07-01' })).toMatchObject({ rate: 122.5 });
+    expect(exchangeRateBody.parse({ base: 'USD', quote: 'BDT', rate: '122.5', effectiveFrom: '2026-07-01' })).toMatchObject({ rate: '122.5' });
   });
 
   it('refuses the same currency on both sides, a non-positive rate and a malformed date', () => {

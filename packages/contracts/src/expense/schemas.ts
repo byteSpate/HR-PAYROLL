@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { positiveDecimal } from '../decimal.js';
 import { currencies } from '../exchange/schemas.js';
 
 export const expenseStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'REIMBURSED'] as const;
@@ -6,6 +7,8 @@ export type ExpenseStatus = (typeof expenseStatuses)[number];
 
 const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a YYYY-MM-DD date');
 const optionalText = (max: number) => z.string().trim().max(max).optional();
+/** ExpenseClaim.amount is Decimal(14,2). */
+const claimAmount = positiveDecimal('amount', 12, 2);
 
 /** Category codes whose claims describe a journey, and so carry a From and a To. */
 export const ROUTE_CATEGORY_CODES: readonly string[] = ['TRAVEL', 'CONVEYANCE'];
@@ -13,7 +16,7 @@ export const hasRoute = (code: string): boolean => ROUTE_CATEGORY_CODES.includes
 
 export const createClaimBody = z.object({
   name: z.string().trim().min(1, 'Give the expense a name').max(200),
-  amount: z.coerce.number().positive('amount must be greater than 0'),
+  amount: claimAmount,
   categoryId: z.string().uuid(),
   currency: z.enum(currencies).default('BDT'),
   expenseDate: dateOnly,
@@ -27,7 +30,7 @@ export type CreateClaimBody = z.infer<typeof createClaimBody>;
 export const updateClaimBody = z
   .object({
     name: z.string().trim().min(1, 'Give the expense a name').max(200).optional(),
-    amount: z.coerce.number().positive('amount must be greater than 0').optional(),
+    amount: claimAmount.optional(),
     categoryId: z.string().uuid().optional(),
     currency: z.enum(currencies).optional(),
     expenseDate: dateOnly.optional(),

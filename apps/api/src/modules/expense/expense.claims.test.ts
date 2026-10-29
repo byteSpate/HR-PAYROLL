@@ -93,6 +93,15 @@ describe('filing a claim', () => {
 
   it('stores an amount exactly, never as a float', async () => {
     expect((await file(alice, claim({ amount: 33.33 }))).body.amount).toBe('33.33');
+    expect((await file(alice, claim({ amount: '12345678.90' }))).body.amount).toBe('12345678.90');
+  });
+
+  it('refuses an amount the column would round, instead of storing 0.001 as 0.00', async () => {
+    const before = await prisma.expenseClaim.count({ where: { employeeId: alice.employee.id } });
+    for (const amount of ['0.001', '10.005', 0.001]) expect((await file(alice, claim({ amount }))).status, String(amount)).toBe(400);
+    const made = await file(alice, claim());
+    expect((await request(app).patch(`/api/expenses/${made.body.id}`).set(alice.header).send({ amount: '1.999' })).status).toBe(400);
+    expect(await prisma.expenseClaim.count({ where: { employeeId: alice.employee.id } })).toBe(before + 1);
   });
 });
 

@@ -45,7 +45,7 @@ export function ExpenseDialog({
   existing?: ExpenseClaim | null
 }) {
   const isEdit = !!existing
-  const [amount, setAmount] = useState(existing ? String(Number(existing.amount)) : "")
+  const [amount, setAmount] = useState(existing?.amount ?? "")
   const [currency, setCurrency] = useState<Currency>(existing?.currency ?? "BDT")
   // Without `items`, Base UI's Select shows the category's uuid on the
   // closed trigger instead of its name.
@@ -71,7 +71,9 @@ export function ExpenseDialog({
   const selected = categories.find((c) => c.id === categoryId) ?? null
   const hasRoute = !!selected && ROUTE_CATEGORY_CODES.includes(selected.code.toUpperCase())
 
-  const canSubmit = !!name.trim() && Number(amount) > 0 && !!expenseDate && !!categoryId
+  // Sent as typed: the server checks the precision and the database keeps two decimals, so a float here would only add noise.
+  const amountOk = /^\d+(\.\d{1,2})?$/.test(amount.trim()) && /[1-9]/.test(amount)
+  const canSubmit = !!name.trim() && amountOk && !!expenseDate && !!categoryId
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -244,7 +246,7 @@ export function ExpenseDialog({
               onSubmit(
                 {
                   name: name.trim(),
-                  amount: Number(amount),
+                  amount: amount.trim(),
                   currency,
                   categoryId,
                   expenseDate,

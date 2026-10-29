@@ -38,7 +38,7 @@ export interface ExpenseClaim {
 export interface ExpenseClaimInput {
   /** Required. A category alone cannot tell two claims apart. */
   name: string;
-  amount: number;
+  amount: string;
   categoryId: string;
   currency: Currency;
   expenseDate: string;

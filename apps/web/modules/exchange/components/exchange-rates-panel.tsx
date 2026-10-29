@@ -184,7 +184,7 @@ function RateDialog({
                 onSave({
                   base: "USD",
                   quote: "BDT",
-                  rate: Number(value),
+                  rate: value.trim(),
                   effectiveFrom,
                 })
               }

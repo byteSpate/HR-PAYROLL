@@ -15,6 +15,6 @@ export interface ExchangeRate {
 export interface ExchangeRateInput {
   base: Currency;
   quote: Currency;
-  rate: number;
+  rate: string;
   effectiveFrom: string;
 }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { positiveDecimal } from '../decimal.js';
 
 export const currencies = ['BDT', 'USD'] as const;
 export type Currency = (typeof currencies)[number];
@@ -9,7 +10,8 @@ export const exchangeRateBody = z
   .object({
     base: z.enum(currencies),
     quote: z.enum(currencies),
-    rate: z.coerce.number().positive('rate must be greater than 0'),
+    // ExchangeRate.rate is Decimal(18,6).
+    rate: positiveDecimal('rate', 12, 6),
     effectiveFrom: dateOnly,
   })
   .refine((r) => r.base !== r.quote, { message: 'base and quote must be different currencies', path: ['quote'] });
