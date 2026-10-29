@@ -130,3 +130,24 @@ model OutboxEvent {
 
   @@index([deliveredAt, availableAt])
 }
+
+/// The outbound mail log. One row per send attempt, so nothing the system
+/// mails can escape the log. `sentAt` set means SENT, `error` set means
+/// FAILED, neither means SKIPPED — a boolean cannot tell a crashed dyno from a
+/// clean success. The recipient is denormalised at send time: this log answers
+/// where the mail actually went, not where a join to User would send it now.
+model EmailDispatch {
+  id        String   @id @default(uuid())
+  to        String
+  kind      String
+  subject   String
+  entity    String?
+  entityId  String?
+  sentAt    DateTime?
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([kind, createdAt])
+  @@index([entity, entityId])
+}
