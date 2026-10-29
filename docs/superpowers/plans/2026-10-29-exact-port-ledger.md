@@ -66,6 +66,18 @@ Moved to later parts, not dropped:
 - Activity (the original's events feed) with the events module in Part D. Resend-password with `@erp/mail` in C3. Asset categories (B), cost categories (B), exchange rates and payroll settings (C): each adds its own Settings child.
 - The `@erp/ui/page` kit stays until the last fresh screens that use it are replaced: admin employees list, detail and add (C), dashboard (D), Roles and Activity pages.
 
+## Progress (Plan 4, Part B, branch `feat/expense-asset-cost`)
+
+Done, tested (unit, API over HTTP, browser) and pushed:
+
+- B0 (added): the `exchange` module (rates, resolution that never defaults to 1, Settings panel) and the money helpers (`@erp/db`, `@erp/ui/lib/money`). Expense reads rates through it, and payroll will too; payroll reads expense claims, so the rates could not live in payroll.
+- B1 Expense backend: claims, categories (seeded with the seven standard ones), scoped reads (an out-of-scope claim is a 404), amend and withdraw own pending claims, approve, reject and batch approve at the spend-date rate (frozen, `expense.claim.approved` carries the BDT amount), receipts through `@erp/attachments`, reports (JSON, CSV, PDF) and outstanding reimbursements. REIMBURSED is set only by `reimburseClaims`, which payroll and settlement call inside their own transaction. `scopeForViewer` and `storageReady` moved into the shared places (employee module, `@erp/attachments`).
+- B2 Expense UI: the original `ExpensePage` at `/expenses` (everybody's) and `/me/expenses` (a person's own), chosen by a `view` prop; permissions decide the approve controls.
+
+Deviations to remember: `paidOn` in the report and the `payslip` join on a claim stay empty until payroll exists (Part C adds them); HR-MNG-V1's legacy `receiptUrl` and `legacyCategoryText` columns are not carried; decision emails wait for `@erp/mail` (C3), and the claimant gets an in-app notice meanwhile.
+
+Still open in Part B: B3 and B4 assets, B5 costs, B6 depreciation.
+
 ## Plan 3 code that deviates and will be replaced
 
 `apps/web/modules/attendance`, `apps/web/modules/leave`, the `@erp/ui/page` kit (signatures differ from the original `StatCard`, `PageHeader`), the employee and department pages from Plan 2, and the nav manifests for attendance and leave.
