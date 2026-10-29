@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "EmailChangeRequest" ADD COLUMN     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

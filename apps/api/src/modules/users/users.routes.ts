@@ -37,3 +37,7 @@ usersRouter.patch('/:id/access-level', async (req, res) => {
 usersRouter.patch('/:id/status', async (req, res) => {
   res.json(await service.setUserStatus(req.params['id']!, req.body, caller(req)));
 });
+
+usersRouter.post('/:id/resend-credentials', async (req, res) => {
+  res.status(200).json(await service.resendCredentials(req.params['id']!, caller(req)));
+});

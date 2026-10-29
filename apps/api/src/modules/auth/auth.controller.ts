@@ -1,9 +1,21 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
-import { changePasswordSchema, loginSchema } from '@erp/contracts/core';
+import {
+  changePasswordSchema,
+  emailChangeRequestSchema,
+  emailChangeTokenSchema,
+  loginSchema,
+} from '@erp/contracts/core';
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { REFRESH_COOKIE_NAME, refreshCookieOptions, refreshCookieSetOptions, sessionContext } from './auth.cookies.js';
 import * as service from './auth.service.js';
+import {
+  approveEmailChange,
+  cancelEmailChange,
+  confirmEmailChange,
+  getPendingEmailChange,
+  requestEmailChange,
+} from './auth.emailchange.js';
 import { listSessions, revokeSession } from './auth.sessions.js';
 
 // Express 5 forwards rejected promises, but this keeps handlers' intent explicit and typed.
@@ -55,4 +67,33 @@ export const changePasswordHandler = wrap(async (req, res) => {
   const { currentPassword, newPassword } = changePasswordSchema.parse(req.body);
   const user = await service.changePassword(req.user!.sub, currentPassword, newPassword, rawCookie(req));
   res.status(200).json({ success: true, user });
+});
+
+export const requestEmailChangeHandler = wrap(async (req, res) => {
+  const { newEmail } = emailChangeRequestSchema.parse(req.body);
+  const pending = await requestEmailChange(req.user!.sub, newEmail);
+  res.status(200).json(pending);
+});
+
+export const getPendingEmailChangeHandler = wrap(async (_req, res) => {
+  const pending = await getPendingEmailChange(_req.user!.sub);
+  res.status(200).json(pending);
+});
+
+export const approveEmailChangeHandler = wrap(async (req, res) => {
+  const { token } = emailChangeTokenSchema.parse(req.body);
+  const result = await approveEmailChange(token);
+  res.status(200).json(result);
+});
+
+export const cancelEmailChangeHandler = wrap(async (req, res) => {
+  const { token } = emailChangeTokenSchema.parse(req.body);
+  await cancelEmailChange(token);
+  res.status(204).send();
+});
+
+export const confirmEmailChangeHandler = wrap(async (req, res) => {
+  const { token } = emailChangeTokenSchema.parse(req.body);
+  const result = await confirmEmailChange(token);
+  res.status(200).json(result);
 });

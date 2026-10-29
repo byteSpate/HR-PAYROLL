@@ -211,6 +211,9 @@ importers:
       '@erp/export':
         specifier: workspace:*
         version: link:../../packages/export
+      '@erp/mail':
+        specifier: workspace:*
+        version: link:../../packages/mail
       '@erp/notifications':
         specifier: workspace:*
         version: link:../../packages/notifications
