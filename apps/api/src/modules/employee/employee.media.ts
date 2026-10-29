@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { documentTypes, type EmployeeView } from '@erp/contracts/employee';
-import { getStorage, requireStorage, type UploadFile } from '@erp/attachments';
+import { getStorage, packAvatar, publicIdOfAvatar, requireStorage, type UploadFile } from '@erp/attachments';
 import { writeAudit } from '@erp/audit';
 import { prisma, type Db } from '@erp/db';
 import { AppError } from '@erp/utils';
@@ -99,8 +99,8 @@ async function assertCanEditAvatar(viewer: Viewer, id: string) {
   throw new AppError(403, 'Forbidden');
 }
 
-export const packAvatar = (publicId: string, version: number) => `${publicId}:${version}`;
-const publicIdOf = (packed: string) => packed.split(':')[0]!;
+export { packAvatar };
+const publicIdOf = publicIdOfAvatar;
 
 export async function setAvatar(viewer: Viewer, id: string, file: UploadFile | undefined): Promise<EmployeeView> {
   const subject = await assertCanEditAvatar(viewer, id);

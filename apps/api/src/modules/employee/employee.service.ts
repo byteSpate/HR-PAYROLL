@@ -5,7 +5,7 @@ import {
   type EmployeeView,
   type UpdateEmployeeInput,
 } from '@erp/contracts/employee';
-import { getStorage } from '@erp/attachments';
+import { avatarUrlFor } from '@erp/attachments';
 import { can, scopeFor } from '@erp/auth';
 import { diffFields, writeAudit } from '@erp/audit';
 import { prisma, type Db, type Prisma, type Tx } from '@erp/db';
@@ -38,13 +38,7 @@ export async function employeeIdForUser(db: Db, userId: string): Promise<string 
 export const viewerEmployeeOf = (db: Db, userId: string): Promise<ViewerEmployee | null> =>
   db.employee.findUnique({ where: { userId }, select: { id: true, departmentId: true } });
 
-// Stored as "publicId:version"; storage being unconfigured degrades to initials, never an error.
-export function avatarUrlFor(profilePicture: string | null): string | null {
-  const storage = getStorage();
-  if (!profilePicture || !storage) return null;
-  const [publicId, version] = profilePicture.split(':');
-  return storage.signedUrl(publicId!, version ? { version: Number(version) } : {});
-}
+export { avatarUrlFor };
 
 type Row = EmployeeRecord & { userId: string; departmentId: string; reportingManagerId: string | null };
 
