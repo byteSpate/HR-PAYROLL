@@ -22,6 +22,8 @@ The spec is too large for one plan. Each plan ends in working, tested software:
 6. Announcement, event calendar, dashboard widgets.
 7. `apps/worker` (cron jobs + outbox delivery), Swagger, Docker images for all apps, production compose.
 
+> **Revised 2026-10-29:** items 4 to 7 are merged into one plan, `2026-10-29-erp-plan-4-remaining-work.md` (Parts B to E), preceded by its Part A, the exact-port work still owed for items 2 and 3.
+
 Each later plan is written after the previous one lands, against the code that actually exists.
 
 ## Global Constraints

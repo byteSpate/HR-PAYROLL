@@ -44,6 +44,8 @@ The original screens call HR-MNG-V1's own API through `lib/api/*` with its respo
 5. Settings, users, reports, activity, announcements, notification bell.
 6. Modules with no ERP backend yet.
 
+Stages 2 to 5 for the already-built modules and stage 6 are scheduled in `2026-10-29-erp-plan-4-remaining-work.md` (Part A, then Parts B and C).
+
 ## Plan 3 code that deviates and will be replaced
 
 `apps/web/modules/attendance`, `apps/web/modules/leave`, the `@erp/ui/page` kit (signatures differ from the original `StatCard`, `PageHeader`), the employee and department pages from Plan 2, and the nav manifests for attendance and leave.
