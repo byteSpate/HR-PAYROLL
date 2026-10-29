@@ -35,3 +35,17 @@ export interface SessionView {
   /** The session reading this list. The server refuses to revoke it. */
   current: boolean;
 }
+
+/** A sign-in address change in flight: approved from the current inbox, then confirmed at the new one. */
+export interface PendingEmailChange {
+  newEmail: string;
+  approved: boolean;
+  expiresAt: string;
+}
+
+/** The new temporary password after a resend. Shown once, since the mail may not arrive. */
+export interface ResendInviteResult {
+  id: string;
+  email: string;
+  temporaryPassword: string;
+}

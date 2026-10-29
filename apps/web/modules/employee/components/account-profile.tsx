@@ -7,6 +7,7 @@ import {
   RiCheckLine,
   RiComputerLine,
   RiKey2Line,
+  RiMailLine,
   RiLogoutBoxRLine,
   RiPencilLine,
   RiShieldKeyholeLine,
@@ -31,6 +32,7 @@ import { SessionsCard } from "./sessions-card"
 import { Tag } from "@erp/ui/dashboard"
 import type { Tone } from "@erp/ui/dashboard"
 import { Button } from "@erp/ui/components/button"
+import { ChangeEmailDialog } from "./change-email-dialog"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@erp/ui/components/dialog"
 import { Input } from "@erp/ui/components/input"
 import { cn } from "@erp/ui/lib/cn"
@@ -83,6 +85,7 @@ export function AccountProfile({
   const { accessToken, user, signOut } = useSession()
   const [confirmSignOut, setConfirmSignOut] = useState(false)
   const [nameOpen, setNameOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
 
   // Their own name once set, and the email until then — never a blank heading.
   const displayed = account.displayName ?? account.email
@@ -161,6 +164,10 @@ export function AccountProfile({
               <RiKey2Line className="size-4" aria-hidden />
               Change password
             </Button>
+            <Button type="button" variant="outline" onClick={() => setEmailOpen(true)}>
+              <RiMailLine className="size-4" aria-hidden />
+              Change email
+            </Button>
             <Button
               type="button"
               variant="outline"
@@ -205,6 +212,12 @@ export function AccountProfile({
         onOpenChange={setNameOpen}
         onSaved={onChanged}
       />
+
+      {/* Mounted only while open, so a second attempt starts from a blank form
+          rather than the "check your inbox" state the last one ended on. */}
+      {emailOpen ? (
+        <ChangeEmailDialog open={emailOpen} onOpenChange={setEmailOpen} currentEmail={account.email} />
+      ) : null}
     </>
   )
 }
