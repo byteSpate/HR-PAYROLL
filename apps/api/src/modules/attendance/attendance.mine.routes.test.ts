@@ -76,6 +76,35 @@ describe('my attendance routes', () => {
     expect(done.body).toMatchObject({ canCheckIn: false, canCheckOut: false });
     expect((await request(app).get('/api/attendance/today')).status).toBe(401);
   });
+  it('offers check-out for a shift opened before midnight, and no new check-in while it is open', async () => {
+    const night = await makeActor(prefix, 'STANDARD');
+    const nightEmployee = await prisma.employee.create({ data: { userId: night.user.id, employeeCode: `${prefix}-night-${Date.now()}`, fullName: 'Night', designation: 'Operator', departmentId, employmentType: 'FULL_TIME', joiningDate: new Date('2026-01-01T00:00:00Z') } });
+    try {
+      const yesterday = new Date(officeToday().getTime() - 86_400_000);
+      const open = await prisma.attendance.create({ data: { employeeId: nightEmployee.id, date: yesterday, checkIn: new Date(Date.now() - 3 * 3_600_000) } });
+      const today = await request(app).get('/api/attendance/today').set(night.header);
+      expect(today.body).toMatchObject({ canCheckIn: false, canCheckOut: true, checkIn: open.checkIn!.toISOString() });
+      expect((await request(app).post('/api/attendance/check-out').set(night.header)).status).toBe(200);
+      const after = await request(app).get('/api/attendance/today').set(night.header);
+      expect(after.body).toMatchObject({ canCheckOut: false });
+    } finally {
+      await prisma.attendance.deleteMany({ where: { employeeId: nightEmployee.id } });
+      await prisma.employee.delete({ where: { id: nightEmployee.id } });
+    }
+  });
+  it('does not offer a check-out the server would refuse, once the open shift is too old to close', async () => {
+    const stale = await makeActor(prefix, 'STANDARD');
+    const staleEmployee = await prisma.employee.create({ data: { userId: stale.user.id, employeeCode: `${prefix}-stale-${Date.now()}`, fullName: 'Stale', designation: 'Operator', departmentId, employmentType: 'FULL_TIME', joiningDate: new Date('2026-01-01T00:00:00Z') } });
+    try {
+      const yesterday = new Date(officeToday().getTime() - 86_400_000);
+      await prisma.attendance.create({ data: { employeeId: staleEmployee.id, date: yesterday, checkIn: new Date(Date.now() - 20 * 3_600_000) } });
+      const today = await request(app).get('/api/attendance/today').set(stale.header);
+      expect(today.body).toMatchObject({ canCheckIn: true, canCheckOut: false });
+    } finally {
+      await prisma.attendance.deleteMany({ where: { employeeId: staleEmployee.id } });
+      await prisma.employee.delete({ where: { id: staleEmployee.id } });
+    }
+  });
   it('lets an employee amend only their own unapproved, recent day', async () => {
     const day = officeToday();
     const at = (back: number) => new Date(day.getTime() - back * 86_400_000);

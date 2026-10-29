@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { prisma } from '@erp/db';
 import { regulariseAttendance, correctAttendance } from './attendance.edit.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
@@ -45,6 +45,20 @@ describe('attendance edits', () => {
     expect(row).toMatchObject({ approval: 'PENDING', regularisedNote: 'Forgot to punch', workedHours: 9 });
     expect(row.regularisedAt).toBeInstanceOf(Date);
     expect(await prisma.notification.count({ where: { userId: manager.user.id, entityId: rowId } })).toBe(1);
+  });
+  it('does not reset a record an approver approved after the employee’s request began', async () => {
+    const date = new Date(officeToday().getTime() - 3 * 86_400_000);
+    const decidedAt = new Date();
+    rowId = (await prisma.attendance.create({ data: { employeeId, date, checkIn: new Date(date.getTime() + 3 * 3_600_000), approval: 'APPROVED', decidedBy: manager.user.id, decidedAt } })).id;
+    // The pre-check read still sees the record as pending: the approval lands between that read and the write.
+    const real = prisma.attendance.findUnique.bind(prisma.attendance);
+    const stale = vi.spyOn(prisma.attendance, 'findUnique').mockImplementationOnce((async (args: never) => ({ ...(await real(args)), approval: 'PENDING' })) as never);
+    const status = await regulariseAttendance(user.user.id, rowId, { checkOut: '18:00', note: 'Late edit' }).then(() => 0, (e: { status?: number }) => e.status);
+    stale.mockRestore();
+    expect(status).toBe(409);
+    const row = await prisma.attendance.findUniqueOrThrow({ where: { id: rowId } });
+    expect(row).toMatchObject({ approval: 'APPROVED', decidedBy: manager.user.id, checkOut: null, regularisedNote: null });
+    expect(await prisma.attendanceAudit.count({ where: { attendanceId: rowId } })).toBe(0);
   });
   it('refuses another person’s record and a record that does not exist', async () => {
     const date = new Date(officeToday().getTime() - 3 * 86_400_000);

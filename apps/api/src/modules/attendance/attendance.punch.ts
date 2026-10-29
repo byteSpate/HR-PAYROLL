@@ -99,7 +99,7 @@ export async function checkOut(userId: string): Promise<PunchResult> {
   const hours = elapsedHours(open.checkIn, now);
   if (hours > MAX_OPEN_SHIFT_HOURS) {
     // A forgotten check-out, not a long day: closing it silently would put an 18-hour shift into payroll unreviewed.
-    throw new AppError(409, `Your last check-in was over ${MAX_OPEN_SHIFT_HOURS} hours ago; ask HR to correct it`);
+    throw new AppError(409, `Your last check-in was over ${MAX_OPEN_SHIFT_HOURS} hours ago; ask an administrator to correct it`);
   }
   // Resolved for the record's own date, so a shift change since then does not rewrite what the day was judged against.
   const shift = await shiftFor(employee.id, open.date);

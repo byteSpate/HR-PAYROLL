@@ -20,6 +20,8 @@ import { createLimiter } from "./limiter.js"
 const here = path.dirname(fileURLToPath(import.meta.url))
 
 let browserPromise: Promise<Browser> | null = null
+// Kept beside the promise so the synchronous 'exit' hook can reach the child process.
+let launched: Browser | null = null
 
 /**
  * One shared Chromium on a 512 MB dyno. Each open page costs memory, so only
@@ -35,15 +37,16 @@ const limit = createLimiter(2, 30_000)
  */
 async function getBrowser(): Promise<Browser> {
   if (!browserPromise) {
-    browserPromise = import("puppeteer").then((puppeteer) =>
-      puppeteer.default.launch({
+    browserPromise = import("puppeteer").then(async (puppeteer) => {
+      launched = await puppeteer.default.launch({
         // The chrome-for-testing buildpack exports only PATH, and
         // PUPPETEER_SKIP_DOWNLOAD=true leaves no bundled Chromium to fall
         // back to, so without this every render throws on Heroku.
         executablePath: process.env.CHROME_PATH,
         args: ["--no-sandbox", "--disable-dev-shm-usage"],
       })
-    )
+      return launched
+    })
   }
   return browserPromise
 }
@@ -52,15 +55,19 @@ export async function closePdfBrowser(): Promise<void> {
   if (!browserPromise) return
   const browser = await browserPromise.catch(() => null)
   browserPromise = null
+  launched = null
   await browser?.close().catch(() => undefined)
 }
 
-// Closed on exit, so a shutdown does not leave an orphaned Chromium.
-for (const signal of ["SIGINT", "SIGTERM", "beforeExit"] as const) {
-  process.once(signal, () => {
-    void closePdfBrowser()
-  })
-}
+// No SIGINT or SIGTERM handlers here: a listener replaces Node's default of exiting on the signal, so the
+// host process would hang on shutdown until killed. A synchronous kill on 'exit' still stops Chromium
+// however the process ends, and `beforeExit` closes it cleanly when the process simply runs out of work.
+process.once("beforeExit", () => {
+  void closePdfBrowser()
+})
+process.once("exit", () => {
+  launched?.process()?.kill()
+})
 
 /**
  * Renders a complete HTML document to PDF bytes.

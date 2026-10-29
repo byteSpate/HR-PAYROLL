@@ -35,13 +35,17 @@ export async function regulariseAttendance(userId: string, id: string, input: un
   const old = await prisma.attendance.findUnique({ where: { id } });
   if (!old) throw new AppError(404, 'Attendance record not found');
   if (old.employeeId !== employee.id) throw new AppError(403, 'You can only amend your own attendance');
-  if (old.approval === 'APPROVED') throw new AppError(409, 'This record has already been approved; ask HR to correct it');
+  if (old.approval === 'APPROVED') throw new AppError(409, 'This record has already been approved; ask an administrator to correct it');
   const ageDays = Math.round((officeToday().getTime() - old.date.getTime()) / 86_400_000);
-  if (ageDays > MAX_REGULARISE_DAYS) throw new AppError(409, `You can only amend the last ${MAX_REGULARISE_DAYS} days; ask HR to correct this one`);
+  if (ageDays > MAX_REGULARISE_DAYS) throw new AppError(409, `You can only amend the last ${MAX_REGULARISE_DAYS} days; ask an administrator to correct this one`);
   const calculated = await times(employee.id, old.date, body, old);
   await prisma.$transaction(async (tx) => {
-    // Back to PENDING whatever it was: the numbers changed and the approver has not seen the new ones.
-    const row = await tx.attendance.update({ where: { id }, data: { ...calculated, approval: 'PENDING', decidedBy: null, decidedAt: null, decisionNote: null, regularisedAt: new Date(), regularisedNote: body.note } });
+    // The approval is checked again here, in the same statement as the write: one that landed after the
+    // read above must not be reset to pending.
+    // Back to PENDING whatever else it was: the numbers changed and the approver has not seen the new ones.
+    const changed = await tx.attendance.updateMany({ where: { id, approval: { not: 'APPROVED' } }, data: { ...calculated, approval: 'PENDING', decidedBy: null, decidedAt: null, decisionNote: null, regularisedAt: new Date(), regularisedNote: body.note } });
+    if (!changed.count) throw new AppError(409, 'This record has already been approved; ask an administrator to correct it');
+    const row = await tx.attendance.findUniqueOrThrow({ where: { id } });
     await tx.attendanceAudit.create({ data: { attendanceId: id, action: 'REGULARISE', changedBy: userId, before: snapshot(old), after: snapshot(row), note: body.note } });
     const users = await approverUserIds(tx, employee.id, 'attendance.approve');
     await notify(tx, users.map((user) => ({ userId: user, type: 'attendance.regularised', title: 'Attendance needs review', href: '/attendance/approvals', entity: 'ATTENDANCE', entityId: id })));
