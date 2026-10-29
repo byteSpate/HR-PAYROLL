@@ -5,7 +5,7 @@ import { RiCloseLine, RiZoomInLine } from "@remixicon/react"
 
 import { AvatarLightbox } from "@erp/ui/dashboard"
 import { Button } from "@erp/ui/components/button"
-import { AVATAR_ACCEPT, AVATAR_MAX_BYTES, FileUpload } from "@erp/ui/components/file-upload"
+import { AVATAR_ACCEPT, AVATAR_MAX_BYTES, FileUpload } from "@/components/file-upload"
 
 export function initialsFrom(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean)

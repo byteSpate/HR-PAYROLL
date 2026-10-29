@@ -16,6 +16,8 @@ export interface NavChild {
   href: string;
   /** 'key' or 'key:scope'. An array shows the child when any entry is held. */
   permission: string | string[] | null;
+  /** Only where the page shows its siblings as tabs (Settings); the sidebar does not draw it. */
+  icon?: string;
 }
 
 export interface NavItem {

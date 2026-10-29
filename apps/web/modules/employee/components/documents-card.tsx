@@ -7,7 +7,7 @@ import { ApiError } from "@erp/utils"
 import { useSession } from "@/lib/session"
 import type { DocumentItem, DocumentType } from "../types"
 import { Button } from "@erp/ui/components/button"
-import { DOCUMENT_ACCEPT, DOCUMENT_MAX_BYTES, FileUpload } from "@erp/ui/components/file-upload"
+import { DOCUMENT_ACCEPT, DOCUMENT_MAX_BYTES, FileUpload } from "@/components/file-upload"
 import { Label } from "@erp/ui/components/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@erp/ui/components/select"
 
