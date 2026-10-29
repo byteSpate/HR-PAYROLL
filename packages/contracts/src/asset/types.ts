@@ -229,3 +229,32 @@ export interface AssetImportCommitResult {
   assetCount: number;
   assignmentCount: number;
 }
+
+export type AssetValueRowStatus = 'VALUED' | 'UNKNOWN' | 'NOT_CAPITALISED';
+
+export interface AssetValueRow {
+  assetId: string;
+  assetTag: string;
+  name: string;
+  categoryName: string;
+  currency: Currency;
+  /** Null, shown as "unknown", when the cost, the date or the rate is missing. */
+  purchaseCost: string | null;
+  accumulated: string | null;
+  bookValue: string | null;
+  status: AssetValueRowStatus;
+}
+
+export interface AssetValueTotal {
+  currency: Currency;
+  purchaseCost: string;
+  accumulated: string;
+  bookValue: string;
+}
+
+export interface AssetValueReport {
+  rows: AssetValueRow[];
+  /** Per currency, never summed across. */
+  totals: AssetValueTotal[];
+  asOf: string;
+}
