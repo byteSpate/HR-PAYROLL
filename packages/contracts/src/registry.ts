@@ -10,6 +10,7 @@ import type { ModuleManifest, Permission, PermissionDef, Scope } from './module.
 import { leave } from './leave/manifest.js';
 import { notification } from './notification/manifest.js';
 import { payroll } from './payroll/manifest.js';
+import { people } from './people/manifest.js';
 import { settlement } from './settlement/manifest.js';
 
 // Core first; later plans append their manifests here. Settings tabs follow this order, so finance panels
@@ -26,6 +27,7 @@ export const modules: readonly ModuleManifest[] = [
   cost,
   payroll,
   settlement,
+  people,
   exchange,
 ];
 

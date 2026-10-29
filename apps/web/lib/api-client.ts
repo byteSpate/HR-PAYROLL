@@ -7,6 +7,8 @@ export { ApiError };
 export interface DownloadedFile {
   blob: Blob;
   fileName: string;
+  /** The response headers, for a download that carries evidence beside the file. */
+  headers: Headers;
 }
 
 export interface SessionPayload {
@@ -115,7 +117,7 @@ export function createApiClient({ baseUrl, onUnauthenticated, fetchImpl }: ApiCl
   /** For exports and templates: the file plus the name the server chose for it. */
   async function download(path: string): Promise<DownloadedFile> {
     const res = await sendWithRefresh(path, {});
-    return { blob: await res.blob(), fileName: fileNameOf(res, 'download') };
+    return { blob: await res.blob(), fileName: fileNameOf(res, 'download'), headers: res.headers };
   }
 
   return {

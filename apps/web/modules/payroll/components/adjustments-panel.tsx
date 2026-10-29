@@ -1,0 +1,149 @@
+"use client"
+
+import { holds } from '@/modules/settings/components/require-permission'
+import { useState } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+
+import { ApiError } from "@erp/utils"
+import { createAdjustment, deleteAdjustment, listAdjustments } from "../api"
+import { listEmployees } from "../../employee/api"
+import { useSession } from "@/lib/session"
+import type { AdjustmentInput } from "../types"
+import { formatMoney, formatMonth } from "@erp/ui/lib/money"
+import { DataTable } from "@erp/ui/dashboard"
+import type { TableCell } from "@erp/ui/dashboard"
+import { Button } from "@erp/ui/components/button"
+import { Skeleton } from "@erp/ui/components/skeleton"
+import { AdjustmentDialog } from "./adjustment-dialog"
+
+export function AdjustmentsPanel({ month, year }: { month: number; year: number }) {
+  const { accessToken, user } = useSession()
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const canWrite = !!user && holds(user, "payroll.manage")
+
+  const adjustmentsQuery = useQuery({
+    queryKey: ["adjustments", year, month],
+    queryFn: () => listAdjustments(accessToken!, { month, year }),
+    enabled: !!accessToken,
+  })
+
+  const employeesQuery = useQuery({
+    queryKey: ["employees"],
+    queryFn: () => listEmployees(),
+    enabled: !!accessToken && canWrite && open,
+  })
+
+  function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ["adjustments", year, month] })
+    queryClient.invalidateQueries({ queryKey: ["payroll-runs"] })
+  }
+
+  const createMutation = useMutation({
+    mutationFn: (input: AdjustmentInput) => createAdjustment(accessToken!, input),
+    onSuccess: () => {
+      setError(null)
+      setOpen(false)
+      invalidate()
+    },
+    // A locked month 409s here; the server's own message explains why, which
+    // a generic fallback would hide.
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again."),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteAdjustment(accessToken!, id),
+    onSuccess: () => {
+      setError(null)
+      invalidate()
+    },
+    onError: (err) =>
+      setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again."),
+  })
+
+  if (adjustmentsQuery.isPending) return <Skeleton className="h-40 w-full" />
+
+  const adjustments = adjustmentsQuery.data ?? []
+
+  const rows: TableCell[][] = adjustments.map((a) => [
+    { text: a.employee?.fullName ?? "—", sub: a.employee?.employeeCode, weight: 600 },
+    { text: a.label, sub: a.reason },
+    {
+      text: `${a.kind === "EARNING" ? "+" : "−"}${formatMoney(a.amount, a.currency)}`,
+      weight: 600,
+    },
+    a.payslipId
+      ? { tag: "Paid", tone: "green" }
+      : canWrite
+        ? {
+            node: (
+              <Button
+                variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline disabled:opacity-50"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate(a.id)}
+              >
+                Remove
+              </Button>
+            ),
+          }
+        : { tag: "Pending", tone: "yellow" },
+  ])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-[15px] font-bold">Adjustments · {formatMonth(month, year)}</div>
+          <div className="mt-0.5 text-[12.5px] text-[#7A8698]">
+            Bonuses, arrears and one-off recoveries. An administrator records these; the next run pays them.
+          </div>
+        </div>
+        {canWrite ? <Button onClick={() => setOpen(true)}>Add adjustment</Button> : null}
+      </div>
+
+      {error ? (
+        <div className="rounded-md border border-[#F0D9D9] bg-[#FDF6F6] px-5 py-3.5 text-[12.5px] text-[#B03A3A]">
+          {error}
+        </div>
+      ) : null}
+
+      {adjustments.length === 0 ? (
+        <div className="rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#7A8698]">
+          No adjustments for this month.
+        </div>
+      ) : (
+        <DataTable
+          title="This month"
+          cols="1.4fr 1.6fr 1fr 0.8fr"
+          headers={["Employee", "Adjustment", "Amount", ""]}
+          rows={rows}
+          action={`${adjustments.length} line${adjustments.length === 1 ? "" : "s"}`}
+        />
+      )}
+
+      {open ? (
+        <AdjustmentDialog
+          key={`adj-${year}-${month}`}
+          open={open}
+          onOpenChange={setOpen}
+          // HR (the only role that opens this dialog) always gets the
+          // `employment` group; filtering rather than fabricating a code
+          // for the rare row that somehow lacks one.
+          employees={(employeesQuery.data ?? []).flatMap((e) =>
+            e.employment
+              ? [{ id: e.id, fullName: e.work.fullName, employeeCode: e.employment.employeeCode }]
+              : []
+          )}
+          month={month}
+          year={year}
+          pending={createMutation.isPending}
+          error={error}
+          onSubmit={(input) => createMutation.mutate(input)}
+        />
+      ) : null}
+    </div>
+  )
+}

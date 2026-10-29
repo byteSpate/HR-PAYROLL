@@ -1,0 +1,638 @@
+"use client"
+
+import { holds } from '@/modules/settings/components/require-permission'
+
+import { useState } from "react"
+import Link from "next/link"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+
+import {
+  approveNationalIdChangeRequest,
+  getEmployee,
+  rejectNationalIdChangeRequest,
+  resendEmployeeInvite,
+  setAccountActive,
+  setSalaryStructure,
+  updateEmployee,
+} from "../admin-api"
+import { listSalaryStructures } from "../admin-api"
+import { listShifts } from "../admin-api"
+import { ApiError } from "@erp/utils"
+import { useSession } from "@/lib/session"
+import { REFERENCE_STALE_MS } from "@/lib/query/default-options"
+import type { EmployeeView } from "../../employee/types"
+import { SalaryStructureDialog } from "./salary-structure-dialog"
+import { ShiftDialog } from "./shift-dialog"
+import {
+  CARD_FIELDS,
+  EditCardDialog,
+  EMPLOYMENT_TYPE_LABEL,
+} from "./edit-card-dialog"
+import { EditNameDialog } from "./edit-name-dialog"
+import { HrChangeEmailDialog } from "./hr-change-email-dialog"
+import { ExitDetailsDialog } from "./exit-details-dialog"
+import { NationalIdRejectDialog } from "./national-id-reject-dialog"
+import { DocumentsCard } from "../../employee/components/documents-card"
+import { LeaveBalanceCard } from "./leave-balance-card"
+import { HoldingsCard } from "../../asset/components/holdings-card"
+import { PayslipsCard } from "../../payroll/components/payslips-card"
+import { ProfileCard, formatDateValue } from "../../employee/components/profile-card"
+import { ProfileHeader } from "../../employee/components/profile-header"
+import { ResendPasswordDialog } from "../../settings/components/resend-password-dialog"
+import { Button } from "@erp/ui/components/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@erp/ui/components/select"
+import { Skeleton } from "@erp/ui/components/skeleton"
+import { PanelNotice } from "@erp/ui/dashboard"
+
+/**
+ * Renders whichever groups are present in the payload.
+ *
+ * There is no role check anywhere in this file. The server projects by tier,
+ * so a group the caller cannot see is a key that is absent — and because every
+ * group key on `EmployeeView` is optional, reading one without a guard fails
+ * `tsc` rather than crashing at runtime.
+ *
+ * The alternative — the client deciding what to show from the viewer's role —
+ * means the same matrix is written twice, and when the two drift the laxer one
+ * promises data the server will not return.
+ */
+export function EmployeeDetailPage({
+  employeeId,
+  backHref,
+}: {
+  employeeId: string
+  backHref: string
+}) {
+  const { accessToken, user, status: sessionStatus } = useSession()
+  const queryClient = useQueryClient()
+  const [editing, setEditing] = useState<string | null>(null)
+  const [editingName, setEditingName] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(false)
+  const [exitOpen, setExitOpen] = useState(false)
+  const [resendOpen, setResendOpen] = useState(false)
+  const [assigningStructure, setAssigningStructure] = useState(false)
+  const [assignError, setAssignError] = useState<string | null>(null)
+  const [assigningShift, setAssigningShift] = useState(false)
+  const [shiftError, setShiftError] = useState<string | null>(null)
+  const [accountError, setAccountError] = useState<string | null>(null)
+
+  const employeeQuery = useQuery({
+    queryKey: ["employee", employeeId],
+    queryFn: () => getEmployee(accessToken!, employeeId),
+    enabled: sessionStatus === "authenticated" && !!accessToken,
+  })
+
+  // Fetched only once the dialog is actually opened — the caller who may see
+  // this page without ever assigning a structure shouldn't pay for the list.
+  const structuresQuery = useQuery({
+    queryKey: ["salary-structures"],
+    queryFn: () => listSalaryStructures(accessToken!),
+    enabled: assigningStructure && sessionStatus === "authenticated" && !!accessToken,
+  })
+
+  // Same lazy-fetch reasoning, and the same `["shifts"]` key the create-
+  // employee form uses — whichever dialog opens first, the other gets it
+  // from cache.
+  const shiftsQuery = useQuery({
+    queryKey: ["shifts"],
+    staleTime: REFERENCE_STALE_MS,
+    queryFn: () => listShifts(accessToken!),
+    enabled: assigningShift && sessionStatus === "authenticated" && !!accessToken,
+  })
+
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["employee", employeeId] })
+    queryClient.invalidateQueries({ queryKey: ["employees"] })
+  }
+
+  const [rejectOpen, setRejectOpen] = useState(false)
+  const approveNationalIdMutation = useMutation({
+    mutationFn: (requestId: string) => approveNationalIdChangeRequest(accessToken!, requestId),
+    onSuccess: refresh,
+  })
+  const rejectNationalIdMutation = useMutation({
+    mutationFn: (vars: { requestId: string; note: string }) =>
+      rejectNationalIdChangeRequest(accessToken!, vars.requestId, vars.note),
+    onSuccess: () => {
+      setRejectOpen(false)
+      refresh()
+    },
+  })
+
+  // `employeeId` rather than `employee.id`: this mutation is declared
+  // unconditionally, before the loading/error early returns below, so the
+  // employee record itself may not exist yet.
+  const assignMutation = useMutation({
+    mutationFn: (salaryStructureId: string | null) =>
+      setSalaryStructure(accessToken!, employeeId, salaryStructureId),
+    onSuccess: () => {
+      setAssigningStructure(false)
+      setAssignError(null)
+      refresh()
+    },
+    onError: (err) => {
+      setAssignError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+    },
+  })
+
+  // Goes through the general PATCH rather than a dedicated route — unlike
+  // salary structure, shift has no month-lock or approval logic of its own to
+  // protect, so it is a plain `HR_ONLY_EDITABLE_FIELDS` write like designation
+  // or office location. `null` clears it back to the General shift, and is
+  // sent explicitly for the same reason setSalaryStructure sends it: an
+  // omitted key is a no-op, not a clear.
+  const shiftMutation = useMutation({
+    mutationFn: (shiftId: string | null) => updateEmployee(accessToken!, employeeId, { shiftId }),
+    onSuccess: () => {
+      setAssigningShift(false)
+      setShiftError(null)
+      refresh()
+    },
+    onError: (err) => {
+      setShiftError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+    },
+  })
+
+  // Same reason as assignMutation: declared before the early returns, so it
+  // keys off `employeeId` rather than a record that may not exist yet.
+  const accountMutation = useMutation({
+    mutationFn: (isActive: boolean) => setAccountActive(accessToken!, employeeId, isActive),
+    onSuccess: () => {
+      setAccountError(null)
+      refresh()
+    },
+    onError: (err) => {
+      setAccountError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+    },
+  })
+
+  // Same reason as accountMutation: declared before the early returns.
+
+  if (sessionStatus === "loading" || employeeQuery.isPending) {
+    return (
+      <div className="space-y-3 pt-7">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    )
+  }
+
+  if (employeeQuery.isError) {
+    return (
+      <div className="mt-7 rounded-md border border-[#E4E9EF] bg-white p-5.5 text-[13px] text-[#B03A3A]">
+        Could not load this employee.{" "}
+        <Button variant="link" className="h-auto p-0 font-semibold underline" onClick={() => employeeQuery.refetch()}>
+          Retry
+        </Button>
+      </div>
+    )
+  }
+
+  const employee: EmployeeView = employeeQuery.data
+  const canEdit = employee.editableFields.length > 0
+  const canEditName = employee.editableFields.includes("fullName")
+  // Matches the permission on PATCH /:id/account, so the control can never 403 when pressed.
+  const canToggleAccount = !!user && holds(user, "employee.update:department") && !!employee.employment
+  const accountActive = employee.employment?.accountActive ?? true
+  // Mirrors requireRole on POST /:id/resend-invite. `passwordPending` is only
+  // sent to HR and Super Admin, so it is also the guard that the server would
+  // accept the call: the person has not chosen a password and can sign in.
+  const canResendInvite =
+    !!user &&
+    holds(user, "user.manage") &&
+    employee.employment?.passwordPending === true &&
+    accountActive
+  // Mirrors PAYROLL_ADMIN_ROLES in payroll.service, the same way
+  // canToggleAccount mirrors requireRole on PATCH /:id/account. Everyone else
+  // reaching this page is a Reporting Manager looking at a report, and the
+  // service 403s them by design: a line manager has no payroll access, which
+  // is a policy choice rather than an oversight. Rendering the card anyway
+  // would turn that into an error message on a page that is otherwise fine.
+  const canSeePayslips = !!user && holds(user, "payroll.read")
+  // `shiftId` is HR-only on the server's write matrix — gating on the field
+  // itself, the same way `editAction` does per card, rather than on role,
+  // keeps this in step if that matrix ever changes.
+  const canAssignShift = employee.editableFields.includes("shiftId")
+
+  // HR-only, matching the server route. Not derived from `editableFields`:
+  // the address is not on the employee write matrix at all, because it lives
+  // on `User` and changing it is a different kind of act.
+  const canChangeEmail = !!user && holds(user, "employee.update:department")
+
+  // A card shows an Edit control if and only if it contains at least one
+  // field this caller may write. No role check — editableFields comes from
+  // the server's writableFieldsFor.
+  const editAction = (card: string) =>
+    (CARD_FIELDS[card] ?? []).some((f) => employee.editableFields.includes(f.key)) ? (
+      <Button
+        type="button"
+        variant="link" className="h-auto p-0 text-[12.5px] font-semibold underline"
+        onClick={() => setEditing(card)}
+      >
+        Edit
+      </Button>
+    ) : null
+
+  return (
+    <>
+      <div className="pt-7 pb-4">
+        <Link href={backHref} className="text-[12.5px] font-semibold text-[#7A8698] hover:underline">
+          ← Back
+        </Link>
+      </div>
+
+      <ProfileHeader
+        employee={employee}
+        avatarEditable={canEdit}
+        onAvatarChanged={refresh}
+        onEditName={canEditName ? () => setEditingName(true) : undefined}
+        action={
+          canEdit || canToggleAccount || canResendInvite ? (
+            <>
+              {/*
+                Only actions with no row of their own live up here.
+
+                "Record exit" stays because when there is no exit there is no
+                Exit card to hang it on; once there is one, the card carries
+                its own Edit and this disappears.
+
+                Shift and salary structure used to be here too. Both moved onto
+                the rows they change — up here they were several buttons away
+                from the value, and people looked for them in the card's Edit
+                dialog instead, which is where they reasonably expected them.
+              */}
+              {canEdit && employee.exit === null ? (
+                <Button type="button" variant="outline" onClick={() => setExitOpen(true)}>
+                  Record exit
+                </Button>
+              ) : null}
+              {/* Distinct from "Record exit": that ends the employment, this
+                  ends the access. Either can happen without the other. */}
+              {canToggleAccount ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={accountMutation.isPending}
+                  onClick={() => accountMutation.mutate(!accountActive)}
+                >
+                  {accountMutation.isPending
+                    ? "Saving…"
+                    : accountActive
+                      ? "Deactivate login"
+                      : "Reactivate login"}
+                </Button>
+              ) : null}
+              {/* For a person whose first email never arrived. Shown only while
+                  they have not chosen their own password. */}
+              {canResendInvite ? (
+                <Button type="button" variant="outline" onClick={() => setResendOpen(true)}>
+                  Resend password
+                </Button>
+              ) : null}
+            </>
+          ) : null
+        }
+      />
+
+      {accountError ? (
+        <div className="mb-4 rounded-md border border-[#E4E9EF] bg-white px-5 py-3 text-[13px] text-[#B03A3A]">
+          {accountError}
+        </div>
+      ) : null}
+
+      {/* FULL only — blockers arrive for SELF and FULL, and this page is never
+          SELF. Every blocker here is actionable, because the person reading
+          the page is the person who resolves them. */}
+      {(employee.blockers ?? []).length > 0 ? (
+        <div className="mb-5 space-y-1.5">
+          {employee.blockers!.map((b) => (
+            <div
+              key={`${b.field}-${b.blocks}`}
+              className="rounded-md border border-[#F0DCC0] bg-[#FDF7EE] px-4 py-2.5 text-[13px] text-[#8A5A1E]"
+            >
+              {b.blocks}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+
+      <div className="mt-5 grid grid-cols-[repeat(auto-fit,minmax(310px,1fr))] gap-4">
+        {employee.personal ? (
+          <ProfileCard
+            title="Personal"
+            action={editAction("Personal")}
+            rows={[
+              { label: "Date of birth", value: formatDateValue(employee.personal.dateOfBirth) },
+              { label: "Gender", value: employee.personal.gender },
+              {
+                label: "National ID",
+                value: employee.personal.nationalId,
+                action: employee.personal.nationalIdChangeRequest ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11.5px] text-[#A5AFBE]">
+                      Change to {employee.personal.nationalIdChangeRequest.newValue} pending
+                    </span>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-[12px] font-semibold underline"
+                      disabled={approveNationalIdMutation.isPending}
+                      onClick={() =>
+                        approveNationalIdMutation.mutate(
+                          employee.personal!.nationalIdChangeRequest!.id
+                        )
+                      }
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-[12px] font-semibold text-[#B03A3A] underline"
+                      onClick={() => setRejectOpen(true)}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                ) : undefined,
+              },
+              { label: "Blood group", value: employee.personal.bloodGroup },
+              { label: "Marital status", value: employee.personal.maritalStatus },
+            ]}
+          />
+        ) : null}
+
+        {employee.contact ? (
+          <ProfileCard
+            title="Contact"
+            action={editAction("Contact")}
+            // No sign-in email row here. It was one, briefly, with its own
+            // separate link underneath — which recreated the exact defect the
+            // Employment card had: a row on a card whose Edit button does not
+            // touch it. It has its own card below instead, with one control.
+            rows={[
+              { label: "Phone", value: employee.work.phone },
+              { label: "Present address", value: employee.contact.presentAddress },
+              { label: "Permanent address", value: employee.contact.permanentAddress },
+              { label: "Emergency contact", value: employee.contact.emergencyContact },
+            ]}
+          />
+        ) : null}
+
+        {/*
+          Its own card, not a row in Contact.
+
+          The address is not a contact detail — it is the sign-in identity and
+          the password-reset target, and changing it goes through a different
+          endpoint with different rules: HR only, applied immediately, signs
+          every session out, notifies both addresses, and is audited. Putting
+          it in the Contact dialog beside a phone number would hide all of that
+          behind a "Save changes" button.
+        */}
+        <ProfileCard
+          title="Sign-in"
+          action={
+            canChangeEmail ? (
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto p-0 text-[12.5px] font-semibold underline"
+                onClick={() => setEmailOpen(true)}
+              >
+                Change
+              </Button>
+            ) : undefined
+          }
+          rows={[
+            {
+              label: "Email",
+              value: employee.work.email,
+              hint: "What they sign in with, and where a password reset is sent.",
+            },
+          ]}
+          lockedHint={
+            canChangeEmail
+              ? // Said before they press it, not after — the consequences are
+                // not what anybody expects from editing an email address.
+                "Changing this signs them out everywhere and emails both the old and the new address."
+              : "Only HR can change a sign-in address."
+          }
+        />
+
+        {employee.employment ? (
+          <ProfileCard
+            title="Employment"
+            action={editAction("Employment")}
+            rows={[
+              // Designation is on the card because the Edit dialog offers it.
+              // A field you can change but cannot see is as confusing as a
+              // field you can see but cannot change.
+              { label: "Designation", value: employee.work.designation },
+              { label: "Employee code", value: employee.employment.employeeCode },
+              {
+                label: "Employment type",
+                value: EMPLOYMENT_TYPE_LABEL[employee.employment.employmentType] ?? null,
+              },
+              { label: "Joining date", value: formatDateValue(employee.employment.joiningDate) },
+              { label: "Office location", value: employee.employment.officeLocation },
+              {
+                label: "Shift",
+                // Unset means the General shift, not "no shift" — an
+                // unassigned employee is still judged against General's window,
+                // which is wrong for night staff and worth saying out loud.
+                value: employee.employment.shift?.name ?? "General (default)",
+                hint: "Sets the working hours attendance is judged against.",
+                // Its own control rather than the Employment dialog: changing
+                // a shift moves someone's late threshold, expected hours and
+                // weekly off, so it keeps a separate confirmation. It lives on
+                // the row because the button used to be at the top of the page
+                // and nobody found it.
+                action: canAssignShift ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    onClick={() => setAssigningShift(true)}
+                  >
+                    {employee.employment.shift ? "Change" : "Assign"}
+                  </Button>
+                ) : undefined,
+              },
+              {
+                label: "Reporting manager",
+                value: employee.work.reportingManager?.fullName ?? null,
+                // Said plainly rather than left as a row with no control:
+                // there is no UI for this anywhere, and a blank field with no
+                // way to fill it reads as broken rather than as unbuilt.
+                hint: "Set when the account is created. Changing it later is not built yet.",
+              },
+            ]}
+          />
+        ) : null}
+
+        {employee.payroll ? (
+          <ProfileCard
+            title="Payroll"
+            action={editAction("Payroll")}
+            rows={[
+              {
+                label: "Salary structure",
+                value: employee.payroll.salaryStructure?.name ?? null,
+                hint: "What payroll pays from. Nobody can be paid without one.",
+                // Same reasoning as Shift: the Payroll dialog covers the bank
+                // fields, and assigning a structure is a money decision with
+                // its own dialog. The control belongs on the row rather than
+                // in the page header, where Shift's used to be.
+                action: canEdit ? (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 text-[12px] font-semibold underline"
+                    onClick={() => setAssigningStructure(true)}
+                  >
+                    {employee.payroll.salaryStructure ? "Change" : "Assign"}
+                  </Button>
+                ) : undefined,
+              },
+              { label: "Bank", value: employee.payroll.bankName },
+              { label: "Account number", value: employee.payroll.bankAccountNumber },
+              { label: "Routing number", value: employee.payroll.bankRoutingNumber },
+            ]}
+          />
+        ) : null}
+
+        {employee.exit ? (
+          <ProfileCard
+            title="Exit"
+            // A recorded exit had no control at all: the "Record exit" button
+            // in the header only shows while there is none, so a wrong last
+            // working day could not be corrected from the UI — even though the
+            // server accepts an amendment right up until a settlement is
+            // approved, and refuses with a message of its own after that.
+            action={
+              canEdit ? (
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0 text-[12.5px] font-semibold underline"
+                  onClick={() => setExitOpen(true)}
+                >
+                  Edit
+                </Button>
+              ) : undefined
+            }
+            rows={[
+              { label: "Last working day", value: formatDateValue(employee.exit.lastWorkingDay) },
+              { label: "Reason", value: employee.exit.exitReason },
+              { label: "Note", value: employee.exit.exitNote },
+            ]}
+            lockedHint="Can be corrected until a settlement is approved."
+          />
+        ) : null}
+
+        {/* Fetched separately: it comes from the leave module, not the employee
+            payload, and a slow leave query should not delay the field cards. */}
+        <LeaveBalanceCard employeeId={employeeId} />
+
+        {/* Also fetched separately, from the asset module. Always rendered,
+            never hidden behind a permission check — an empty state saying so
+            is exactly what the exit conversation needs to see. */}
+        <HoldingsCard employeeId={employeeId} />
+
+        {/* Fetched from the payroll module for the same reason, and gated on
+            role rather than on a group key: payslips are not part of the
+            employee payload, so there is no absent key to read the answer
+            from the way every card above does. */}
+        {canSeePayslips ? <PayslipsCard employeeId={employeeId} /> : null}
+
+        {employee.documents ? (
+          <DocumentsCard
+            employeeId={employee.id}
+            documents={employee.documents}
+            canManage={canEdit}
+            onChanged={refresh}
+          />
+        ) : null}
+      </div>
+
+      {editing ? (
+        <EditCardDialog
+          employee={employee}
+          title={editing}
+          fields={CARD_FIELDS[editing] ?? []}
+          open
+          onOpenChange={(open) => !open && setEditing(null)}
+          onSaved={refresh}
+        />
+      ) : null}
+
+      <EditNameDialog
+        employee={employee}
+        open={editingName}
+        onOpenChange={setEditingName}
+        onSaved={refresh}
+      />
+
+      {/* Mounted only while open, so a second change starts from a blank form
+          rather than the confirmation the last one ended on. */}
+      {emailOpen ? (
+        <HrChangeEmailDialog
+          open={emailOpen}
+          onOpenChange={setEmailOpen}
+          employeeId={employee.id}
+          employeeName={employee.work.fullName}
+          currentEmail={employee.work.email}
+          onChanged={refresh}
+        />
+      ) : null}
+
+      <ResendPasswordDialog
+        open={resendOpen}
+        who={employee.work.fullName}
+        send={() => resendEmployeeInvite(accessToken!, employeeId)}
+        onClose={() => setResendOpen(false)}
+        onSent={refresh}
+      />
+
+      <ExitDetailsDialog
+        employee={employee}
+        open={exitOpen}
+        onOpenChange={setExitOpen}
+        onSaved={refresh}
+      />
+
+      <NationalIdRejectDialog
+        open={rejectOpen}
+        onOpenChange={setRejectOpen}
+        pending={rejectNationalIdMutation.isPending}
+        error={rejectNationalIdMutation.error instanceof Error ? rejectNationalIdMutation.error.message : null}
+        onConfirm={(note) =>
+          employee.personal?.nationalIdChangeRequest &&
+          rejectNationalIdMutation.mutate({
+            requestId: employee.personal.nationalIdChangeRequest.id,
+            note,
+          })
+        }
+      />
+
+      <SalaryStructureDialog
+        employee={assigningStructure ? employee : null}
+        structures={structuresQuery.data ?? []}
+        pending={assignMutation.isPending}
+        error={assignError}
+        onOpenChange={(open) => !open && setAssigningStructure(false)}
+        onSubmit={(salaryStructureId) => assignMutation.mutate(salaryStructureId)}
+      />
+
+      <ShiftDialog
+        employee={assigningShift ? employee : null}
+        shifts={shiftsQuery.data ?? []}
+        pending={shiftMutation.isPending}
+        error={shiftError}
+        onOpenChange={(open) => !open && setAssigningShift(false)}
+        onSubmit={(shiftId) => shiftMutation.mutate(shiftId)}
+      />
+    </>
+  )
+}

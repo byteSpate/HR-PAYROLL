@@ -92,7 +92,7 @@ async function lockRequest(
 }
 
 /** Revokes every refresh token for a user, signed out everywhere. */
-async function revokeAllUserTokens(tx: Tx, userId: string): Promise<void> {
+export async function revokeAllUserTokens(tx: Tx, userId: string): Promise<void> {
   await tx.refreshToken.updateMany({
     where: { userId, revokedAt: null },
     data: { revokedAt: new Date() },
@@ -250,16 +250,25 @@ export async function confirmEmailChange(rawToken: string): Promise<{ email: str
     return { req: request!, previousEmail: user.email };
   });
 
-  const changedNotice = async (to: string) =>
+  // Both addresses. Not awaited inside the transaction: a mail outage must
+  // not undo a committed change.
+  await sendEmailChangedNotices(req.userId, previousEmail, req.newEmail);
+
+  return { email: req.newEmail };
+}
+
+/** Tells both addresses the sign-in address changed: the old inbox is the only place a wrong change can still be spotted. */
+export async function sendEmailChangedNotices(userId: string, previousEmail: string, newEmail: string): Promise<void> {
+  const notice = async (to: string) =>
     sendMail({
       to,
       kind: 'EMAIL_CHANGED',
       subject: `Your ${env.COMPANY_NAME} sign-in address has changed`,
       html: await renderEmail({
-        serial: serialFor('EMAIL_CHANGED', req.userId),
+        serial: serialFor('EMAIL_CHANGED', userId),
         subject: `Your sign-in address has changed`,
         stamp: { label: 'Security notice', tone: 'notice' },
-        intro: `The sign-in address on this account changed from ${previousEmail} to ${req.newEmail}. You have been signed out everywhere and will need to sign in again with the new address.`,
+        intro: `The sign-in address on this account changed from ${previousEmail} to ${newEmail}. You have been signed out everywhere and will need to sign in again with the new address.`,
         action: {
           label: 'Sign in',
           href: signInLink,
@@ -268,12 +277,7 @@ export async function confirmEmailChange(rawToken: string): Promise<{ email: str
         footer: `You are receiving this because the sign-in address on a ${env.COMPANY_NAME} account was changed.`,
       }),
     });
-
-  // Both addresses. Not awaited inside the transaction: a mail outage must
-  // not undo a committed change.
-  await Promise.all([changedNotice(req.newEmail), changedNotice(previousEmail)]);
-
-  return { email: req.newEmail };
+  await Promise.all([notice(newEmail), notice(previousEmail)]);
 }
 
 /** What the profile screen shows while a change is in flight. */

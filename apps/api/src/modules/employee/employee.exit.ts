@@ -13,7 +13,7 @@ import { getEmployee, viewerEmployeeOf } from './employee.service.js';
 // Reasons where the employer ends the employment; everything else is the employee leaving.
 const TERMINATING = new Set(['TERMINATION', 'DISMISSAL', 'DISCHARGE', 'RETRENCHMENT']);
 
-async function loadForAction(tx: Tx, viewer: Viewer, id: string, key: string) {
+export async function loadForAction(tx: Tx, viewer: Viewer, id: string, key: string) {
   const actor = await loadActor(tx, viewer.sub);
   const employee = await tx.employee.findUnique({ where: { id } });
   if (!employee) throw new AppError(404, 'Employee not found');

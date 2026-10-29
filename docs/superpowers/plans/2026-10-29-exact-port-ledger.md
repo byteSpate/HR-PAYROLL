@@ -90,6 +90,29 @@ Part B completed on the same branch:
 
 Deviations to remember: the ledger writes (capitalise, pay, dispose, depreciation posting, cost accrual and payment) are events with the figures a bookkeeper needs, since accounting is out of scope. A new permission `asset.capitalise` (capitalise, pay, dispose, depreciation) and `asset.value` were added beside the planned four; cost permissions are on/off because a company cost has no owner to scope by. Depreciation rate is a column on the asset category (yearly percent of the book value at the start of the financial year, July start), because there is no chart of accounts to hold it; the original takes it from the account. A reversed run frees its month (partial unique index) and only the latest posted run can be reversed. Book value counts posted runs only. Cost and the frozen BDT figures are left out of an asset read for anyone who cannot see costs, where the original left the BDT figures in. Capitalised cost and currency cannot be edited. Foreign-currency operating costs are refused, as in the original. The "recover from payroll" action and its payroll-settings switch wait for payroll (Part C); the screen has no button for it until then. Asset category settings gained the kind (IT or not), the registered-one-by-one switch and the depreciation rate, which the original's form lacked while its API required them. The depreciation and cost tables share the new `IdCounter` series table with asset tags.
 
+## Progress (Plan 5, Part C, branch `feat/payroll-settlement`)
+
+Plan: `2026-10-29-erp-plan-5-part-c-payroll-settlement-mail.md`.
+
+- C1 Mail: `@erp/mail` (`sendMail` never throws and records every message in `EmailDispatch`; no SMTP records a skipped row), the brand email template, and the optional `SMTP_*` variables.
+- C2 Account mail: change email by two links (approve at the old address, confirm at the new), an administrator's resend of credentials, and the administrator's direct change of someone's address (`PATCH /employees/:id/email`: applied at once, audited with both addresses, both addresses told, sessions revoked, an unused invite reissued). Screens: the public approve and confirm pages, the change-email dialog and pending notice, Resend password on Users and on the employee page.
+- C3/C4 Payroll configuration and pay: salary structures (authored with `payroll.config`, assigned with `employee.update`), payroll settings (Settings, Payroll settings), the pay calculation (ported unchanged), preflight, adjustments, and the asset recovery path "Recover from payroll".
+- C5/C6 Runs and payslips: draft, process, submit, approve, reject, disburse, delete; the bank file (audited); payslip PDF on request; "Email payslips" for a run; `/me/payroll`. Events `payroll.run.submitted`, `payroll.run.rejected`, `payroll.run.finalized` (the figures the books need), `payroll.run.disbursed`, `payslip.published`. Approved claims are paid (REIMBURSED, with the payslip) when the run is disbursed, as in the original, so the expense report's `paidOn` is the payslip number.
+- C7 Settlement: calculate, override, approve, reject, pay, the statement mailed on pay, and the events `settlement.approved` and `settlement.paid`.
+- C8 Admin employees: the original's employee list with add, and the detail page with edit cards, salary structure, shift, exit details, leave balance, held assets, payslips and the administrator's change of sign-in email.
+
+Deviations to remember:
+
+- Permissions are `payroll.read|manage` (department or all), `payroll.approve|disburse` (all), `payroll.config`, and `settlement.read|create` (department or all) and `settlement.approve|pay` (all). Run, approval and disbursement routes ask for the grant at `all`. The original's Finance, HR and Super Admin roles are not ported.
+- Separation of duties: whoever processed or submitted a run, or calculated a settlement, cannot approve or return it unless they hold an administrator level.
+- One live run per month is a partial unique index on `(year, month)` where the run is not deleted, in place of the original's `activeKey` column. Process takes the run's row lock, so two people processing the same run take turns.
+- Exit details are frozen while the employee has an approved or paid settlement; this is derived from the settlement, not stored. Rejecting a settlement keeps it a draft, as in the original, so it does not change that.
+- `assertMonthNotLocked` is shared (`apps/api/src/lib/month-lock.ts`) and wired into holiday writes, payroll adjustments and exit details; an approved or disbursed month refuses them.
+- Payslip PDFs are rendered on request and not cached (the original cached them in its file store). A payslip email with no SMTP is recorded as not sent, never as sent.
+- Decision and reminder emails (expense, asset request, leave, national ID, payroll submitted) are not sent yet; in-app notices stand in until the worker (Part E). Payroll submitted notifies the approvers in the app.
+- The admin employee screens live in a new `people` module (no permissions or navigation of its own), because they combine payroll, leave, assets and settlement, which all depend on `employee`. The original's Add employee page is a dialog on the list, so the `/employees/new` route and its nav entry are gone. The add form has no Role field (a permission role is set on Users), reporting managers are any active employee, and the Techno Sales Hub switch, the device enrolment row and the profile insights (Part D) are not on the detail page.
+- Wire money from payroll and settlement is the database decimal as a string without trailing zeros (as the original), not fixed to two places.
+
 ## Plan 3 code that deviates and will be replaced
 
 `apps/web/modules/attendance`, `apps/web/modules/leave`, the `@erp/ui/page` kit (signatures differ from the original `StatCard`, `PageHeader`), the employee and department pages from Plan 2, and the nav manifests for attendance and leave.

@@ -46,7 +46,7 @@ export const STARTER_ROLES: StarterRoleDef[] = [
       { key: 'asset.read', scope: 'all' },
       { key: 'asset.manage', scope: 'all' },
       { key: 'asset.config', scope: null },
-            { key: 'payroll.read', scope: 'all' },
+      { key: 'payroll.read', scope: 'all' },
       { key: 'payroll.manage', scope: 'all' },
       { key: 'settlement.read', scope: 'all' },
       { key: 'cost.read', scope: null },

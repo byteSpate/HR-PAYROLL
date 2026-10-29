@@ -192,8 +192,15 @@ export async function resendCredentials(
   });
 
   // After the commit: a mail outage must not undo a password change.
+  await sendCredentialsMail(userId, user.email, temporaryPassword);
+
+  return { id: userId, email: user.email, temporaryPassword };
+}
+
+/** The sign-in details, mailed to the person. Never throws: a mail outage must not undo the change that made it. */
+export async function sendCredentialsMail(userId: string, email: string, temporaryPassword: string): Promise<void> {
   await sendMail({
-    to: user.email,
+    to: email,
     kind: 'CREDENTIALS',
     subject: `Your ${env.COMPANY_NAME} account is ready`,
     html: await renderEmail({
@@ -202,7 +209,7 @@ export async function resendCredentials(
       stamp: { label: 'Action required', tone: 'action' },
       intro: 'Your account credentials have been reset. Here is how you sign in:',
       facts: [
-        { label: 'Email address', value: user.email },
+        { label: 'Email address', value: email },
         { label: 'Temporary password', value: temporaryPassword },
       ],
       prose: ["You'll be asked to change this password on first sign-in."],
@@ -210,6 +217,4 @@ export async function resendCredentials(
       footer: `You are receiving this because an account was created for you at ${env.COMPANY_NAME}.`,
     }),
   });
-
-  return { id: userId, email: user.email, temporaryPassword };
 }

@@ -45,7 +45,7 @@
 2. **Another employee's payslip or settlement by id.** 404; a manager cannot read a report's pay with only `employee.read:team` (C6, C7).
 3. **Payslip rounding.** A payslip's total equals the sum of its lines to the cent; 3 claims of 33.33 reimburse 99.99; USD figures keep their frozen BDT twin (C4, C5).
 4. **A claim or recovery consumed by a run that is then reprocessed or deleted.** The claim returns to APPROVED and the recovery to open; a second run cannot pay it twice (C5).
-5. **Exit details after approval.** Frozen (409) while APPROVED or PAID; rejecting unfreezes (C7).
+5. **Exit details after approval.** Frozen (409) while APPROVED or PAID (C7). Rejecting a settlement keeps it a draft in the original, so it does not unfreeze anything.
 6. **Change-email race and reuse.** A confirm link works once, only for the pending address; a taken address is refused at request time and again at confirm (C2).
 
 ---
@@ -167,7 +167,7 @@
 - `assertExitEditable(tx, employeeId)` in the employee module: 409 with the original's wording when a settlement is APPROVED or PAID.
 - `approve` emits `settlement.approved` (all heads in BDT and currency); `pay` marks claims REIMBURSED and recoveries COLLECTED in the same transaction, emits `settlement.paid`, then renders the statement and mails it (`SETTLEMENT_STATEMENT`) after commit.
 
-- [ ] **Step 1: Failing tests** (port `settlement.calc.test.ts` and `settlement.service.test.ts` with the original's fixtures): gratuity 30 days per year of basic wages (45 after 10 years); notice-pay shortfall by reason; pending salary pro-rated; heads sum to `finalAmount` to the cent (Review Focus 3); approving then editing exit details is 409, rejecting then editing succeeds (Review Focus 5); the calculator cannot approve their own settlement (403) but an admin can; another employee's settlement id is 404 for a non-holder; paying twice is 409 and consumes each claim and recovery once; calculating for an employee with no exit recorded is 409.
+- [ ] **Step 1: Failing tests** (port `settlement.calc.test.ts` and `settlement.service.test.ts` with the original's fixtures): gratuity 30 days per year of basic wages (45 after 10 years); notice-pay shortfall by reason; pending salary pro-rated; heads sum to `finalAmount` to the cent (Review Focus 3); approving then editing exit details is 409 (Review Focus 5); the calculator cannot approve their own settlement (403) but an admin can; another employee's settlement id is 404 for a non-holder; paying twice is 409 and consumes each claim and recovery once; calculating for an employee with no exit recorded is 409.
 - [ ] **Step 2:** Run each file; expect FAIL.
 - [ ] **Step 3:** Port; replace `settlement.posting.ts` with the events above.
 - [ ] **Step 4:** Run; expect PASS. Browser check: record an exit, calculate, override, approve, pay; confirm the freeze on the employee page.
@@ -177,7 +177,7 @@
 
 **Files:** Replace the fresh admin screens in `apps/web/app/(app)/employees/**` and `apps/web/modules/employee/components/` with copies of HR-MNG-V1 `employees-page`, `employee-detail-page`, `edit-card-dialog`, `shift-dialog`, `exit-details-dialog`, `salary-structure-dialog`, `leave-balance-card` (read the originals; the add flow is the original's); delete the fresh `employee-table`, `employee-form` and their tests once the copies replace them and nothing else imports them; extend `apps/web/modules/employee/api.ts` with the original's call signatures. Add server routes only where an original call has no ERP route, and list them in the commit body.
 
-**Interfaces:** Consumes the structure assignment (C3), exit routes, shift assignment and leave balances already in ERP; pay figures on the detail page are shown only to a holder of `payroll.read` whose scope reaches the person. Wire types stay in `@erp/contracts/employee`.
+**Interfaces:** Lives in a new `people` module (see the ledger). Consumes the structure assignment (C3), exit routes, shift assignment and leave balances already in ERP; pay figures on the detail page are shown only to a holder of `payroll.read` whose scope reaches the person. Wire types stay in `@erp/contracts/employee`.
 
 - [ ] **Step 1: Failing tests:** copy the original component tests; add a web test that the salary tab is absent without `payroll.read`, and an API test that the employee read omits pay for a viewer with only `employee.read`.
 - [ ] **Step 2:** Run `pnpm --filter @erp/web exec vitest run <file>`; expect FAIL.

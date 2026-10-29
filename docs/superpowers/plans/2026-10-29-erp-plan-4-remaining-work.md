@@ -235,6 +235,8 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 # Part C - Payroll and settlement (old Plan 5)
 
+> Moved to its own plan: `2026-10-29-erp-plan-5-part-c-payroll-settlement-mail.md`. The tasks below are kept only as the original outline.
+
 ### Task C1: Payroll configuration
 
 **Files:** `packages/contracts/src/payroll/**`; `packages/db/prisma/schema/payroll.prisma` (`ExchangeRate`, `SalaryStructure`, `SalaryComponent`, `PayrollSetting`, plus `PayrollRun` and `PayrollAdjustment` for C2); `apps/api/src/modules/payroll/payroll.{settings,fx,structure.export,money,types,validators}.ts`; copy `salary-structures-page.tsx` and the exchange-rates and payroll-settings panels; page `app/(app)/payroll/salary-structures/page.tsx`; Settings children for the two panels.
