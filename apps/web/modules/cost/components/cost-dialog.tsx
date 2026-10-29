@@ -1,36 +1,42 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createCost, getCost, updateCost } from "../api"
-import { ApiError } from "@erp/utils"
-import { useSession } from "@/lib/session"
-import type { Currency, CostBill, CostCategory } from "../types"
-import { Button } from "@erp/ui/components/button"
+import { createCost, getCost, updateCost } from '../api';
+import { ApiError } from '@erp/utils';
+import { useSession } from '@/lib/session';
+import type { Currency, CostBill, CostCategory } from '../types';
+import { Button } from '@erp/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@erp/ui/components/dialog"
-import { Input } from "@erp/ui/components/input"
-import { Label } from "@erp/ui/components/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@erp/ui/components/select"
-import { Skeleton } from "@erp/ui/components/skeleton"
-import { Textarea } from "@erp/ui/components/textarea"
-import { formatCostDate, monthName, STATUS_LABEL } from "./cost-shared"
-import { ReceiptGallery } from "./receipt-gallery"
+} from '@erp/ui/components/dialog';
+import { Input } from '@erp/ui/components/input';
+import { Label } from '@erp/ui/components/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@erp/ui/components/select';
+import { Skeleton } from '@erp/ui/components/skeleton';
+import { Textarea } from '@erp/ui/components/textarea';
+import { formatCostDate, monthName, STATUS_LABEL } from './cost-shared';
+import { ReceiptGallery } from './receipt-gallery';
 
 export interface CostPrefill {
-  categoryId: string
-  label: string
-  payee: string
-  commitmentId?: string
-  amount?: string | null
-  currency?: Currency
-  dueDate?: string
+  categoryId: string;
+  label: string;
+  payee: string;
+  commitmentId?: string;
+  amount?: string | null;
+  currency?: Currency;
+  dueDate?: string;
 }
 
 /**
@@ -53,40 +59,40 @@ function BillForm({
   onPay,
   onReceiptsChanged,
 }: {
-  bill: CostBill | null
-  period: { year: number; month: number }
-  categories: CostCategory[]
-  prefill?: CostPrefill
-  canManage: boolean
-  accessToken: string
-  pending: boolean
+  bill: CostBill | null;
+  period: { year: number; month: number };
+  categories: CostCategory[];
+  prefill?: CostPrefill;
+  canManage: boolean;
+  accessToken: string;
+  pending: boolean;
   onSubmit: (input: {
-    categoryId: string
-    label: string
-    payee: string
-    amount: string
-    currency: Currency
-    dueDate: string
-    notes: string
-  }) => void
-  onCancel: () => void
-  onPay: (id: string) => void
-  onReceiptsChanged: () => void
+    categoryId: string;
+    label: string;
+    payee: string;
+    amount: string;
+    currency: Currency;
+    dueDate: string;
+    notes: string;
+  }) => void;
+  onCancel: () => void;
+  onPay: (id: string) => void;
+  onReceiptsChanged: () => void;
 }) {
-  const isEdit = !!bill
+  const isEdit = !!bill;
 
-  const [categoryId, setCategoryId] = useState(bill?.categoryId ?? prefill?.categoryId ?? "")
-  const [label, setLabel] = useState(bill?.label ?? prefill?.label ?? "")
-  const [payee, setPayee] = useState(bill?.payee ?? prefill?.payee ?? "")
-  const [amount, setAmount] = useState(bill?.amount ?? prefill?.amount ?? "")
-  const [currency, setCurrency] = useState<Currency>(bill?.currency ?? prefill?.currency ?? "BDT")
+  const [categoryId, setCategoryId] = useState(bill?.categoryId ?? prefill?.categoryId ?? '');
+  const [label, setLabel] = useState(bill?.label ?? prefill?.label ?? '');
+  const [payee, setPayee] = useState(bill?.payee ?? prefill?.payee ?? '');
+  const [amount, setAmount] = useState(bill?.amount ?? prefill?.amount ?? '');
+  const [currency, setCurrency] = useState<Currency>(bill?.currency ?? prefill?.currency ?? 'BDT');
   const [dueDate, setDueDate] = useState(
-    bill?.dueDate ? bill.dueDate.slice(0, 10) : (prefill?.dueDate ?? "")
-  )
-  const [notes, setNotes] = useState(bill?.notes ?? "")
+    bill?.dueDate ? bill.dueDate.slice(0, 10) : (prefill?.dueDate ?? ''),
+  );
+  const [notes, setNotes] = useState(bill?.notes ?? '');
 
   const canSubmit =
-    !!categoryId && label.trim().length > 0 && payee.trim().length > 0 && amount.trim().length > 0
+    !!categoryId && label.trim().length > 0 && payee.trim().length > 0 && amount.trim().length > 0;
 
   return (
     <>
@@ -95,11 +101,15 @@ function BillForm({
           {monthName(period.month)} {period.year}
           {bill ? (
             <>
-              {" · "}
-              <span className={bill.status === "PAID" ? "font-medium" : "font-semibold text-amber-700"}>
+              {' · '}
+              <span
+                className={bill.status === 'PAID' ? 'font-medium' : 'font-semibold text-amber-700'}
+              >
                 {STATUS_LABEL[bill.status]}
               </span>
-              {bill.isOverdue ? <span className="font-semibold text-destructive"> · Overdue</span> : null}
+              {bill.isOverdue ? (
+                <span className="font-semibold text-destructive"> · Overdue</span>
+              ) : null}
             </>
           ) : null}
         </p>
@@ -107,10 +117,16 @@ function BillForm({
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <Label className="mb-1.5 text-xs font-bold">Category</Label>
-            <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")} disabled={!canManage}>
+            <Select
+              value={categoryId}
+              onValueChange={(v) => setCategoryId(v ?? '')}
+              disabled={!canManage}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue>
-                  {(v: string | null) => categories.find((c) => c.id === v)?.name ?? "Select a category"}
+                  {(v: string | null) =>
+                    categories.find((c) => c.id === v)?.name ?? 'Select a category'
+                  }
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -126,7 +142,12 @@ function BillForm({
             <Label htmlFor="cost-payee" className="mb-1.5 text-xs font-bold">
               Payee
             </Label>
-            <Input id="cost-payee" value={payee} disabled={!canManage} onChange={(e) => setPayee(e.target.value)} />
+            <Input
+              id="cost-payee"
+              value={payee}
+              disabled={!canManage}
+              onChange={(e) => setPayee(e.target.value)}
+            />
           </div>
         </div>
 
@@ -134,7 +155,12 @@ function BillForm({
           <Label htmlFor="cost-label" className="mb-1.5 text-xs font-bold">
             Label
           </Label>
-          <Input id="cost-label" value={label} disabled={!canManage} onChange={(e) => setLabel(e.target.value)} />
+          <Input
+            id="cost-label"
+            value={label}
+            disabled={!canManage}
+            onChange={(e) => setLabel(e.target.value)}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -197,10 +223,10 @@ function BillForm({
           />
         </div>
 
-        {bill?.status === "PAID" ? (
+        {bill?.status === 'PAID' ? (
           <div className="rounded-md border px-3 py-2 text-[12.5px] text-muted-foreground">
             Paid {formatCostDate(bill.paidAt)}
-            {bill.paymentRef ? ` · Ref: ${bill.paymentRef}` : ""}
+            {bill.paymentRef ? ` · Ref: ${bill.paymentRef}` : ''}
           </div>
         ) : bill && canManage ? (
           <Button type="button" variant="outline" size="sm" onClick={() => onPay(bill.id)}>
@@ -231,7 +257,7 @@ function BillForm({
 
       <DialogFooter>
         <Button variant="outline" onClick={onCancel} disabled={pending}>
-          {canManage ? "Cancel" : "Close"}
+          {canManage ? 'Cancel' : 'Close'}
         </Button>
         {canManage ? (
           <Button
@@ -248,12 +274,12 @@ function BillForm({
               })
             }
           >
-            {pending ? "Saving…" : isEdit ? "Save changes" : "Record bill"}
+            {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Record bill'}
           </Button>
         ) : null}
       </DialogFooter>
     </>
-  )
+  );
 }
 
 /**
@@ -277,45 +303,45 @@ export function CostDialog({
   onSuccess,
   onPay,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /** Null in create mode. */
-  costId: string | null
-  period: { year: number; month: number }
-  categories: CostCategory[]
-  prefill?: CostPrefill
+  costId: string | null;
+  period: { year: number; month: number };
+  categories: CostCategory[];
+  prefill?: CostPrefill;
   /** HR reaches this dialog read-only — no field edits, no pay, no receipts. */
-  canManage: boolean
-  onSuccess: () => void
+  canManage: boolean;
+  onSuccess: () => void;
   /** Opens the pay dialog for this bill — the parent owns that dialog's state. */
-  onPay: (id: string) => void
+  onPay: (id: string) => void;
 }) {
-  const { accessToken } = useSession()
-  const queryClient = useQueryClient()
-  const isEdit = !!costId
-  const [formError, setFormError] = useState<string | null>(null)
+  const { accessToken } = useSession();
+  const queryClient = useQueryClient();
+  const isEdit = !!costId;
+  const [formError, setFormError] = useState<string | null>(null);
 
   const detailQuery = useQuery({
-    queryKey: ["costs", "detail", costId],
+    queryKey: ['costs', 'detail', costId],
     queryFn: () => getCost(accessToken!, costId!),
     enabled: open && isEdit,
-  })
-  const bill = detailQuery.data ?? null
+  });
+  const bill = detailQuery.data ?? null;
 
   function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["costs"] })
-    queryClient.invalidateQueries({ queryKey: ["cost-summary", period.year, period.month] })
+    queryClient.invalidateQueries({ queryKey: ['costs'] });
+    queryClient.invalidateQueries({ queryKey: ['cost-summary', period.year, period.month] });
   }
 
   const createMutation = useMutation({
     mutationFn: (input: {
-      categoryId: string
-      label: string
-      payee: string
-      amount: string
-      currency: Currency
-      dueDate: string
-      notes: string
+      categoryId: string;
+      label: string;
+      payee: string;
+      amount: string;
+      currency: Currency;
+      dueDate: string;
+      notes: string;
     }) =>
       createCost(accessToken!, {
         categoryId: input.categoryId,
@@ -330,24 +356,26 @@ export function CostDialog({
         notes: input.notes || undefined,
       }),
     onSuccess: () => {
-      onOpenChange(false)
-      invalidate()
-      onSuccess()
+      onOpenChange(false);
+      invalidate();
+      onSuccess();
     },
     onError: (err) => {
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+      setFormError(
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     },
-  })
+  });
 
   const updateMutation = useMutation({
     mutationFn: (input: {
-      categoryId: string
-      label: string
-      payee: string
-      amount: string
-      currency: Currency
-      dueDate: string
-      notes: string
+      categoryId: string;
+      label: string;
+      payee: string;
+      amount: string;
+      currency: Currency;
+      dueDate: string;
+      notes: string;
     }) =>
       updateCost(accessToken!, costId!, {
         categoryId: input.categoryId,
@@ -359,22 +387,24 @@ export function CostDialog({
         notes: input.notes || undefined,
       }),
     onSuccess: () => {
-      onOpenChange(false)
-      invalidate()
-      onSuccess()
+      onOpenChange(false);
+      invalidate();
+      onSuccess();
     },
     onError: (err) => {
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+      setFormError(
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     },
-  })
+  });
 
-  const pending = createMutation.isPending || updateMutation.isPending
+  const pending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit bill" : "Record a bill"}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit bill' : 'Record a bill'}</DialogTitle>
         </DialogHeader>
 
         {isEdit && detailQuery.isPending ? (
@@ -391,15 +421,15 @@ export function CostDialog({
             accessToken={accessToken!}
             pending={pending}
             onSubmit={(input) => {
-              setFormError(null)
-              if (isEdit) updateMutation.mutate(input)
-              else createMutation.mutate(input)
+              setFormError(null);
+              if (isEdit) updateMutation.mutate(input);
+              else createMutation.mutate(input);
             }}
             onCancel={() => onOpenChange(false)}
             onPay={onPay}
             onReceiptsChanged={() => {
-              detailQuery.refetch()
-              invalidate()
+              detailQuery.refetch();
+              invalidate();
             }}
           />
         )}
@@ -409,5 +439,5 @@ export function CostDialog({
         ) : null}
       </DialogContent>
     </Dialog>
-  )
+  );
 }

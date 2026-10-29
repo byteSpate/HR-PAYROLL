@@ -5,9 +5,20 @@ export const expense = defineModule({
   name: 'expense',
   deps: ['core', 'employee', 'exchange', 'notification'],
   permissions: {
-    'expense.read': { label: 'View expense claims', scopes: ['team', 'department', 'all'], managerDefault: true },
-    'expense.approve': { label: 'Approve or reject expense claims', scopes: ['team', 'department', 'all'], managerDefault: true },
-    'expense.manage': { label: 'See what is owed in reimbursements', scopes: ['department', 'all'] },
+    'expense.read': {
+      label: 'View expense claims',
+      scopes: ['team', 'department', 'all'],
+      managerDefault: true,
+    },
+    'expense.approve': {
+      label: 'Approve or reject expense claims',
+      scopes: ['team', 'department', 'all'],
+      managerDefault: true,
+    },
+    'expense.manage': {
+      label: 'See what is owed in reimbursements',
+      scopes: ['department', 'all'],
+    },
     'expense.config': { label: 'Manage expense categories' },
     'expense.report': { label: 'Run expense reports', scopes: ['department', 'all'] },
   },
@@ -15,7 +26,14 @@ export const expense = defineModule({
     {
       label: 'Payroll & finance',
       order: 15,
-      items: [{ label: 'Employee expenses', href: '/expenses', icon: 'RiReceiptLine', permission: ['expense.read', 'expense.approve'] }],
+      items: [
+        {
+          label: 'Employee expenses',
+          href: '/expenses',
+          icon: 'RiReceiptLine',
+          permission: ['expense.read', 'expense.approve'],
+        },
+      ],
     },
     {
       label: 'Workspace',

@@ -58,6 +58,7 @@ export interface AssetCategory {
   classification: AssetClassification;
   tracksIndividually: boolean;
   usefulLifeMonths: number | null;
+  depreciationRate: string | null;
 }
 
 export interface Asset {
@@ -257,4 +258,52 @@ export interface AssetValueReport {
   /** Per currency, never summed across. */
   totals: AssetValueTotal[];
   asOf: string;
+}
+
+export type DepreciationRunStatus = 'DRAFT' | 'POSTED' | 'REVERSED';
+
+export interface DepreciationRunCharge {
+  id: string;
+  assetId: string;
+  amount: string;
+  openingBookValue: string;
+  rate: string;
+  months: number;
+  asset?: { assetTag: string; name: string; categoryName?: string };
+}
+
+export interface DepreciationRunDetail {
+  id: string;
+  runNo: string;
+  year: number;
+  month: number;
+  status: DepreciationRunStatus;
+  createdBy: string;
+  createdAt: string;
+  postedBy: string | null;
+  postedAt: string | null;
+  reversedBy: string | null;
+  reversedAt: string | null;
+  charges: DepreciationRunCharge[];
+}
+
+export interface DepreciationRunSummary {
+  id: string;
+  runNo: string;
+  year: number;
+  month: number;
+  status: DepreciationRunStatus;
+  chargeCount: number;
+  total: string;
+}
+
+export interface DepreciationPreflightItem {
+  code: string;
+  message: string;
+}
+
+export interface DepreciationPreflight {
+  blockers: DepreciationPreflightItem[];
+  warnings: DepreciationPreflightItem[];
+  ok: boolean;
 }

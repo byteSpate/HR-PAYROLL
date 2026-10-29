@@ -74,6 +74,8 @@ model AssetCategory {
   tracksIndividually Boolean             @default(true)
   /// Straight-line life for depreciation.
   usefulLifeMonths   Int?
+  /// Yearly depreciation, as a percent of the book value at the start of the financial year. Null means the category is not depreciated.
+  depreciationRate   Decimal?            @db.Decimal(5, 2)
 
   assets   Asset[]
   requests AssetRequest[]
@@ -303,8 +305,9 @@ model DepreciationRun {
 
   charges AssetDepreciation[]
 
-  /// One run per month: a second attempt collides here instead of double-charging.
-  @@unique([year, month])
+  /// One live run per month: a second attempt collides on the partial unique index in the migration instead of
+  /// double-charging, and reversing a run frees its month.
+  @@index([year, month])
   @@index([status])
 }
 

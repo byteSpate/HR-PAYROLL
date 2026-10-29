@@ -1,4 +1,4 @@
-import type { CostStatus } from "../types"
+import type { CostStatus } from '../types';
 
 /**
  * Status tone/labels and the role predicates every cost component branches
@@ -6,14 +6,14 @@ import type { CostStatus } from "../types"
  * `asset-shared.ts`.
  */
 export const STATUS_TONE: Record<CostStatus, string> = {
-  PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200",
-  PAID: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200",
-}
+  PENDING: 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-200',
+  PAID: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+};
 
 export const STATUS_LABEL: Record<CostStatus, string> = {
-  PENDING: "Pending",
-  PAID: "Paid",
-}
+  PENDING: 'Pending',
+  PAID: 'Paid',
+};
 
 /** Finance and Super Admin write; HR reads everything they write. */
 
@@ -26,32 +26,32 @@ export const STATUS_LABEL: Record<CostStatus, string> = {
  * formatClock.
  */
 export function formatCostDate(iso: string | null): string {
-  if (!iso) return ""
-  return new Date(iso).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  })
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 }
 
 const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-]
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
 /** Bare month name — the missing-bill prompt reads "No rent recorded for March.", not "for March 2026." */
 export function monthName(month: number): string {
-  return MONTH_NAMES[month - 1] ?? String(month)
+  return MONTH_NAMES[month - 1] ?? String(month);
 }
 
 /**
@@ -61,8 +61,8 @@ export function monthName(month: number): string {
  * open the page on the wrong month.
  */
 export function currentPeriod(): { year: number; month: number } {
-  const now = new Date()
-  return { year: now.getFullYear(), month: now.getMonth() + 1 }
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() + 1 };
 }
 
 /**
@@ -74,24 +74,24 @@ export function currentPeriod(): { year: number; month: number } {
  * a lapse at all, it is a forecast. Reporting all three as "not recorded" put
  * a chase notice on a month that has not happened.
  */
-export type PeriodRelation = "past" | "current" | "future"
+export type PeriodRelation = 'past' | 'current' | 'future';
 
 export function relateToNow(year: number, month: number): PeriodRelation {
-  const now = new Date()
-  const nowYear = now.getFullYear()
-  const nowMonth = now.getMonth() + 1
-  if (year < nowYear || (year === nowYear && month < nowMonth)) return "past"
-  if (year === nowYear && month === nowMonth) return "current"
-  return "future"
+  const now = new Date();
+  const nowYear = now.getFullYear();
+  const nowMonth = now.getMonth() + 1;
+  if (year < nowYear || (year === nowYear && month < nowMonth)) return 'past';
+  if (year === nowYear && month === nowMonth) return 'current';
+  return 'future';
 }
 
 /** "5th", "12th", "23rd" — for "due the 5th" in the expectation lists. */
 export function ordinalDay(day: number): string {
   // 11th, 12th and 13th are the exceptions that a bare last-digit rule gets
   // wrong, which is why they are tested before it.
-  if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`
-  const suffix = { 1: "st", 2: "nd", 3: "rd" }[day % 10] ?? "th"
-  return `${day}${suffix}`
+  if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
+  const suffix = { 1: 'st', 2: 'nd', 3: 'rd' }[day % 10] ?? 'th';
+  return `${day}${suffix}`;
 }
 
 /**
@@ -102,8 +102,8 @@ export function ordinalDay(day: number): string {
  * (UTC+6) every moment before 6am local yields yesterday's date.
  */
 export function todayLocalDate(): string {
-  const now = new Date()
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -112,8 +112,8 @@ export function todayLocalDate(): string {
  * started on the 28th still counts for that same month.
  */
 export function startedOnOrBefore(startedOn: string, year: number, month: number): boolean {
-  const d = new Date(startedOn)
-  const cy = d.getUTCFullYear()
-  const cm = d.getUTCMonth() + 1
-  return cy < year || (cy === year && cm <= month)
+  const d = new Date(startedOn);
+  const cy = d.getUTCFullYear();
+  const cm = d.getUTCMonth() + 1;
+  return cy < year || (cy === year && cm <= month);
 }

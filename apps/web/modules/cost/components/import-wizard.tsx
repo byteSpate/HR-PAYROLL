@@ -1,24 +1,33 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useMutation } from "@tanstack/react-query"
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 
-import { commitCostImport, previewCostImport } from "../api"
-import { ApiError } from "@erp/utils"
-import { useSession } from "@/lib/session"
-import type { CostCategory, CostImportCommitResult, CostImportIssue, CostImportPreview } from "../types"
-import { DataTable } from "@erp/ui/dashboard"
-import type { TableCell } from "@erp/ui/dashboard"
-import { ImportPreviewEmpty, issuesCell, previewRowNumbers } from "@/components/import/import-preview"
-import { ImportGuide } from "@/components/import-export/import-guide"
-import { Button } from "@erp/ui/components/button"
-import { DOCUMENT_MAX_BYTES, FileUpload } from "@/components/file-upload"
+import { commitCostImport, previewCostImport } from '../api';
+import { ApiError } from '@erp/utils';
+import { useSession } from '@/lib/session';
+import type {
+  CostCategory,
+  CostImportCommitResult,
+  CostImportIssue,
+  CostImportPreview,
+} from '../types';
+import { DataTable } from '@erp/ui/dashboard';
+import type { TableCell } from '@erp/ui/dashboard';
+import {
+  ImportPreviewEmpty,
+  issuesCell,
+  previewRowNumbers,
+} from '@/components/import/import-preview';
+import { ImportGuide } from '@/components/import-export/import-guide';
+import { Button } from '@erp/ui/components/button';
+import { DOCUMENT_MAX_BYTES, FileUpload } from '@/components/file-upload';
 
 /** `parseSheet` (server/src/utils/import/import.parse.ts) reads only these
  *  two — a third format is a second parser to keep consistent with it. */
-const IMPORT_ACCEPT = ["xlsx", "csv"]
+const IMPORT_ACCEPT = ['xlsx', 'csv'];
 
-type Step = "upload" | "preview" | "result"
+type Step = 'upload' | 'preview' | 'result';
 
 /**
  * One row as the server's preview reports it — `CostImportRow`
@@ -30,22 +39,31 @@ type Step = "upload" | "preview" | "result"
  * either.
  */
 interface ImportRow {
-  rowNumber: number
-  categoryId?: string
-  label?: string
-  payee?: string
-  periodMonth?: number
-  periodYear?: number
-  amount?: number
-  paidAt?: string
+  rowNumber: number;
+  categoryId?: string;
+  label?: string;
+  payee?: string;
+  periodMonth?: number;
+  periodYear?: number;
+  amount?: number;
+  paidAt?: string;
 }
 
 function issuesForRow(rowNumber: number, issues: CostImportIssue[]): CostImportIssue[] {
-  return issues.filter((issue) => issue.rowNumber === rowNumber)
+  return issues.filter((issue) => issue.rowNumber === rowNumber);
 }
 
-const PREVIEW_HEADERS = ["Row", "Category", "Label", "Payee", "Period", "Amount", "Status", "Issues"]
-const PREVIEW_COLS = "0.4fr 0.9fr 1.3fr 1fr 0.7fr 0.8fr 0.7fr 1.6fr"
+const PREVIEW_HEADERS = [
+  'Row',
+  'Category',
+  'Label',
+  'Payee',
+  'Period',
+  'Amount',
+  'Status',
+  'Issues',
+];
+const PREVIEW_COLS = '0.4fr 0.9fr 1.3fr 1fr 0.7fr 0.8fr 0.7fr 1.6fr';
 
 /**
  * Every parsed row, its issues inline. Reused verbatim for a commit-time 400:
@@ -66,37 +84,36 @@ function PreviewTable({
   issues,
   categories,
 }: {
-  rows: ImportRow[]
-  issues: CostImportIssue[]
-  categories: CostCategory[]
+  rows: ImportRow[];
+  issues: CostImportIssue[];
+  categories: CostCategory[];
 }) {
-  const rowNumbers = previewRowNumbers(rows, issues)
+  const rowNumbers = previewRowNumbers(rows, issues);
 
-  if (rowNumbers.length === 0) return <ImportPreviewEmpty noun="bills" />
+  if (rowNumbers.length === 0) return <ImportPreviewEmpty noun="bills" />;
 
   const tableRows: TableCell[][] = rowNumbers.map((rowNumber) => {
-    const row = rows.find((r) => r.rowNumber === rowNumber)
-    const category = categories.find((c) => c.id === row?.categoryId)
+    const row = rows.find((r) => r.rowNumber === rowNumber);
+    const category = categories.find((c) => c.id === row?.categoryId);
     return [
       { text: String(rowNumber), weight: 600 },
-      { text: category?.name ?? "" },
-      { text: row?.label ?? "" },
-      { text: row?.payee ?? "" },
+      { text: category?.name ?? '' },
+      { text: row?.label ?? '' },
+      { text: row?.payee ?? '' },
       {
-        text:
-          row?.periodMonth && row?.periodYear ? `${row.periodMonth}/${row.periodYear}` : "",
+        text: row?.periodMonth && row?.periodYear ? `${row.periodMonth}/${row.periodYear}` : '',
       },
-      { text: row?.amount === undefined ? "" : String(row.amount) },
+      { text: row?.amount === undefined ? '' : String(row.amount) },
       // A row that failed before parsing has no status to report, and
       // guessing one would be inventing data about a row we could not read.
-      row ? { tag: row.paidAt ? "Paid" : "Pending", tone: row.paidAt ? "green" : "neutral" } : {},
+      row ? { tag: row.paidAt ? 'Paid' : 'Pending', tone: row.paidAt ? 'green' : 'neutral' } : {},
       issuesCell(issuesForRow(rowNumber, issues)),
-    ]
-  })
+    ];
+  });
 
   return (
     <DataTable title="" action="" cols={PREVIEW_COLS} headers={PREVIEW_HEADERS} rows={tableRows} />
-  )
+  );
 }
 
 /**
@@ -112,94 +129,94 @@ export function ImportWizard({
   categories,
   onImported,
 }: {
-  categories: CostCategory[]
-  onImported: () => void
+  categories: CostCategory[];
+  onImported: () => void;
 }) {
-  const { accessToken } = useSession()
+  const { accessToken } = useSession();
 
-  const [step, setStep] = useState<Step>("upload")
-  const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<CostImportPreview | null>(null)
-  const [issues, setIssues] = useState<CostImportIssue[]>([])
-  const [commitError, setCommitError] = useState<string | null>(null)
-  const [result, setResult] = useState<CostImportCommitResult | null>(null)
+  const [step, setStep] = useState<Step>('upload');
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<CostImportPreview | null>(null);
+  const [issues, setIssues] = useState<CostImportIssue[]>([]);
+  const [commitError, setCommitError] = useState<string | null>(null);
+  const [result, setResult] = useState<CostImportCommitResult | null>(null);
 
   function reset() {
-    setStep("upload")
-    setFile(null)
-    setPreview(null)
-    setIssues([])
-    setCommitError(null)
-    setResult(null)
+    setStep('upload');
+    setFile(null);
+    setPreview(null);
+    setIssues([]);
+    setCommitError(null);
+    setResult(null);
   }
 
   const previewMutation = useMutation({
     mutationFn: (f: File) => previewCostImport(accessToken!, f),
     onSuccess: (data, f) => {
-      setFile(f)
-      setPreview(data)
-      setIssues(data.issues)
-      setCommitError(null)
-      setStep("preview")
+      setFile(f);
+      setPreview(data);
+      setIssues(data.issues);
+      setCommitError(null);
+      setStep('preview');
     },
-  })
+  });
 
   const commitMutation = useMutation({
     mutationFn: () => {
-      if (!file) throw new Error("No file selected")
-      return commitCostImport(accessToken!, file)
+      if (!file) throw new Error('No file selected');
+      return commitCostImport(accessToken!, file);
     },
     onSuccess: (data) => {
-      setResult(data)
-      setCommitError(null)
-      setStep("result")
-      onImported()
+      setResult(data);
+      setCommitError(null);
+      setStep('result');
+      onImported();
     },
     onError: (err) => {
       if (err instanceof ApiError && err.status === 400 && Array.isArray(err.details?.issues)) {
         // A row failed a check the preview could not see (typically a race —
         // someone else's import landed in between). Same table, fresher
         // issues, never a bare string.
-        setIssues(err.details.issues as CostImportIssue[])
-        setCommitError(null)
+        setIssues(err.details.issues as CostImportIssue[]);
+        setCommitError(null);
       } else {
         setCommitError(
-          err instanceof ApiError ? err.message : "Something went wrong. Please try again."
-        )
+          err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+        );
       }
     },
-  })
+  });
 
-  const previewRows = (preview?.rows ?? []) as ImportRow[]
+  const previewRows = (preview?.rows ?? []) as ImportRow[];
 
   return (
     <div className="space-y-4">
-      {step === "upload" ? (
+      {step === 'upload' ? (
         <div className="space-y-4">
-        <ImportGuide basePath="/api/costs" />
-        <div className="rounded-md border border-dashed p-8 text-center">
-          <p className="mb-3 text-sm text-muted-foreground">
-            Upload an Excel (.xlsx) or CSV file of historical bills to import. Nothing is written
-            until you review and commit it.
-          </p>
-          <div className="flex justify-center">
-            <FileUpload
-              accept={IMPORT_ACCEPT}
-              maxBytes={DOCUMENT_MAX_BYTES}
-              label="Choose file"
-              onSelect={(f) => previewMutation.mutateAsync(f).then(() => undefined)}
-            />
+          <ImportGuide basePath="/api/costs" />
+          <div className="rounded-md border border-dashed p-8 text-center">
+            <p className="mb-3 text-sm text-muted-foreground">
+              Upload an Excel (.xlsx) or CSV file of historical bills to import. Nothing is written
+              until you review and commit it.
+            </p>
+            <div className="flex justify-center">
+              <FileUpload
+                accept={IMPORT_ACCEPT}
+                maxBytes={DOCUMENT_MAX_BYTES}
+                label="Choose file"
+                onSelect={(f) => previewMutation.mutateAsync(f).then(() => undefined)}
+              />
+            </div>
           </div>
-        </div>
         </div>
       ) : null}
 
-      {step === "preview" && preview ? (
+      {step === 'preview' && preview ? (
         <div className="space-y-4">
           <p className="text-[13px]">
             <span className="font-semibold">{preview.summary.costs ?? 0}</span> bill
-            {(preview.summary.costs ?? 0) === 1 ? "" : "s"},{" "}
-            <span className="font-semibold">{preview.summary.paid ?? 0}</span> already paid,{" "}
+            {(preview.summary.costs ?? 0) === 1 ? '' : 's'},{' '}
+            <span className="font-semibold">{preview.summary.paid ?? 0}</span> already paid,{' '}
             <span className="font-semibold">{preview.summary.pending ?? 0}</span> pending.
           </p>
 
@@ -214,7 +231,12 @@ export function ImportWizard({
           ) : null}
 
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={reset} disabled={commitMutation.isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={reset}
+              disabled={commitMutation.isPending}
+            >
               Choose a different file
             </Button>
             <Button
@@ -222,21 +244,21 @@ export function ImportWizard({
               disabled={issues.length > 0 || commitMutation.isPending}
               onClick={() => commitMutation.mutate()}
             >
-              {commitMutation.isPending ? "Importing…" : "Commit import"}
+              {commitMutation.isPending ? 'Importing…' : 'Commit import'}
             </Button>
           </div>
         </div>
       ) : null}
 
-      {step === "result" && result ? (
+      {step === 'result' && result ? (
         <div className="space-y-4">
           <div className="rounded-md border border-emerald-200 bg-emerald-50 px-5 py-4 dark:border-emerald-900 dark:bg-emerald-950">
             <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-200">
               Import complete.
             </p>
             <p className="mt-0.5 text-[12.5px] text-emerald-700 dark:text-emerald-300">
-              {result.costCount} bill{result.costCount === 1 ? "" : "s"} created,{" "}
-              {result.paidCount} already marked paid.
+              {result.costCount} bill{result.costCount === 1 ? '' : 's'} created, {result.paidCount}{' '}
+              already marked paid.
             </p>
           </div>
           <Button type="button" variant="outline" onClick={reset}>
@@ -245,5 +267,5 @@ export function ImportWizard({
         </div>
       ) : null}
     </div>
-  )
+  );
 }

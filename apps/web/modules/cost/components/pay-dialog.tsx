@@ -1,21 +1,21 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { payCost } from "../api"
-import { ApiError } from "@erp/utils"
-import { useSession } from "@/lib/session"
-import { Button } from "@erp/ui/components/button"
+import { payCost } from '../api';
+import { ApiError } from '@erp/utils';
+import { useSession } from '@/lib/session';
+import { Button } from '@erp/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@erp/ui/components/dialog"
-import { Input } from "@erp/ui/components/input"
-import { Label } from "@erp/ui/components/label"
+} from '@erp/ui/components/dialog';
+import { Input } from '@erp/ui/components/input';
+import { Label } from '@erp/ui/components/label';
 
 /**
  * Terminal for a bill: PENDING -> PAID, there is no un-pay, matching
@@ -29,28 +29,28 @@ export function PayDialog({
   period,
   onSuccess,
 }: {
-  costId: string | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  period: { year: number; month: number }
-  onSuccess: () => void
+  costId: string | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  period: { year: number; month: number };
+  onSuccess: () => void;
 }) {
-  const { accessToken } = useSession()
-  const queryClient = useQueryClient()
+  const { accessToken } = useSession();
+  const queryClient = useQueryClient();
 
-  const [paidAt, setPaidAt] = useState("")
-  const [paymentRef, setPaymentRef] = useState("")
-  const [formError, setFormError] = useState<string | null>(null)
+  const [paidAt, setPaidAt] = useState('');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
 
   function resetForm() {
-    setPaidAt("")
-    setPaymentRef("")
-    setFormError(null)
+    setPaidAt('');
+    setPaymentRef('');
+    setFormError(null);
   }
 
   function handleOpenChange(next: boolean) {
-    if (!next) resetForm()
-    onOpenChange(next)
+    if (!next) resetForm();
+    onOpenChange(next);
   }
 
   const payMutation = useMutation({
@@ -60,16 +60,18 @@ export function PayDialog({
         paymentRef: paymentRef.trim() || undefined,
       }),
     onSuccess: () => {
-      resetForm()
-      onOpenChange(false)
-      queryClient.invalidateQueries({ queryKey: ["costs"] })
-      queryClient.invalidateQueries({ queryKey: ["cost-summary", period.year, period.month] })
-      onSuccess()
+      resetForm();
+      onOpenChange(false);
+      queryClient.invalidateQueries({ queryKey: ['costs'] });
+      queryClient.invalidateQueries({ queryKey: ['cost-summary', period.year, period.month] });
+      onSuccess();
     },
     onError: (err) => {
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+      setFormError(
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     },
-  })
+  });
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -81,14 +83,23 @@ export function PayDialog({
         <div className="space-y-4">
           <div>
             <Label htmlFor="pay-date" className="mb-1.5 text-xs font-bold">
-              Paid on <span className="font-normal text-muted-foreground">(optional, defaults to today)</span>
+              Paid on{' '}
+              <span className="font-normal text-muted-foreground">
+                (optional, defaults to today)
+              </span>
             </Label>
-            <Input id="pay-date" type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+            <Input
+              id="pay-date"
+              type="date"
+              value={paidAt}
+              onChange={(e) => setPaidAt(e.target.value)}
+            />
           </div>
 
           <div>
             <Label htmlFor="pay-ref" className="mb-1.5 text-xs font-bold">
-              Payment reference <span className="font-normal text-muted-foreground">(optional)</span>
+              Payment reference{' '}
+              <span className="font-normal text-muted-foreground">(optional)</span>
             </Label>
             <Input
               id="pay-ref"
@@ -101,18 +112,24 @@ export function PayDialog({
             </p>
           </div>
 
-          {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+          {formError ? (
+            <p className="text-[13px] font-semibold text-destructive">{formError}</p>
+          ) : null}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={payMutation.isPending}>
+          <Button
+            variant="outline"
+            onClick={() => handleOpenChange(false)}
+            disabled={payMutation.isPending}
+          >
             Cancel
           </Button>
           <Button disabled={!costId || payMutation.isPending} onClick={() => payMutation.mutate()}>
-            {payMutation.isPending ? "Saving…" : "Mark paid"}
+            {payMutation.isPending ? 'Saving…' : 'Mark paid'}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

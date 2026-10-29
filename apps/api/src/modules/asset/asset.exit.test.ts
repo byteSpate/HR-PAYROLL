@@ -48,15 +48,12 @@ describe('the exit checklist', () => {
   it('lists what a leaver still holds and what they owe, leaves out consumables, and only warns', async () => {
     const mine = await give(laptop.id, alice);
     await give(mouse.id, alice);
-    await request(app)
-      .post('/api/assets/recoveries')
-      .set(hr.header)
-      .send({
-        assetId: mine.id,
-        employeeId: alice.employee.id,
-        amount: '700',
-        reason: 'Charger lost',
-      });
+    await request(app).post('/api/assets/recoveries').set(hr.header).send({
+      assetId: mine.id,
+      employeeId: alice.employee.id,
+      amount: '700',
+      reason: 'Charger lost',
+    });
     const list = await exitChecklist(alice.employee.id);
     expect(list.openAssignments.map((a) => a.assetTag)).toEqual([mine.assetTag]);
     expect(list.pendingRecoveries).toHaveLength(1);

@@ -11,14 +11,22 @@ const periodYear = z.coerce
   .number()
   .int()
   .min(2000)
-  .refine((year) => year <= new Date().getUTCFullYear() + 1, { message: 'periodYear cannot be more than one year ahead of the current year' });
+  .refine((year) => year <= new Date().getUTCFullYear() + 1, {
+    message: 'periodYear cannot be more than one year ahead of the current year',
+  });
 
 export const costCategoryBody = z.object({
-  code: z.string().trim().regex(/^[A-Z][A-Z0-9_-]*$/, 'Use upper-case letters, digits, dashes and underscores').max(40),
+  code: z
+    .string()
+    .trim()
+    .regex(/^[A-Z][A-Z0-9_-]*$/, 'Use upper-case letters, digits, dashes and underscores')
+    .max(40),
   name: z.string().trim().min(1).max(100),
 });
 export type CostCategoryBody = z.infer<typeof costCategoryBody>;
-export const updateCostCategoryBody = z.object({ name: z.string().trim().min(1).max(100).optional() });
+export const updateCostCategoryBody = z.object({
+  name: z.string().trim().min(1).max(100).optional(),
+});
 
 export const commitmentBody = z.object({
   categoryId: z.string().uuid(),
@@ -68,7 +76,10 @@ export const updateCostBody = z.object({
 });
 export type UpdateCostBody = z.infer<typeof updateCostBody>;
 
-export const payCostBody = z.object({ paidAt: isoDate.optional(), paymentRef: z.string().trim().max(200).optional() });
+export const payCostBody = z.object({
+  paidAt: isoDate.optional(),
+  paymentRef: z.string().trim().max(200).optional(),
+});
 export type PayCostBody = z.infer<typeof payCostBody>;
 
 export const listCostsQuery = z.object({
@@ -86,4 +97,7 @@ export const listCommitmentsQuery = z.object({
     .transform((v) => (v === undefined ? undefined : v === 'true')),
 });
 
-export const summaryQuery = z.object({ year: z.coerce.number().int().min(2000), month: z.coerce.number().int().min(1).max(12) });
+export const summaryQuery = z.object({
+  year: z.coerce.number().int().min(2000),
+  month: z.coerce.number().int().min(1).max(12),
+});

@@ -27,6 +27,7 @@ export const categoryView = (c: Prisma.AssetCategoryGetPayload<object>): AssetCa
   classification: c.classification,
   tracksIndividually: c.tracksIndividually,
   usefulLifeMonths: c.usefulLifeMonths,
+  depreciationRate: c.depreciationRate ? c.depreciationRate.toFixed(2) : null,
 });
 
 type OpenAssignmentRow = {

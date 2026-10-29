@@ -1,26 +1,32 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { createCostCommitment, updateCostCommitment } from "../api"
-import { ApiError } from "@erp/utils"
-import { useSession } from "@/lib/session"
-import type { Currency, CostCategory, CostCommitment } from "../types"
-import { ConfirmDialog } from "@erp/ui/dashboard"
-import { todayLocalDate } from "./cost-shared"
-import { Button } from "@erp/ui/components/button"
+import { createCostCommitment, updateCostCommitment } from '../api';
+import { ApiError } from '@erp/utils';
+import { useSession } from '@/lib/session';
+import type { Currency, CostCategory, CostCommitment } from '../types';
+import { ConfirmDialog } from '@erp/ui/dashboard';
+import { todayLocalDate } from './cost-shared';
+import { Button } from '@erp/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@erp/ui/components/dialog"
-import { Input } from "@erp/ui/components/input"
-import { Label } from "@erp/ui/components/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@erp/ui/components/select"
-import { Textarea } from "@erp/ui/components/textarea"
+} from '@erp/ui/components/dialog';
+import { Input } from '@erp/ui/components/input';
+import { Label } from '@erp/ui/components/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@erp/ui/components/select';
+import { Textarea } from '@erp/ui/components/textarea';
 
 /**
  * Create, edit or end a recurring commitment. Ending is the only way a
@@ -38,47 +44,49 @@ export function CommitmentDialog({
   categories,
   onSuccess,
 }: {
-  commitment: CostCommitment | "new" | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  categories: CostCategory[]
-  onSuccess: () => void
+  commitment: CostCommitment | 'new' | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  categories: CostCategory[];
+  onSuccess: () => void;
 }) {
-  const { accessToken } = useSession()
-  const queryClient = useQueryClient()
-  const existing = commitment !== "new" ? commitment : null
-  const isEdit = !!existing
+  const { accessToken } = useSession();
+  const queryClient = useQueryClient();
+  const existing = commitment !== 'new' ? commitment : null;
+  const isEdit = !!existing;
 
-  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? "")
-  const [label, setLabel] = useState(existing?.label ?? "")
-  const [payee, setPayee] = useState(existing?.payee ?? "")
-  const [amount, setAmount] = useState(existing?.amount ?? "")
-  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? "BDT")
-  const [dueDay, setDueDay] = useState(existing?.dueDay != null ? String(existing.dueDay) : "")
-  const [startedOn, setStartedOn] = useState(existing?.startedOn ? existing.startedOn.slice(0, 10) : "")
-  const [notes, setNotes] = useState(existing?.notes ?? "")
-  const [formError, setFormError] = useState<string | null>(null)
-  const [confirmEnd, setConfirmEnd] = useState(false)
+  const [categoryId, setCategoryId] = useState(existing?.categoryId ?? '');
+  const [label, setLabel] = useState(existing?.label ?? '');
+  const [payee, setPayee] = useState(existing?.payee ?? '');
+  const [amount, setAmount] = useState(existing?.amount ?? '');
+  const [currency, setCurrency] = useState<Currency>(existing?.currency ?? 'BDT');
+  const [dueDay, setDueDay] = useState(existing?.dueDay != null ? String(existing.dueDay) : '');
+  const [startedOn, setStartedOn] = useState(
+    existing?.startedOn ? existing.startedOn.slice(0, 10) : '',
+  );
+  const [notes, setNotes] = useState(existing?.notes ?? '');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [confirmEnd, setConfirmEnd] = useState(false);
 
   function resetForm() {
-    setCategoryId(existing?.categoryId ?? "")
-    setLabel(existing?.label ?? "")
-    setPayee(existing?.payee ?? "")
-    setAmount(existing?.amount ?? "")
-    setCurrency(existing?.currency ?? "BDT")
-    setDueDay(existing?.dueDay != null ? String(existing.dueDay) : "")
-    setStartedOn(existing?.startedOn ? existing.startedOn.slice(0, 10) : "")
-    setNotes(existing?.notes ?? "")
-    setFormError(null)
+    setCategoryId(existing?.categoryId ?? '');
+    setLabel(existing?.label ?? '');
+    setPayee(existing?.payee ?? '');
+    setAmount(existing?.amount ?? '');
+    setCurrency(existing?.currency ?? 'BDT');
+    setDueDay(existing?.dueDay != null ? String(existing.dueDay) : '');
+    setStartedOn(existing?.startedOn ? existing.startedOn.slice(0, 10) : '');
+    setNotes(existing?.notes ?? '');
+    setFormError(null);
   }
 
   function handleOpenChange(next: boolean) {
-    if (!next) resetForm()
-    onOpenChange(next)
+    if (!next) resetForm();
+    onOpenChange(next);
   }
 
   function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["costs"] })
+    queryClient.invalidateQueries({ queryKey: ['costs'] });
   }
 
   const createMutation = useMutation({
@@ -94,15 +102,17 @@ export function CommitmentDialog({
         notes: notes.trim() || undefined,
       }),
     onSuccess: () => {
-      resetForm()
-      onOpenChange(false)
-      invalidate()
-      onSuccess()
+      resetForm();
+      onOpenChange(false);
+      invalidate();
+      onSuccess();
     },
     onError: (err) => {
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+      setFormError(
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     },
-  })
+  });
 
   const updateMutation = useMutation({
     mutationFn: () =>
@@ -115,14 +125,16 @@ export function CommitmentDialog({
         notes: notes.trim() || undefined,
       }),
     onSuccess: () => {
-      onOpenChange(false)
-      invalidate()
-      onSuccess()
+      onOpenChange(false);
+      invalidate();
+      onSuccess();
     },
     onError: (err) => {
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+      setFormError(
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     },
-  })
+  });
 
   const endMutation = useMutation({
     mutationFn: () =>
@@ -133,16 +145,18 @@ export function CommitmentDialog({
         endedOn: todayLocalDate(),
       }),
     onSuccess: () => {
-      setConfirmEnd(false)
-      onOpenChange(false)
-      invalidate()
-      onSuccess()
+      setConfirmEnd(false);
+      onOpenChange(false);
+      invalidate();
+      onSuccess();
     },
     onError: (err) => {
-      setConfirmEnd(false)
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+      setConfirmEnd(false);
+      setFormError(
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     },
-  })
+  });
 
   /**
    * Ending is reversible on the server: `endedOn` is `.nullable()` in
@@ -154,38 +168,49 @@ export function CommitmentDialog({
   const reopenMutation = useMutation({
     mutationFn: () => updateCostCommitment(accessToken!, existing!.id, { endedOn: null }),
     onSuccess: () => {
-      onOpenChange(false)
-      invalidate()
-      onSuccess()
+      onOpenChange(false);
+      invalidate();
+      onSuccess();
     },
     onError: (err) => {
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.")
+      setFormError(
+        err instanceof ApiError ? err.message : 'Something went wrong. Please try again.',
+      );
     },
-  })
+  });
 
   const pending =
     createMutation.isPending ||
     updateMutation.isPending ||
     endMutation.isPending ||
-    reopenMutation.isPending
+    reopenMutation.isPending;
   const canSubmit =
-    !!categoryId && label.trim().length > 0 && payee.trim().length > 0 && (isEdit || startedOn.length > 0)
+    !!categoryId &&
+    label.trim().length > 0 &&
+    payee.trim().length > 0 &&
+    (isEdit || startedOn.length > 0);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit fixed cost" : "New fixed cost"}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Edit fixed cost' : 'New fixed cost'}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <Label className="mb-1.5 text-xs font-bold">Category</Label>
-              <Select value={categoryId} onValueChange={(v) => setCategoryId(v ?? "")} disabled={isEdit}>
+              <Select
+                value={categoryId}
+                onValueChange={(v) => setCategoryId(v ?? '')}
+                disabled={isEdit}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue>
-                    {(v: string | null) => categories.find((c) => c.id === v)?.name ?? "Select a category"}
+                    {(v: string | null) =>
+                      categories.find((c) => c.id === v)?.name ?? 'Select a category'
+                    }
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
@@ -201,7 +226,11 @@ export function CommitmentDialog({
               <Label htmlFor="commitment-payee" className="mb-1.5 text-xs font-bold">
                 Payee
               </Label>
-              <Input id="commitment-payee" value={payee} onChange={(e) => setPayee(e.target.value)} />
+              <Input
+                id="commitment-payee"
+                value={payee}
+                onChange={(e) => setPayee(e.target.value)}
+              />
             </div>
           </div>
 
@@ -230,7 +259,9 @@ export function CommitmentDialog({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="mt-1 text-[11px] text-muted-foreground">Leave blank if the bill varies monthly.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Leave blank if the bill varies monthly.
+              </p>
             </div>
             <div>
               <Label htmlFor="commitment-currency" className="mb-1.5 text-xs font-bold">
@@ -273,7 +304,9 @@ export function CommitmentDialog({
               onChange={(e) => setStartedOn(e.target.value)}
             />
             {isEdit ? (
-              <p className="mt-1 text-[11px] text-muted-foreground">The start date is fixed once created.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                The start date is fixed once created.
+              </p>
             ) : null}
           </div>
 
@@ -291,11 +324,14 @@ export function CommitmentDialog({
 
           {existing?.endedOn ? (
             <p className="text-[12.5px] text-muted-foreground">
-              Ended {new Date(existing.endedOn).toLocaleDateString("en-US", { dateStyle: "medium" })}.
+              Ended{' '}
+              {new Date(existing.endedOn).toLocaleDateString('en-US', { dateStyle: 'medium' })}.
             </p>
           ) : null}
 
-          {formError ? <p className="text-[13px] font-semibold text-destructive">{formError}</p> : null}
+          {formError ? (
+            <p className="text-[13px] font-semibold text-destructive">{formError}</p>
+          ) : null}
         </div>
 
         <DialogFooter className="flex-wrap gap-2">
@@ -318,7 +354,7 @@ export function CommitmentDialog({
               disabled={pending}
               onClick={() => reopenMutation.mutate()}
             >
-              {reopenMutation.isPending ? "Reopening…" : "Reopen"}
+              {reopenMutation.isPending ? 'Reopening…' : 'Reopen'}
             </Button>
           ) : null}
           <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={pending}>
@@ -334,7 +370,7 @@ export function CommitmentDialog({
             disabled={!canSubmit || pending}
             onClick={() => (isEdit ? updateMutation.mutate() : createMutation.mutate())}
           >
-            {pending ? "Saving…" : isEdit ? "Save changes" : "Create fixed cost"}
+            {pending ? 'Saving…' : isEdit ? 'Save changes' : 'Create fixed cost'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -349,16 +385,16 @@ export function CommitmentDialog({
         title="End this fixed cost?"
         body={
           <>
-            {existing ? `${existing.label} ` : "This fixed cost "}
+            {existing ? `${existing.label} ` : 'This fixed cost '}
             stops being expected from today, so no further months will prompt you for a missing
             bill. Bills already recorded against it are untouched, and you can reopen it later.
           </>
         }
-        confirmLabel={endMutation.isPending ? "Ending…" : "End it"}
+        confirmLabel={endMutation.isPending ? 'Ending…' : 'End it'}
         pending={endMutation.isPending}
         onCancel={() => setConfirmEnd(false)}
         onConfirm={() => endMutation.mutate()}
       />
     </Dialog>
-  )
+  );
 }

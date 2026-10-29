@@ -13,15 +13,27 @@ export const core = defineModule({
     {
       label: 'Overview',
       order: 10,
-      items: [{ label: 'Dashboard', href: '/dashboard', icon: 'RiDashboardLine', permission: null }],
+      items: [
+        { label: 'Dashboard', href: '/dashboard', icon: 'RiDashboardLine', permission: null },
+      ],
     },
     {
       label: 'Administration',
       order: 900,
       items: [
         { label: 'Users', href: '/settings/users', icon: 'RiUserLine', permission: 'user.manage' },
-        { label: 'Roles & Permissions', href: '/settings/roles', icon: 'RiSettingsLine', permission: 'role.manage' },
-        { label: 'Activity', href: '/settings/activity', icon: 'RiPulseLine', permission: 'audit.read' },
+        {
+          label: 'Roles & Permissions',
+          href: '/settings/roles',
+          icon: 'RiSettingsLine',
+          permission: 'role.manage',
+        },
+        {
+          label: 'Activity',
+          href: '/settings/activity',
+          icon: 'RiPulseLine',
+          permission: 'audit.read',
+        },
       ],
     },
   ],

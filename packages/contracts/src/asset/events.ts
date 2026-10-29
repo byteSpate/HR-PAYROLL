@@ -13,4 +13,6 @@ export const ASSET_EVENTS = [
   'asset.disposed',
   'asset.imported',
   'asset.recovery.collected',
+  'depreciation.run.finalized',
+  'depreciation.run.reversed',
 ] as const;

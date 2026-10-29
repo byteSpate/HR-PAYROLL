@@ -5,7 +5,8 @@ import { listCosts, parseListQuery } from './cost.service.js';
 
 function filterNote(filters: ListCostsQuery): string | undefined {
   const parts: string[] = [];
-  if (filters.year !== undefined && filters.month !== undefined) parts.push(`Month ${filters.month}/${filters.year}`);
+  if (filters.year !== undefined && filters.month !== undefined)
+    parts.push(`Month ${filters.month}/${filters.year}`);
   else if (filters.year !== undefined) parts.push(`Year ${filters.year}`);
   else if (filters.month !== undefined) parts.push(`Month ${filters.month}`);
   if (filters.categoryId) parts.push('One category only');
@@ -33,7 +34,21 @@ export async function buildCostExportSpec(filters: ListCostsQuery): Promise<Expo
       { header: 'status', type: 'text' },
       { header: 'isOverdue', type: 'boolean' },
     ],
-    rows: bills.map((b) => [b.category.code, b.label, b.payee, b.periodMonth, b.periodYear, Number(b.amount), b.currency, b.dueDate, b.paidAt, b.paymentRef, b.notes, b.status, b.isOverdue]),
+    rows: bills.map((b) => [
+      b.category.code,
+      b.label,
+      b.payee,
+      b.periodMonth,
+      b.periodYear,
+      Number(b.amount),
+      b.currency,
+      b.dueDate,
+      b.paidAt,
+      b.paymentRef,
+      b.notes,
+      b.status,
+      b.isOverdue,
+    ]),
   };
 }
 
@@ -41,7 +56,15 @@ export async function exportCostsHandler(req: Request, res: Response, next: Next
   try {
     const format = parseExportFormat(req.query['format']);
     const filters = parseListQuery(req.query);
-    await sendExport({ res, spec: await buildCostExportSpec(filters), format, baseName: 'operating-costs', actor: req.user!, list: 'COSTS', filter: filters });
+    await sendExport({
+      res,
+      spec: await buildCostExportSpec(filters),
+      format,
+      baseName: 'operating-costs',
+      actor: req.user!,
+      list: 'COSTS',
+      filter: filters,
+    });
   } catch (err) {
     next(err);
   }

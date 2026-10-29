@@ -5,7 +5,12 @@ import { listCommitmentsQuery, summaryQuery } from '@erp/contracts/cost';
 import { commitHandler, guideHandler, previewHandler, templateHandler } from '@erp/export';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
-import { COST_IMPORT_COLUMNS, commitCostImport, costImportSampleRows, previewCostImport } from './cost.import.js';
+import {
+  COST_IMPORT_COLUMNS,
+  commitCostImport,
+  costImportSampleRows,
+  previewCostImport,
+} from './cost.import.js';
 import { exportCostsHandler } from './cost.export.js';
 import * as media from './cost.media.js';
 import * as service from './cost.service.js';
@@ -13,10 +18,17 @@ import { monthlySummary } from './cost.summary.js';
 
 export const costRouter = Router();
 
-const receiptFile = uploadSingle('file', { maxBytes: 15 * 1024 * 1024, mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
+const receiptFile = uploadSingle('file', {
+  maxBytes: 15 * 1024 * 1024,
+  mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'],
+});
 const sheetFile = uploadSingle('file', {
   maxBytes: 5 * 1024 * 1024,
-  mimeTypes: ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+  mimeTypes: [
+    'text/csv',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  ],
 });
 const read = requirePermission(['cost.read', 'cost.manage']);
 const manage = requirePermission('cost.manage');
@@ -65,7 +77,15 @@ costRouter.delete('/receipts/:id', manage, async (req, res) => {
 
 costRouter.get('/export', manage, exportCostsHandler);
 costRouter.get('/import/guide', manage, guideHandler(COST_IMPORT_COLUMNS));
-costRouter.get('/import/template', manage, templateHandler({ columns: COST_IMPORT_COLUMNS, sampleRows: costImportSampleRows, baseName: 'operating-costs' }));
+costRouter.get(
+  '/import/template',
+  manage,
+  templateHandler({
+    columns: COST_IMPORT_COLUMNS,
+    sampleRows: costImportSampleRows,
+    baseName: 'operating-costs',
+  }),
+);
 costRouter.post('/import/preview', manage, sheetFile, previewHandler(previewCostImport));
 costRouter.post('/import/commit', manage, sheetFile, commitHandler(commitCostImport));
 

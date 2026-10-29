@@ -84,6 +84,16 @@ export const categoryBody = z.object({
   // Required, not defaulted: a category nobody classified is the silent bucket the non-null column exists to prevent.
   classification: z.enum(assetClassifications),
   tracksIndividually: z.boolean().optional(),
+  // Percent a year of the book value at the start of the financial year; blank means the category is not depreciated.
+  depreciationRate: z
+    .string()
+    .trim()
+    .regex(
+      /^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$/,
+      'Use a percentage from 0 to 100 with at most two decimals',
+    )
+    .nullable()
+    .optional(),
 });
 export type CategoryBody = z.infer<typeof categoryBody>;
 
@@ -201,3 +211,23 @@ export const recoveryQuery = z.object({
   status: z.enum(assetRecoveryStatuses).optional(),
 });
 export type RecoveryQuery = z.infer<typeof recoveryQuery>;
+
+export const draftRunBody = z.object({
+  year: z.number().int().min(2000).max(2100),
+  month: z.number().int().min(1).max(12),
+});
+export const runQuery = z.object({
+  year: z.coerce.number().int().min(2000).max(2100).optional(),
+  status: z.enum(['DRAFT', 'POSTED', 'REVERSED']).optional(),
+});
+export const preflightQuery = z.object({
+  year: z.coerce.number().int().min(2000).max(2100),
+  month: z.coerce.number().int().min(1).max(12),
+});
+export const reverseRunBody = z.object({
+  reason: z.string().trim().min(1, 'Give a reason for the reversal').max(1000),
+});
+export const valueReportQuery = z.object({
+  asOf: isoDate.optional(),
+  categoryId: z.string().uuid().optional(),
+});

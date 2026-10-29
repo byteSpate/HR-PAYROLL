@@ -177,6 +177,7 @@ function AssetCategoryDialog({
   const [name, setName] = useState(category?.name ?? '');
   const [requiresSerial, setRequiresSerial] = useState(category?.requiresSerial ?? true);
   const [isConsumable, setIsConsumable] = useState(category?.isConsumable ?? false);
+  const [depreciationRate, setDepreciationRate] = useState(category?.depreciationRate ?? '');
   const [classification, setClassification] = useState<AssetClassification>(
     category?.classification ?? 'IT',
   );
@@ -257,6 +258,20 @@ function AssetCategoryDialog({
             </Select>
           </Field>
 
+          <Field
+            label="Depreciation (% a year)"
+            htmlFor="ac-rate"
+            hint="Taken on the book value at the start of each financial year. Leave blank if this category is not depreciated."
+          >
+            <Input
+              id="ac-rate"
+              inputMode="decimal"
+              value={depreciationRate}
+              onChange={(e) => setDepreciationRate(e.target.value)}
+              placeholder="Not depreciated"
+            />
+          </Field>
+
           <div className="space-y-1">
             <CheckboxField
               label="Registered one by one (turn off for supplies like paper)"
@@ -291,6 +306,7 @@ function AssetCategoryDialog({
                   isConsumable,
                   classification,
                   tracksIndividually,
+                  depreciationRate: depreciationRate.trim() === '' ? null : depreciationRate.trim(),
                   usefulLifeMonths:
                     usefulLifeMonths.trim() === '' ? null : Number(usefulLifeMonths),
                 })

@@ -184,15 +184,12 @@ describe('registering an asset', () => {
   });
 
   it('stores money exactly and refuses what the column would round', async () => {
-    const ok = await request(app)
-      .post('/api/assets')
-      .set(hr.header)
-      .send({
-        categoryId: chair.id,
-        name: 'Costly',
-        purchaseCost: '95000.50',
-        purchaseDate: '2026-01-15',
-      });
+    const ok = await request(app).post('/api/assets').set(hr.header).send({
+      categoryId: chair.id,
+      name: 'Costly',
+      purchaseCost: '95000.50',
+      purchaseDate: '2026-01-15',
+    });
     expect(ok.status).toBe(201);
     const read = await request(app).get(`/api/assets/${ok.body.id}`).set(hr.header);
     expect(read.body).toMatchObject({ purchaseCost: '95000.50', purchaseDate: '2026-01-15' });

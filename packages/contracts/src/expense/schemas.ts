@@ -12,7 +12,8 @@ const claimAmount = positiveDecimal('amount', 12, 2);
 
 /** Category codes whose claims describe a journey, and so carry a From and a To. */
 export const ROUTE_CATEGORY_CODES: readonly string[] = ['TRAVEL', 'CONVEYANCE'];
-export const hasRoute = (code: string): boolean => ROUTE_CATEGORY_CODES.includes(code.toUpperCase());
+export const hasRoute = (code: string): boolean =>
+  ROUTE_CATEGORY_CODES.includes(code.toUpperCase());
 
 export const createClaimBody = z.object({
   name: z.string().trim().min(1, 'Give the expense a name').max(200),
@@ -45,11 +46,15 @@ export const approveClaimBody = z.object({ note: z.string().max(1000).optional()
 export type ApproveClaimBody = z.infer<typeof approveClaimBody>;
 
 /** A note is required on reject. */
-export const rejectClaimBody = z.object({ note: z.string().min(1, 'A note is required').max(1000) });
+export const rejectClaimBody = z.object({
+  note: z.string().min(1, 'A note is required').max(1000),
+});
 export type RejectClaimBody = z.infer<typeof rejectClaimBody>;
 
 /** No note on a sweep: one sentence glued to twelve claims is no reason at all. Capped, as each is its own transaction. */
-export const approveClaimsBody = z.object({ claimIds: z.array(z.string().uuid()).min(1, 'Select at least one claim').max(200) });
+export const approveClaimsBody = z.object({
+  claimIds: z.array(z.string().uuid()).min(1, 'Select at least one claim').max(200),
+});
 export type ApproveClaimsBody = z.infer<typeof approveClaimsBody>;
 
 export const claimQuery = z.object({
@@ -59,7 +64,12 @@ export const claimQuery = z.object({
 export type ClaimQuery = z.infer<typeof claimQuery>;
 
 export const categoryBody = z.object({
-  code: z.string().trim().toUpperCase().regex(/^[A-Z_]+$/, 'Use upper-case letters and underscores').max(40),
+  code: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .regex(/^[A-Z_]+$/, 'Use upper-case letters and underscores')
+    .max(40),
   name: z.string().trim().min(1, 'A name is required').max(100),
 });
 export type CategoryBody = z.infer<typeof categoryBody>;

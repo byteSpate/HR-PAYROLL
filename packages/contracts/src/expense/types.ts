@@ -97,7 +97,11 @@ export interface ExpenseReport {
     claims: number;
     /** Per currency, never added together. */
     byCurrency: { currency: Currency; claims: number; amount: string }[];
-    byStatus: { status: ExpenseStatus; claims: number; byCurrency: { currency: Currency; amount: string }[] }[];
+    byStatus: {
+      status: ExpenseStatus;
+      claims: number;
+      byCurrency: { currency: Currency; amount: string }[];
+    }[];
   };
 }
 

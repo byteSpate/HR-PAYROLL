@@ -14,6 +14,9 @@ export const exchangeRateBody = z
     rate: positiveDecimal('rate', 12, 6),
     effectiveFrom: dateOnly,
   })
-  .refine((r) => r.base !== r.quote, { message: 'base and quote must be different currencies', path: ['quote'] });
+  .refine((r) => r.base !== r.quote, {
+    message: 'base and quote must be different currencies',
+    path: ['quote'],
+  });
 
 export type ExchangeRateBody = z.infer<typeof exchangeRateBody>;

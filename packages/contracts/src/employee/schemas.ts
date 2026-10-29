@@ -16,7 +16,14 @@ export const exitReasons = [
   'CONTRACT_END',
   'DEATH',
 ] as const;
-export const documentTypes = ['CONTRACT', 'NID', 'CERTIFICATE', 'OFFER_LETTER', 'RESIGNATION', 'OTHER'] as const;
+export const documentTypes = [
+  'CONTRACT',
+  'NID',
+  'CERTIFICATE',
+  'OFFER_LETTER',
+  'RESIGNATION',
+  'OTHER',
+] as const;
 
 export const createEmployeeSchema = z.object({
   email: z.string().trim().toLowerCase().pipe(z.email()),

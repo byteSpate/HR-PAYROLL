@@ -19,7 +19,8 @@ export const asset = defineModule({
       label: 'Register, assign, repair, retire and recover assets',
       scopes: ['department', 'all'],
     },
-    'asset.capitalise': { label: 'Capitalise, pay for and dispose of assets' },
+    'asset.capitalise': { label: 'Capitalise, pay for, dispose of and depreciate assets' },
+    'asset.value': { label: 'See the asset value report' },
     'asset.config': { label: 'Manage asset categories' },
   },
   nav: [

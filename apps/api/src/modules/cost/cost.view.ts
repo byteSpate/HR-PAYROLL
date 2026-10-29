@@ -6,9 +6,15 @@ import { isOverdue } from './cost.derive.js';
 const day = (d: Date | null) => (d ? formatDateOnly(d) : null);
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
-export const categoryView = (c: Prisma.CostCategoryGetPayload<object>): CostCategory => ({ id: c.id, code: c.code, name: c.name });
+export const categoryView = (c: Prisma.CostCategoryGetPayload<object>): CostCategory => ({
+  id: c.id,
+  code: c.code,
+  name: c.name,
+});
 
-export const commitmentView = (c: Prisma.CostCommitmentGetPayload<{ include: { category: true } }>): CostCommitment => ({
+export const commitmentView = (
+  c: Prisma.CostCommitmentGetPayload<{ include: { category: true } }>,
+): CostCommitment => ({
   id: c.id,
   categoryId: c.categoryId,
   category: categoryView(c.category),
@@ -34,9 +40,13 @@ export const attachmentView = (a: Prisma.CostAttachmentGetPayload<object>): Cost
   uploadedAt: a.uploadedAt.toISOString(),
 });
 
-export type BillRow = Prisma.OperatingCostGetPayload<{ include: { category: true; commitment: { include: { category: true } }; attachments: true } }>;
+export type BillRow = Prisma.OperatingCostGetPayload<{
+  include: { category: true; commitment: { include: { category: true } }; attachments: true };
+}>;
 
-export const billView = (b: Omit<BillRow, 'attachments'> & { attachments?: BillRow['attachments'] }): CostBill => ({
+export const billView = (
+  b: Omit<BillRow, 'attachments'> & { attachments?: BillRow['attachments'] },
+): CostBill => ({
   id: b.id,
   categoryId: b.categoryId,
   category: categoryView(b.category),

@@ -12,7 +12,18 @@ import { notification } from './notification/manifest.js';
 
 // Core first; later plans append their manifests here. Settings tabs follow this order, so finance panels
 // such as exchange rates stay last.
-export const modules: readonly ModuleManifest[] = [core, department, employee, notification, attendance, leave, expense, asset, cost, exchange];
+export const modules: readonly ModuleManifest[] = [
+  core,
+  department,
+  employee,
+  notification,
+  attendance,
+  leave,
+  expense,
+  asset,
+  cost,
+  exchange,
+];
 
 function findCycle(byName: Map<string, ModuleManifest>): string[] {
   const state = new Map<string, 'visiting' | 'done'>();

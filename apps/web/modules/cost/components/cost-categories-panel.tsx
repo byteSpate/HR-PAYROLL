@@ -1,7 +1,7 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
   Dialog,
@@ -10,15 +10,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@erp/ui/components/dialog"
-import { Input } from "@erp/ui/components/input"
+} from '@erp/ui/components/dialog';
+import { Input } from '@erp/ui/components/input';
 import {
   createCostCategory,
   deleteCostCategory,
   listCostCategories,
   updateCostCategory,
-} from "../api"
-import type { CostCategory, CreateCostCategoryInput } from "../types"
+} from '../api';
+import type { CostCategory, CreateCostCategoryInput } from '../types';
 import {
   ConfirmDeleteDialog,
   DialogActions,
@@ -28,13 +28,13 @@ import {
   PanelTable,
   RowActions,
   toMessage,
-} from "@erp/ui/dashboard"
+} from '@erp/ui/dashboard';
 
 export function CostCategoriesPanel({ accessToken }: { accessToken: string }) {
-  const queryClient = useQueryClient()
-  const [editing, setEditing] = useState<CostCategory | "new" | null>(null)
-  const [deleting, setDeleting] = useState<CostCategory | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState<CostCategory | 'new' | null>(null);
+  const [deleting, setDeleting] = useState<CostCategory | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const {
     data: categories = [],
@@ -42,41 +42,41 @@ export function CostCategoriesPanel({ accessToken }: { accessToken: string }) {
     isError,
     refetch,
   } = useQuery({
-    queryKey: ["cost-categories"],
+    queryKey: ['cost-categories'],
     queryFn: () => listCostCategories(accessToken),
-  })
+  });
 
   const done = () => {
-    setEditing(null)
-    setDeleting(null)
-    setError(null)
-    queryClient.invalidateQueries({ queryKey: ["cost-categories"] })
-  }
+    setEditing(null);
+    setDeleting(null);
+    setError(null);
+    queryClient.invalidateQueries({ queryKey: ['cost-categories'] });
+  };
 
   const saveMutation = useMutation({
     mutationFn: ({ id, input }: { id: string | null; input: CreateCostCategoryInput }) => {
-      if (id === null) return createCostCategory(accessToken, input)
-      const { code, ...rest } = input
-      void code
-      return updateCostCategory(accessToken, id, rest)
+      if (id === null) return createCostCategory(accessToken, input);
+      const { code, ...rest } = input;
+      void code;
+      return updateCostCategory(accessToken, id, rest);
     },
     onSuccess: done,
     onError: (err) => setError(toMessage(err)),
-  })
+  });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteCostCategory(accessToken, id),
     onSuccess: done,
     onError: (err) => {
-      setDeleting(null)
-      setError(toMessage(err))
+      setDeleting(null);
+      setError(toMessage(err));
     },
-  })
+  });
 
   const add = () => {
-    setError(null)
-    setEditing("new")
-  }
+    setError(null);
+    setEditing('new');
+  };
 
   return (
     <PanelFrame
@@ -89,7 +89,7 @@ export function CostCategoriesPanel({ accessToken }: { accessToken: string }) {
     >
       <PanelTable
         cols="2fr 0.8fr"
-        headers={["Category", ""]}
+        headers={['Category', '']}
         isLoading={isLoading}
         isError={isError}
         onRetry={() => refetch()}
@@ -104,19 +104,19 @@ export function CostCategoriesPanel({ accessToken }: { accessToken: string }) {
               <RowActions
                 actions={[
                   {
-                    kind: "edit",
-                    label: "Rename",
+                    kind: 'edit',
+                    label: 'Rename',
                     onClick: () => {
-                      setError(null)
-                      setEditing(category)
+                      setError(null);
+                      setEditing(category);
                     },
                   },
                   {
-                    kind: "delete",
-                    label: "Delete",
+                    kind: 'delete',
+                    label: 'Delete',
                     onClick: () => {
-                      setError(null)
-                      setDeleting(category)
+                      setError(null);
+                      setDeleting(category);
                     },
                   },
                 ]}
@@ -128,25 +128,25 @@ export function CostCategoriesPanel({ accessToken }: { accessToken: string }) {
 
       {editing !== null ? (
         <CostCategoryDialog
-          category={editing === "new" ? null : editing}
+          category={editing === 'new' ? null : editing}
           pending={saveMutation.isPending}
           error={error}
           onClose={() => setEditing(null)}
           onSave={(input) =>
-            saveMutation.mutate({ id: editing === "new" ? null : editing.id, input })
+            saveMutation.mutate({ id: editing === 'new' ? null : editing.id, input })
           }
         />
       ) : null}
 
       <ConfirmDeleteDialog
         open={deleting !== null}
-        what={deleting?.name ?? ""}
+        what={deleting?.name ?? ''}
         pending={deleteMutation.isPending}
         onCancel={() => setDeleting(null)}
         onConfirm={() => deleting && deleteMutation.mutate(deleting.id)}
       />
     </PanelFrame>
-  )
+  );
 }
 
 function CostCategoryDialog({
@@ -156,20 +156,20 @@ function CostCategoryDialog({
   onClose,
   onSave,
 }: {
-  category: CostCategory | null
-  pending: boolean
-  error: string | null
-  onClose: () => void
-  onSave: (input: CreateCostCategoryInput) => void
+  category: CostCategory | null;
+  pending: boolean;
+  error: string | null;
+  onClose: () => void;
+  onSave: (input: CreateCostCategoryInput) => void;
 }) {
-  const [code, setCode] = useState(category?.code ?? "")
-  const [name, setName] = useState(category?.name ?? "")
+  const [code, setCode] = useState(category?.code ?? '');
+  const [name, setName] = useState(category?.name ?? '');
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{category ? `Edit ${category.name}` : "Add a cost category"}</DialogTitle>
+          <DialogTitle>{category ? `Edit ${category.name}` : 'Add a cost category'}</DialogTitle>
           <DialogDescription>
             A table rather than a fixed list, because Finance will add &ldquo;gas bill&rdquo; and no
             code branches on the name.
@@ -180,7 +180,7 @@ function CostCategoryDialog({
             <Field
               label="Code"
               htmlFor="cc-code"
-              hint={category ? "Fixed. Rules key off the code." : undefined}
+              hint={category ? 'Fixed. Rules key off the code.' : undefined}
             >
               <Input
                 id="cc-code"
@@ -201,7 +201,7 @@ function CostCategoryDialog({
             <DialogActions
               pending={pending}
               disabled={name.trim().length === 0 || code.trim().length === 0}
-              submitLabel={category ? "Save" : "Add category"}
+              submitLabel={category ? 'Save' : 'Add category'}
               onCancel={onClose}
               onSubmit={() => onSave({ code: code.trim(), name: name.trim() })}
             />
@@ -209,5 +209,5 @@ function CostCategoryDialog({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

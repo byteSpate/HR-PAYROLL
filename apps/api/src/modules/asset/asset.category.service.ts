@@ -1,6 +1,6 @@
 import { categoryBody, updateCategoryBody } from '@erp/contracts/asset';
 import { writeAudit } from '@erp/audit';
-import { prisma, type Prisma } from '@erp/db';
+import { dec, prisma, type Prisma } from '@erp/db';
 import { AppError, describeUsage } from '@erp/utils';
 import { categoryView } from './asset.view.js';
 
@@ -22,6 +22,7 @@ export async function createCategory(actorUserId: string, input: unknown) {
           requiresSerial: body.requiresSerial ?? true,
           isConsumable: body.isConsumable ?? false,
           usefulLifeMonths: body.usefulLifeMonths ?? null,
+          depreciationRate: body.depreciationRate ?? null,
           classification: body.classification,
           tracksIndividually: body.tracksIndividually ?? true,
         },
@@ -85,6 +86,15 @@ export async function updateCategory(actorUserId: string, id: string, input: unk
         before[key] = existing[key];
         after[key] = next;
         (data as Record<string, unknown>)[key] = next;
+      }
+      if (body.depreciationRate !== undefined) {
+        const was = existing.depreciationRate?.toFixed(2) ?? null;
+        const now = body.depreciationRate === null ? null : dec(body.depreciationRate).toFixed(2);
+        if (was !== now) {
+          before['depreciationRate'] = was;
+          after['depreciationRate'] = now;
+          data.depreciationRate = now;
+        }
       }
       if (Object.keys(data).length === 0) return categoryView(existing);
       const updated = await tx.assetCategory.update({ where: { id }, data });

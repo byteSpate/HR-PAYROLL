@@ -1,12 +1,12 @@
-"use client"
+'use client';
 
-import { useState } from "react"
+import { useState } from 'react';
 
-import { deleteCostReceipt, getCostReceiptUrl, uploadCostReceipt } from "../api"
-import { ApiError } from "@erp/utils"
-import type { CostAttachment } from "../types"
-import { Button } from "@erp/ui/components/button"
-import { DOCUMENT_ACCEPT, DOCUMENT_MAX_BYTES, FileUpload } from "@/components/file-upload"
+import { deleteCostReceipt, getCostReceiptUrl, uploadCostReceipt } from '../api';
+import { ApiError } from '@erp/utils';
+import type { CostAttachment } from '../types';
+import { Button } from '@erp/ui/components/button';
+import { DOCUMENT_ACCEPT, DOCUMENT_MAX_BYTES, FileUpload } from '@/components/file-upload';
 
 /**
  * One receipt thumbnail. Fetches a signed URL on click and opens it — never
@@ -20,37 +20,37 @@ function ReceiptThumb({
   canManage,
   onDeleted,
 }: {
-  attachment: CostAttachment
-  accessToken: string
-  canManage: boolean
-  onDeleted: () => void
+  attachment: CostAttachment;
+  accessToken: string;
+  canManage: boolean;
+  onDeleted: () => void;
 }) {
-  const [busy, setBusy] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function open() {
-    setBusy(true)
-    setError(null)
+    setBusy(true);
+    setError(null);
     try {
-      const { url } = await getCostReceiptUrl(accessToken, attachment.id)
-      window.open(url, "_blank", "noopener,noreferrer")
+      const { url } = await getCostReceiptUrl(accessToken, attachment.id);
+      window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not open that file.")
+      setError(err instanceof ApiError ? err.message : 'Could not open that file.');
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   async function remove() {
-    setDeleting(true)
-    setError(null)
+    setDeleting(true);
+    setError(null);
     try {
-      await deleteCostReceipt(accessToken, attachment.id)
-      onDeleted()
+      await deleteCostReceipt(accessToken, attachment.id);
+      onDeleted();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not remove that receipt.")
-      setDeleting(false)
+      setError(err instanceof ApiError ? err.message : 'Could not remove that receipt.');
+      setDeleting(false);
     }
   }
 
@@ -63,7 +63,7 @@ function ReceiptThumb({
           disabled={busy || deleting}
           className="rounded-md border border-dashed px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:border-foreground/30 hover:text-foreground disabled:opacity-50"
         >
-          {busy ? "Opening…" : attachment.fileName}
+          {busy ? 'Opening…' : attachment.fileName}
         </Button>
         {canManage ? (
           <Button
@@ -79,7 +79,7 @@ function ReceiptThumb({
       </div>
       {error ? <p className="text-[11px] text-destructive">{error}</p> : null}
     </div>
-  )
+  );
 }
 
 /**
@@ -95,21 +95,21 @@ export function ReceiptGallery({
   canManage,
   onChanged,
 }: {
-  costId: string
-  attachments: CostAttachment[]
-  accessToken: string
-  canManage: boolean
-  onChanged: () => void
+  costId: string;
+  attachments: CostAttachment[];
+  accessToken: string;
+  canManage: boolean;
+  onChanged: () => void;
 }) {
-  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   async function handleUpload(file: File) {
-    setUploadError(null)
+    setUploadError(null);
     try {
-      await uploadCostReceipt(accessToken, costId, file)
-      onChanged()
+      await uploadCostReceipt(accessToken, costId, file);
+      onChanged();
     } catch (err) {
-      setUploadError(err instanceof ApiError ? err.message : "Could not upload that receipt.")
+      setUploadError(err instanceof ApiError ? err.message : 'Could not upload that receipt.');
     }
   }
 
@@ -142,5 +142,5 @@ export function ReceiptGallery({
         </>
       ) : null}
     </div>
-  )
+  );
 }

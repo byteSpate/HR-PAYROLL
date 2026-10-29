@@ -13,7 +13,14 @@ export const cost = defineModule({
     {
       label: 'Payroll & finance',
       order: 15,
-      items: [{ label: 'Expenses', href: '/costs', icon: 'RiWallet3Line', permission: ['cost.read', 'cost.manage'] }],
+      items: [
+        {
+          label: 'Expenses',
+          href: '/costs',
+          icon: 'RiWallet3Line',
+          permission: ['cost.read', 'cost.manage'],
+        },
+      ],
     },
     {
       label: 'Administration',
@@ -24,7 +31,14 @@ export const cost = defineModule({
           href: '/settings/cost-categories',
           icon: 'RiSettingsLine',
           permission: null,
-          children: [{ label: 'Cost categories', href: '/settings/cost-categories', permission: 'cost.config', icon: 'RiWallet3Line' }],
+          children: [
+            {
+              label: 'Cost categories',
+              href: '/settings/cost-categories',
+              permission: 'cost.config',
+              icon: 'RiWallet3Line',
+            },
+          ],
         },
       ],
     },

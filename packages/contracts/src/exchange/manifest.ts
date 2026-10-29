@@ -16,7 +16,14 @@ export const exchange = defineModule({
           href: '/settings/exchange-rates',
           icon: 'RiSettingsLine',
           permission: null,
-          children: [{ label: 'Exchange rates', href: '/settings/exchange-rates', permission: 'exchange.config', icon: 'RiExchangeDollarLine' }],
+          children: [
+            {
+              label: 'Exchange rates',
+              href: '/settings/exchange-rates',
+              permission: 'exchange.config',
+              icon: 'RiExchangeDollarLine',
+            },
+          ],
         },
       ],
     },

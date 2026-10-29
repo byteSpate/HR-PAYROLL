@@ -6,6 +6,7 @@ import { attendanceConfigRouter } from './attendance/config.routes.js';
 import { authRouter } from './auth/auth.routes.js';
 import { auditRouter } from './core-audit/audit.routes.js';
 import { costRouter } from './cost/cost.routes.js';
+import { depreciationRouter } from './asset/depreciation/depreciation.routes.js';
 import { departmentRouter } from './department/department.routes.js';
 import { employeeRouter } from './employee/employee.routes.js';
 import { exchangeRouter } from './exchange/exchange.routes.js';
@@ -27,6 +28,7 @@ export const apiMounts: [prefix: string, router: Router][] = [
   ['/exchange-rates', exchangeRouter],
   ['/assets', assetRouter],
   ['/costs', costRouter],
+  ['/depreciation', depreciationRouter],
   ['/expenses', expenseRouter],
   ['/notifications', notificationRouter],
   ['/leave', leaveRouter],

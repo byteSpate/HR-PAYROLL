@@ -4,6 +4,7 @@ import { storageReady, uploadSingle } from '@erp/attachments';
 import { commitHandler, guideHandler, previewHandler, templateHandler } from '@erp/export';
 import {
   approveRequestBody,
+  valueReportQuery,
   attachmentKindBody,
   assignBody,
   cancelRequestBody,
@@ -44,6 +45,7 @@ import * as recoveries from './asset.recoveries.js';
 import * as repairs from './asset.repairs.js';
 import * as requests from './asset.requests.js';
 import { exitChecklist } from './asset.exit.js';
+import { assetValueReport } from './asset.value.js';
 import * as service from './asset.service.js';
 
 export const assetRouter = Router();
@@ -78,6 +80,10 @@ assetRouter.patch('/categories/:id', requirePermission('asset.config'), async (r
 assetRouter.delete('/categories/:id', requirePermission('asset.config'), async (req, res) => {
   await categories.deleteCategory(req.user!.sub, id(req));
   res.status(204).send();
+});
+
+assetRouter.get('/value', requirePermission('asset.value'), async (req, res) => {
+  res.json(await assetValueReport(valueReportQuery.parse(req.query)));
 });
 
 assetRouter.get('/recoveries', async (req, res) => {

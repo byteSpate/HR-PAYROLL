@@ -1,4 +1,5 @@
 import { api } from '@/lib/api-client';
+import type { DepreciationPreflight, DepreciationRunDetail, DepreciationRunSummary } from './types';
 import { listEmployees as listAllEmployees } from '@/modules/employee/api';
 
 export const listEmployees = (_t: string) => listAllEmployees();
@@ -167,3 +168,22 @@ export const getAssetValueReport = (
   _t: string,
   filter: { asOf?: string; categoryId?: string } = {},
 ) => api.request<AssetValueReport>(`/assets/value${query(filter)}`);
+
+export const listDepreciationRuns = (_t: string, filter: { year?: number; status?: string } = {}) =>
+  api.request<DepreciationRunSummary[]>(
+    `/depreciation${query({ year: filter.year === undefined ? undefined : String(filter.year), status: filter.status })}`,
+  );
+export const getDepreciationRun = (_t: string, id: string) =>
+  api.request<DepreciationRunDetail>(`/depreciation/${id}`);
+export const draftDepreciationRun = (_t: string, input: { year: number; month: number }) =>
+  post<DepreciationRunDetail>('/depreciation', input);
+export const postDepreciationRun = (_t: string, id: string) =>
+  post<DepreciationRunDetail>(`/depreciation/${id}/post`);
+export const reverseDepreciationRun = (_t: string, id: string, reason: string) =>
+  post<DepreciationRunDetail>(`/depreciation/${id}/reverse`, { reason });
+export const deleteDepreciationRun = (_t: string, id: string) =>
+  api.request<void>(`/depreciation/${id}`, { method: 'DELETE' });
+export const getDepreciationPreflight = (_t: string, input: { year: number; month: number }) =>
+  api.request<DepreciationPreflight>(
+    `/depreciation/preflight${query({ year: String(input.year), month: String(input.month) })}`,
+  );

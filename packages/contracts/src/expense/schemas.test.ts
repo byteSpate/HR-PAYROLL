@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { createClaimBody, updateClaimBody } from './schemas.js';
 import { exchangeRateBody } from '../exchange/schemas.js';
 
-const claim = { name: 'Taxi', categoryId: '0f8fad5b-d9cb-469f-a165-70867728950e', expenseDate: '2026-10-01' };
+const claim = {
+  name: 'Taxi',
+  categoryId: '0f8fad5b-d9cb-469f-a165-70867728950e',
+  expenseDate: '2026-10-01',
+};
 
 describe('claim amounts', () => {
   it('keeps a decimal string exactly as written, with up to two decimals', () => {
@@ -22,7 +26,18 @@ describe('claim amounts', () => {
   });
 
   it('refuses zero, negatives, exponents, blanks and amounts too large for the column', () => {
-    for (const amount of ['0', '0.00', '-1', '1e3', '', 'abc', '1,000', '1234567890123', 1e21, Number.NaN]) {
+    for (const amount of [
+      '0',
+      '0.00',
+      '-1',
+      '1e3',
+      '',
+      'abc',
+      '1,000',
+      '1234567890123',
+      1e21,
+      Number.NaN,
+    ]) {
       expect(createClaimBody.safeParse({ ...claim, amount }).success, String(amount)).toBe(false);
     }
   });
