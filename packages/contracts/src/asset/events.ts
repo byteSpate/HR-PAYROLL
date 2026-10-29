@@ -1,0 +1,16 @@
+export const ASSET_EVENTS = [
+  'asset.assigned',
+  'asset.acknowledged',
+  'asset.returned',
+  'asset.request.submitted',
+  'asset.request.approved',
+  'asset.request.ordered',
+  'asset.request.rejected',
+  'asset.retired',
+  'asset.lost',
+  'asset.capitalised',
+  'asset.paid',
+  'asset.disposed',
+  'asset.imported',
+  'asset.recovery.collected',
+] as const;

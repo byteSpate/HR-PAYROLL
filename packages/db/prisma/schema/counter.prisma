@@ -1,0 +1,6 @@
+/// Human-facing numbers ("BS-AST-00042", later payslip and run numbers). One row per series; the next
+/// value is taken by an upsert-increment inside the creating transaction, so concurrent writers never share one.
+model IdCounter {
+  id    String @id
+  value Int    @default(0)
+}

@@ -10,6 +10,13 @@ export const DEFAULT_SHIFT_NAME = 'General';
 export async function seedDefaultShift(db: Db): Promise<void> {
   if (await db.shift.findFirst({ where: { name: DEFAULT_SHIFT_NAME } })) return;
   await db.shift.create({
-    data: { name: DEFAULT_SHIFT_NAME, startTime: '09:00', endTime: '18:00', breakMinutes: 60, graceMinutes: 15, weeklyOffDays: [5] },
+    data: {
+      name: DEFAULT_SHIFT_NAME,
+      startTime: '09:00',
+      endTime: '18:00',
+      breakMinutes: 60,
+      graceMinutes: 15,
+      weeklyOffDays: [5],
+    },
   });
 }

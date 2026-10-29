@@ -1,5 +1,16 @@
 import { z } from 'zod';
 
+function decimalString(label: string, intDigits: number, fractionDigits: number) {
+  const pattern = new RegExp(`^\\d{1,${intDigits}}(\\.\\d{1,${fractionDigits}})?$`);
+  return z.preprocess(
+    (value) => (typeof value === 'number' && Number.isFinite(value) ? String(value) : value),
+    z
+      .string()
+      .trim()
+      .regex(pattern, `${label} must be a number with at most ${fractionDigits} decimal places`),
+  );
+}
+
 /**
  * A positive decimal kept as the string the person wrote, checked against the column that will hold it
  * (`intDigits` before the point, `fractionDigits` after). Parsing to a float first would let 0.001
@@ -8,13 +19,12 @@ import { z } from 'zod';
  * exact decimal reading and fails the pattern.
  */
 export function positiveDecimal(label: string, intDigits: number, fractionDigits: number) {
-  const pattern = new RegExp(`^\\d{1,${intDigits}}(\\.\\d{1,${fractionDigits}})?$`);
-  return z.preprocess(
-    (value) => (typeof value === 'number' && Number.isFinite(value) ? String(value) : value),
-    z
-      .string()
-      .trim()
-      .regex(pattern, `${label} must be a number with at most ${fractionDigits} decimal places`)
-      .refine((text) => /[1-9]/.test(text), `${label} must be greater than 0`),
+  return decimalString(label, intDigits, fractionDigits).pipe(
+    z.string().refine((text) => /[1-9]/.test(text), `${label} must be greater than 0`),
   );
+}
+
+/** As `positiveDecimal`, but zero is allowed: a free asset or a no-charge repair is a real answer. */
+export function nonNegativeDecimal(label: string, intDigits: number, fractionDigits: number) {
+  return decimalString(label, intDigits, fractionDigits);
 }

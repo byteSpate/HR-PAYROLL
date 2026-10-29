@@ -5,7 +5,9 @@ it('creates the standard categories once and keeps a renamed one as it was', asy
   const rows = new Map<string, { code: string; name: string }>();
   const client = {
     expenseCategory: {
-      findUnique: vi.fn(async ({ where }: { where: { code: string } }) => rows.get(where.code) ?? null),
+      findUnique: vi.fn(
+        async ({ where }: { where: { code: string } }) => rows.get(where.code) ?? null,
+      ),
       create: vi.fn(async ({ data }: { data: { code: string; name: string } }) => {
         rows.set(data.code, data);
         return data;
@@ -14,7 +16,15 @@ it('creates the standard categories once and keeps a renamed one as it was', asy
   };
 
   await seedExpenseCategories(client as never);
-  expect([...rows.keys()].sort()).toEqual(['ENTERTAINMENT', 'IT', 'MEDICAL', 'OTHER', 'STATIONERY', 'TRAINING', 'TRAVEL']);
+  expect([...rows.keys()].sort()).toEqual([
+    'ENTERTAINMENT',
+    'IT',
+    'MEDICAL',
+    'OTHER',
+    'STATIONERY',
+    'TRAINING',
+    'TRAVEL',
+  ]);
   expect(rows.get('TRAVEL')?.name).toBe('Travel and conveyance');
 
   rows.set('TRAVEL', { code: 'TRAVEL', name: 'Travel & conveyance' });

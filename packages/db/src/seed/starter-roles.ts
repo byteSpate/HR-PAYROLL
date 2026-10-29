@@ -43,6 +43,9 @@ export const STARTER_ROLES: StarterRoleDef[] = [
       { key: 'leave.config', scope: null },
       { key: 'expense.read', scope: 'all' },
       { key: 'expense.report', scope: 'all' },
+      { key: 'asset.read', scope: 'all' },
+      { key: 'asset.manage', scope: 'all' },
+      { key: 'asset.config', scope: null },
     ],
   },
   {
@@ -58,6 +61,8 @@ export const STARTER_ROLES: StarterRoleDef[] = [
       { key: 'expense.manage', scope: 'all' },
       { key: 'expense.config', scope: null },
       { key: 'expense.report', scope: 'all' },
+      { key: 'asset.read', scope: 'all' },
+      { key: 'asset.capitalise', scope: null },
     ],
   },
   { name: 'Employee', description: 'Baseline role for every staff member', grants: [] },

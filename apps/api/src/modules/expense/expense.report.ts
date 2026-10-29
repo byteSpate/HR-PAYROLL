@@ -4,7 +4,7 @@ import { MS_PER_DAY, formatDateOnly, parseDateOnly, toCsv } from '@erp/export';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
 import { scopeForViewer } from '../employee/employee.scope.js';
-import { employeeOf } from './expense.service.js';
+import { employeeOf } from '../employee/employee.self.js';
 
 // Expense claims over a date range, per person or across everybody: one range function, one shape,
 // JSON, CSV and PDF off the same object, so the totals cannot be wrong in a second place.

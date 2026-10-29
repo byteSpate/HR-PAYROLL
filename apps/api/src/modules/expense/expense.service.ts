@@ -7,18 +7,13 @@ import { formatDateOnly, officeToday, parseDateOnly } from '@erp/export';
 import { approverUserIds, notify } from '@erp/notifications';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
+import { employeeOf } from '../employee/employee.self.js';
 import { scopeForViewer } from '../employee/employee.scope.js';
 import { lockOwnPending } from './expense.lock.js';
 import { CLAIM_INCLUDE, claimView } from './expense.view.js';
 
 /** Long enough to cover an approval delay across a month boundary, short enough that a claim cannot surface against a closed payroll month. */
 export const MAX_CLAIM_AGE_DAYS = 90;
-
-export async function employeeOf(userId: string) {
-  const employee = await prisma.employee.findUnique({ where: { userId } });
-  if (!employee) throw new AppError(403, 'An employee record is required');
-  return employee;
-}
 
 /** The spend-date rules, shared by filing and amending so an edit cannot be a way round them. */
 function assertSpendDate(date: Date): void {

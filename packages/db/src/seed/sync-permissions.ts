@@ -17,7 +17,9 @@ export async function syncPermissions(
   db: Db,
   perms: PermissionDef[],
 ): Promise<{ added: string[]; removed: string[] }> {
-  const existing = new Set((await db.permission.findMany({ select: { key: true } })).map((p) => p.key));
+  const existing = new Set(
+    (await db.permission.findMany({ select: { key: true } })).map((p) => p.key),
+  );
   const declared = new Set(perms.map((p) => p.key));
 
   const added = perms.map((p) => p.key).filter((k) => !existing.has(k));
@@ -25,7 +27,11 @@ export async function syncPermissions(
 
   for (const p of perms) {
     const data = { label: p.label, module: p.module, scopes: (p.scopes ?? []).map(toDbScope) };
-    await db.permission.upsert({ where: { key: p.key }, create: { key: p.key, ...data }, update: data });
+    await db.permission.upsert({
+      where: { key: p.key },
+      create: { key: p.key, ...data },
+      update: data,
+    });
   }
   if (removed.length > 0) await db.permission.deleteMany({ where: { key: { in: removed } } });
   return { added, removed };

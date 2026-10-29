@@ -8,6 +8,10 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./asset": {
+      "types": "./dist/asset/index.d.ts",
+      "default": "./dist/asset/index.js"
+    },
     "./attendance": {
       "types": "./dist/attendance/index.d.ts",
       "default": "./dist/attendance/index.js"

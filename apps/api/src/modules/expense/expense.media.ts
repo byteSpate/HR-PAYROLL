@@ -5,8 +5,9 @@ import { DEFAULT_URL_TTL_SECONDS } from '@erp/attachments';
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
+import { employeeOf } from '../employee/employee.self.js';
 import { lockOwnPending } from './expense.lock.js';
-import { employeeOf, getClaim } from './expense.service.js';
+import { getClaim } from './expense.service.js';
 
 // Receipts live in file storage as authenticated assets; the database keeps only the storage id, and every
 // open goes through a short-lived signed URL.

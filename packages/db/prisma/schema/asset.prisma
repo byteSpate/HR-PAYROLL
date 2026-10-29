@@ -1,0 +1,328 @@
+enum AssetClassification {
+  IT
+  NON_IT
+}
+
+enum AssetLifecycle {
+  IN_SERVICE
+  LOST
+  RETIRED
+}
+
+enum AssetCondition {
+  NEW
+  GOOD
+  FAIR
+  DAMAGED
+}
+
+enum AssetAttachmentKind {
+  PHOTO
+  INVOICE
+  WARRANTY
+  CONDITION_OUT
+  CONDITION_IN
+}
+
+enum AssetRequestKind {
+  NEW_ITEM
+  REPAIR
+  RETURN
+}
+
+/// PENDING/APPROVED/REJECTED/CANCELLED mirror the leave workflow on purpose. FULFILLED is the one addition:
+/// an approved request that nothing was issued against is not finished.
+enum AssetRequestStatus {
+  PENDING
+  APPROVED
+  ORDERED
+  REJECTED
+  CANCELLED
+  FULFILLED
+}
+
+enum AssetRecoveryKind {
+  NOT_RETURNED
+  DAMAGED
+  LOST
+}
+
+enum AssetRecoveryStatus {
+  PENDING
+  RECOVERED
+  WAIVED
+}
+
+enum DepreciationRunStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+model AssetCategory {
+  id                 String              @id @default(uuid())
+  /// Stable machine key (LAPTOP, MONITOR, ...). Rules key off this, never off `name`.
+  code               String              @unique
+  name               String              @unique
+  /// A laptop has a serial; a chair does not. Enforced when an asset is created.
+  requiresSerial     Boolean             @default(true)
+  /// Issued and never expected back (a mouse). Left off the exit checklist.
+  isConsumable       Boolean             @default(false)
+  /// Stated once per category. Non-null on purpose: a nullable column would be a silent "unclassified" bucket.
+  classification     AssetClassification
+  /// False means requestable but never registered (paper, pens).
+  tracksIndividually Boolean             @default(true)
+  /// Straight-line life for depreciation.
+  usefulLifeMonths   Int?
+
+  assets   Asset[]
+  requests AssetRequest[]
+}
+
+model Asset {
+  id           String        @id @default(uuid())
+  /// "BS-AST-00123", from IdCounter series AST.
+  assetTag     String        @unique
+  categoryId   String
+  category     AssetCategory @relation(fields: [categoryId], references: [id])
+  name         String
+  /// Unique when present: many rows legitimately have none and Postgres allows several nulls.
+  serialNumber String?       @unique
+  model        String?
+  notes        String?
+
+  purchaseDate   DateTime? @db.Date
+  purchaseCost   Decimal?  @db.Decimal(14, 2)
+  currency       Currency  @default(BDT)
+  vendor         String?
+  warrantyExpiry DateTime? @db.Date
+
+  /// Frozen at capitalisation (1.000000 for a BDT asset). Everything downstream derives from purchaseCostBdt; nothing reconverts.
+  fxRateToBdt     Decimal?  @db.Decimal(18, 6)
+  purchaseCostBdt Decimal?  @db.Decimal(14, 2)
+  capitalisedAt   DateTime?
+  capitalisedBy   String?
+  /// The purchase has been paid for. Set once; paying twice is refused.
+  paidAt          DateTime?
+  paidBy          String?
+
+  /// The owning cost centre, not the holder's department: a laptop bought by one department can be lent to another.
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  /// Where it sits when nobody has it.
+  location     String?
+
+  /// Only the irreversible decisions are stored; "assigned" and "in repair" are derived from open rows.
+  lifecycle      AssetLifecycle @default(IN_SERVICE)
+  retiredAt      DateTime?
+  retiredBy      String?
+  retirementNote String?
+
+  assignments         AssetAssignment[]
+  repairs             AssetRepair[]
+  requests            AssetRequest[]      @relation("RequestTarget")
+  fulfilledRequests   AssetRequest[]      @relation("RequestFulfilment")
+  attachments         AssetAttachment[]
+  recoveries          AssetRecovery[]
+  depreciationCharges AssetDepreciation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([lifecycle])
+}
+
+/// Append-only custody. A row is written once and closed by setting the return fields. One open row per asset
+/// is held by a partial unique index in the migration.
+model AssetAssignment {
+  id         String   @id @default(uuid())
+  assetId    String
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  assignedAt     DateTime
+  assignedBy     String
+  conditionOut   AssetCondition
+  issueNote      String?
+  /// The holder's own confirmation. Null means "we say they have it" and they have not said so.
+  acknowledgedAt DateTime?
+
+  returnedAt  DateTime?
+  returnedTo  String?
+  conditionIn AssetCondition?
+  returnNote  String?
+
+  attachments AssetAttachment[]
+  recoveries  AssetRecovery[]
+
+  @@index([assetId, assignedAt])
+  @@index([employeeId, returnedAt])
+}
+
+/// A file on an asset (photo, invoice, warranty) or on a handover (condition photos). Exactly one owner,
+/// held by a CHECK in the migration. Stores the storage id, never a URL.
+model AssetAttachment {
+  id           String              @id @default(uuid())
+  assetId      String?
+  asset        Asset?              @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  assignmentId String?
+  assignment   AssetAssignment?    @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  kind         AssetAttachmentKind
+  publicId     String              @unique
+  fileName     String
+  bytes        Int
+  format       String
+  uploadedBy   String?
+  uploadedAt   DateTime            @default(now())
+
+  @@index([assetId, uploadedAt])
+  @@index([assignmentId, uploadedAt])
+}
+
+model AssetRequest {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+
+  kind AssetRequestKind @default(NEW_ITEM)
+
+  /// NEW_ITEM names a category, REPAIR and RETURN name the asset the requester holds. Exactly one is set (CHECK in the migration).
+  categoryId String?
+  category   AssetCategory? @relation(fields: [categoryId], references: [id])
+  assetId    String?
+  asset      Asset?         @relation("RequestTarget", fields: [assetId], references: [id])
+
+  /// Supplies only; a tracked request is strictly one-to-one.
+  quantity Int?
+
+  reason String
+  status AssetRequestStatus @default(PENDING)
+
+  decidedBy    String?
+  decidedAt    DateTime?
+  decisionNote String?
+
+  orderedAt  DateTime?
+  orderedBy  String?
+  expectedBy DateTime? @db.Date
+  orderNote  String?
+
+  /// The repair this request created on approval.
+  repairId String?      @unique
+  repair   AssetRepair? @relation(fields: [repairId], references: [id])
+
+  fulfilledAt      DateTime?
+  fulfilledBy      String?
+  fulfilledAssetId String?
+  fulfilledAsset   Asset?    @relation("RequestFulfilment", fields: [fulfilledAssetId], references: [id])
+  fulfilledNote    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([employeeId, createdAt])
+  @@index([kind, status])
+}
+
+model AssetRepair {
+  id      String @id @default(uuid())
+  assetId String
+  asset   Asset  @relation(fields: [assetId], references: [id])
+
+  sentAt       DateTime
+  sentBy       String
+  vendor       String?
+  fault        String
+  expectedBack DateTime? @db.Date
+  isWarranty   Boolean   @default(false)
+
+  returnedAt     DateTime?
+  /// An expense, never capitalised: it does not enter the depreciation base.
+  cost           Decimal?        @db.Decimal(14, 2)
+  currency       Currency        @default(BDT)
+  outcome        String?
+  conditionAfter AssetCondition?
+
+  request AssetRequest?
+
+  @@index([assetId, sentAt])
+  @@index([returnedAt])
+}
+
+/// A debt owed for an asset that did not come back, or came back damaged. It records that a debt exists, who
+/// priced it and why; collecting it is a separate act. A waived recovery is kept: "we chose not to charge her" is what an auditor asks about.
+model AssetRecovery {
+  id           String           @id @default(uuid())
+  assetId      String
+  asset        Asset            @relation(fields: [assetId], references: [id])
+  employeeId   String
+  employee     Employee         @relation(fields: [employeeId], references: [id])
+  /// The custody episode it arose under. Null when an asset went missing with nobody holding it.
+  assignmentId String?
+  assignment   AssetAssignment? @relation(fields: [assignmentId], references: [id])
+
+  kind     AssetRecoveryKind
+  /// Typed by a person, never computed: book value, replacement cost and original cost are three defensible answers.
+  amount   Decimal           @db.Decimal(14, 2)
+  currency Currency          @default(BDT)
+  reason   String
+
+  status AssetRecoveryStatus @default(PENDING)
+
+  waivedBy     String?
+  waivedAt     DateTime?
+  waiverReason String?
+
+  /// The payroll adjustment or settlement that collected it. Plain columns for now: the payroll migration adds their foreign keys.
+  adjustmentId String? @unique
+  settlementId String?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([employeeId, status])
+  @@index([assetId])
+}
+
+model DepreciationRun {
+  id         String                @id @default(uuid())
+  /// "BS-DEP-00007", from IdCounter series DEP.
+  runNo      String                @unique
+  year       Int
+  month      Int
+  status     DepreciationRunStatus @default(DRAFT)
+  createdBy  String
+  createdAt  DateTime              @default(now())
+  postedBy   String?
+  postedAt   DateTime?
+  reversedBy String?
+  reversedAt DateTime?
+
+  charges AssetDepreciation[]
+
+  /// One run per month: a second attempt collides here instead of double-charging.
+  @@unique([year, month])
+  @@index([status])
+}
+
+model AssetDepreciation {
+  id      String          @id @default(uuid())
+  runId   String
+  run     DepreciationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  assetId String
+  asset   Asset           @relation(fields: [assetId], references: [id])
+
+  /// Always BDT: a USD asset is converted once, at capitalisation, and never again.
+  amount           Decimal @db.Decimal(14, 2)
+  /// The figures the charge was computed from, frozen, so a later rate change cannot rewrite history.
+  openingBookValue Decimal @db.Decimal(14, 2)
+  rate             Decimal @db.Decimal(5, 2)
+  /// How many months this charge covers: 1 normally, more when a late capitalisation is caught up.
+  months           Int     @default(1)
+
+  @@unique([runId, assetId])
+  @@index([assetId])
+}
