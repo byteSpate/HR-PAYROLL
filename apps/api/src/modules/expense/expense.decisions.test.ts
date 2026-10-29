@@ -5,7 +5,7 @@ import { parseDateOnly } from '@erp/export';
 import { createApp } from '../../app.js';
 import { makeActor } from '../../test-utils/access.js';
 import { reimburseClaims } from './expense.decisions.js';
-import { cleanExpenseData, daysAgo, hireActor, makeDepartment } from './expense.fixtures.js';
+import { cleanExpenseData, daysAgo, hireActor, makeDepartment, makePayslip } from './expense.fixtures.js';
 
 const prefix = 'zzexpdecide';
 const app = createApp();
@@ -162,11 +162,12 @@ describe('reimbursing', () => {
     const approved = await file(alice);
     await approve(approverAll, approved.id);
     const pending = await file(alice);
-    await expect(prisma.$transaction((tx) => reimburseClaims(tx, [approved.id, pending.id], { payslipId: 'payslip-1', actorUserId: approverAll.user.id }))).rejects.toMatchObject({ status: 409 });
+    const payslip = await makePayslip(alice.employee.id);
+    await expect(prisma.$transaction((tx) => reimburseClaims(tx, [approved.id, pending.id], { payslipId: payslip.id, actorUserId: approverAll.user.id }))).rejects.toMatchObject({ status: 409 });
     expect((await prisma.expenseClaim.findUniqueOrThrow({ where: { id: approved.id } })).status).toBe('APPROVED');
-    await prisma.$transaction((tx) => reimburseClaims(tx, [approved.id], { payslipId: 'payslip-1', actorUserId: approverAll.user.id }));
-    expect(await prisma.expenseClaim.findUniqueOrThrow({ where: { id: approved.id } })).toMatchObject({ status: 'REIMBURSED', payslipId: 'payslip-1' });
-    expect((await outbox('expense.claim.reimbursed', approved.id))?.payload).toMatchObject({ amount: '80.00', payslipId: 'payslip-1' });
+    await prisma.$transaction((tx) => reimburseClaims(tx, [approved.id], { payslipId: payslip.id, actorUserId: approverAll.user.id }));
+    expect(await prisma.expenseClaim.findUniqueOrThrow({ where: { id: approved.id } })).toMatchObject({ status: 'REIMBURSED', payslipId: payslip.id });
+    expect((await outbox('expense.claim.reimbursed', approved.id))?.payload).toMatchObject({ amount: '80.00', payslipId: payslip.id });
     expect((await approve(approverAll, approved.id)).status).toBe(409);
   });
 });

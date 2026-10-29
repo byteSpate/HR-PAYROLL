@@ -157,7 +157,7 @@ export function projectEmployee(
     };
   }
   if (tier === 'SELF' || tier === 'FULL' || tier === 'FINANCE') {
-    view.payroll = { salaryStructure: e.salaryStructure, bankAccountNumber: e.bankAccountNumber, bankName: e.bankName, bankRoutingNumber: e.bankRoutingNumber };
+    view.payroll = { salaryStructure: e.salaryStructure ?? null, bankAccountNumber: e.bankAccountNumber, bankName: e.bankName, bankRoutingNumber: e.bankRoutingNumber };
     view.exit = e.lastWorkingDay && e.exitReason ? { lastWorkingDay: dateOnly(e.lastWorkingDay)!, exitReason: e.exitReason, exitNote: e.exitNote } : null;
   }
   if (extras.documents !== undefined) view.documents = extras.documents;
