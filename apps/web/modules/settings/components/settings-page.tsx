@@ -42,7 +42,7 @@ export function SettingsPage({ section, children }: { section: string; children:
           </span>
           <div className="text-[13.5px] font-bold">Nothing here for you</div>
           <p className={`mx-auto mt-1 max-w-[44ch] text-[12.5px] leading-relaxed ${TONE.muted}`}>
-            Settings holds the reference tables HR and finance own. Ask an administrator if you need a
+            Settings holds the reference tables the rest of the system is built from. Ask an administrator if you need a
             change made to one.
           </p>
         </div>

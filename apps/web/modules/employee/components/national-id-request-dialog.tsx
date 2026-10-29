@@ -59,7 +59,7 @@ function RequestForm({
           </Label>
           <Input id="new-national-id" value={value} onChange={(e) => setValue(e.target.value)} />
           <p className="mt-1 text-[11.5px] text-[#A5AFBE]">
-            {currentValue ? `Currently on file: ${currentValue}` : "Nothing is on file yet"}. HR
+            {currentValue ? `Currently on file: ${currentValue}` : "Nothing is on file yet"}. An administrator
             reviews this before it takes effect.
           </p>
         </div>

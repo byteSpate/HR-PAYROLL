@@ -228,7 +228,7 @@ export function AttendancePage() {
         // as a missing value rather than a normal one.
         text: day.approval ? APPROVAL_LABEL[day.approval] : "Not raised",
         sub: day.corrected
-          ? "Edited by HR"
+          ? "Edited by an administrator"
           : day.regularised
             ? "You amended this"
             : day.autoCheckOut

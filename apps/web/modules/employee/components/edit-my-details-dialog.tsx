@@ -130,7 +130,7 @@ function EditForm({
         ))}
 
         <p className="text-[12px] text-[#A5AFBE]">
-          Everything else on your profile is maintained by HR.
+          Everything else on your profile is maintained by an administrator.
         </p>
 
         {error ? <p className="text-[13px] font-semibold text-[#B03A3A]">{error}</p> : null}

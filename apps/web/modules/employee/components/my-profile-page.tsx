@@ -124,7 +124,7 @@ function StaffProfile({
       {/* Only blockers this person can actually resolve themselves. A blocker
           is shown if and only if the field it names is one the server said
           this caller may write — with the write matrix as it stands that is
-          at most emergencyContact, and every other blocker is HR's work.
+          at most emergencyContact, and every other blocker is an administrator's work.
           Showing an employee a "payroll cannot process you" warning they are
           powerless to act on produces a support ticket and no fix. */}
       {(employee.blockers ?? [])
@@ -145,7 +145,7 @@ function StaffProfile({
         {employee.personal ? (
           <ProfileCard
             title="Personal"
-            lockedHint="National ID changes need HR approval before they take effect."
+            lockedHint="National ID changes need administrator approval before they take effect."
             rows={[
               { label: "Date of birth", value: formatDateValue(employee.personal.dateOfBirth) },
               { label: "Gender", value: employee.personal.gender },
@@ -155,7 +155,7 @@ function StaffProfile({
                 action: employee.personal.nationalIdChangeRequest ? (
                   <div className="flex items-center gap-2">
                     <span className="text-[11.5px] text-[#A5AFBE]">
-                      Change to {employee.personal.nationalIdChangeRequest.newValue} pending HR
+                      Change to {employee.personal.nationalIdChangeRequest.newValue} pending administrator
                       approval
                     </span>
                     <Button
@@ -206,7 +206,7 @@ function StaffProfile({
         {employee.employment ? (
           <ProfileCard
             title="Employment"
-            lockedHint="Employment details are maintained by HR."
+            lockedHint="Employment details are maintained by an administrator."
             rows={[
               { label: "Employee code", value: employee.employment.employeeCode },
               {
@@ -234,7 +234,7 @@ function StaffProfile({
         {employee.payroll ? (
           <ProfileCard
             title="Payroll"
-            lockedHint="Contact HR to update your bank details."
+            lockedHint="Contact an administrator to update your bank details."
             rows={[
               {
                 label: "Salary structure",
@@ -251,7 +251,7 @@ function StaffProfile({
           <DocumentsCard
             employeeId={employee.id}
             documents={employee.documents}
-            footnote="Documents are uploaded by HR."
+            footnote="Documents are uploaded by an administrator."
           />
         ) : null}
 
@@ -268,7 +268,7 @@ function StaffProfile({
             // The only card here that said nothing about why it cannot be
             // edited. Every other one does, and silence reads as an oversight
             // rather than as a rule.
-            lockedHint="Recorded by HR. Speak to them if anything here is wrong."
+            lockedHint="Recorded by an administrator. Speak to them if anything here is wrong."
           />
         ) : null}
       </div>

@@ -27,10 +27,10 @@ These are my calls; each says what changes if you disagree.
 
 - **Copy, do not write.** Take the file from `HR-MNG-V1/client/components/<area>` and `HR-MNG-V1/server/src/modules/<module>`. Allowed edits: import paths and the data layer underneath. No renamed props, no restyled markup, no new components, no reworded copy.
 - **Out of scope, never ported:** `components/accounting`, `sales`, `statements`, `posting`; routes for accounting, statements, posting rules, customers, suppliers, deals, journals; the server modules `dealMoney`, `receivables`, `supplierBill`, `vatCode`; the VAT panel in settings; the Sales Hub access flag; the two sales jobs. From `components/money`, port only what payroll, expense and cost import.
-- **Employee and admin sides are separate pages.** HR `/employee/<x>` becomes `/me/<x>`; HR `/admin/<x>` becomes the module route `/<x>`. Routes are per module, not per role (spec section 8).
-- **Sidebar:** HR-MNG-V1's own `Sidebar`. An item whose original page stacks several sections becomes a collapsible item with one child page per section; each child renders that section's original component unchanged. This is the only deliberate difference. Heading labels are HR's own from each area's `nav-config.ts` (admin side: `Overview`, `Payroll & finance`, `Administration`; personal pages: `Workspace`, `Account`); headings with the same label merge across modules. Manifest shape `{ label, order, items:[{ label, href, icon, permission, children? }] }`; icons come from `packages/ui/src/dashboard/icons.ts`.
-- **Permissions replace roles, and there are two points of view.** Where HR checks `role`, ERP uses `requirePermission` and `scopeFor`/`reaches`. Port only the employee pages (`/me/...`) and the admin pages (module routes); HR's `hr/*`, `finance/*` and `manager/*` variants (including `manager/team`) are not ported, because admins create roles with permissions later (owner, 2026-10-29).
-- **Data layer:** keep ERP's API and tests; wire the copied screens through one adapter `apps/web/modules/<module>/api.ts` that keeps HR's call signatures (including the ignored token argument), as attendance already does.
+- **Employee and admin sides are separate pages.** HR-MNG-V1 `/employee/<x>` becomes `/me/<x>`; HR-MNG-V1 `/admin/<x>` becomes the module route `/<x>`. Routes are per module, not per role (spec section 8).
+- **Sidebar:** HR-MNG-V1's own `Sidebar`. An item whose original page stacks several sections becomes a collapsible item with one child page per section; each child renders that section's original component unchanged. This is the only deliberate difference. Heading labels are the original's own from each area's `nav-config.ts` (admin side: `Overview`, `Payroll & finance`, `Administration`; personal pages: `Workspace`, `Account`); headings with the same label merge across modules. Manifest shape `{ label, order, items:[{ label, href, icon, permission, children? }] }`; icons come from `packages/ui/src/dashboard/icons.ts`.
+- **Permissions replace roles, and there are two points of view.** Where HR-MNG-V1 checks `role`, ERP uses `requirePermission` and `scopeFor`/`reaches`. Port only the employee pages (`/me/...`) and the admin pages (module routes); the original's `hr/*`, `finance/*` and `manager/*` variants (including `manager/team`) are not ported, because there is one admin who sees all of those routes combined; permissions are handed out later and the roles and permissions already built are not changed until then (owner, 2026-10-29).
+- **Data layer:** keep ERP's API and tests; wire the copied screens through one adapter `apps/web/modules/<module>/api.ts` that keeps the original's call signatures (including the ignored token argument), as attendance already does.
 - **Types once:** wire types live in `@erp/contracts/<module>/types.ts`; `apps/web/modules/<module>/types.ts` re-exports them.
 - **Porting tool:** the Plan 3 rewrite rules (`@/components/dashboard/*` to `@erp/ui/dashboard`, `@/components/ui/*` to `@erp/ui/components/*`, `@/lib/utils` to `@erp/ui/lib/cn` or `@erp/ui/lib/dates`, `@/lib/api/types` to `../types`, `@/lib/api/<module>` to `../api`, `ApiError` to `@erp/utils`, session to `@/lib/session`). The script stays outside the repo in the session scratchpad; recreate it from this list if the scratchpad is gone.
 
@@ -44,7 +44,7 @@ Everything in Plans 1 to 3 and the ledger, plus:
 - Self-decision: only `ADMIN` and `SUPER_ADMIN` may decide their own expense claim, asset request, payroll run or settlement; everyone else gets 403. Use `@erp/approvals`.
 - Migrations: the CLAUDE.md recipe (`migrate diff`, never `migrate dev`, keep the `one_super_admin` index), one migration per module.
 - Every mutation writes an audit row (`@erp/audit`) in the same transaction as the change, and every event type is listed in the owning manifest's `events`.
-- Permissions are declared per manifest with `{ label, scopes?, managerDefault? }`; keys unique across modules. Starter grants go in `packages/db/src/seed/starter-roles.ts` (HR Admin, Finance Officer, Employee).
+- Permissions are declared per manifest with `{ label, scopes?, managerDefault? }`; keys unique across modules. Starter grants go in `packages/db/src/seed/starter-roles.ts` (HR-MNG-V1 Admin, Finance Officer, Employee).
 - Dev run: Docker Postgres on 5433 (`pnpm services:up`), ERP on web 3100 and API 4100 (HR-MNG-V1 containers hold 3000 and 4000), login `admin@example.com` / `change-me-now`.
 - Done means: `pnpm typecheck`, `pnpm lint`, `pnpm build`, `pnpm test` pass, and the new pages were opened in a browser against the dev database. Test commands below run one file: `pnpm --filter @erp/<pkg> exec vitest run <file>`.
 
@@ -52,9 +52,9 @@ Everything in Plans 1 to 3 and the ledger, plus:
 
 Tasks below name only what is specific to the module. Each task's steps expand to this:
 
-1. **Contracts and schema:** manifest (`permissions`, `nav`, `events`, `deps`), `schemas.ts`, `types.ts` (copied from HR `*.types.ts`), register in `registry.ts`; Prisma models ported from HR `schema.prisma` minus accounting columns; migration by the CLAUDE.md recipe; starter grants; `pnpm db:generate`.
-2. **API port, test first:** copy HR `*.test.ts` for the module, replace role fixtures with permission/scope fixtures, run and see FAIL; then copy the service/calc/validators, replace roles with `scopeFor`, `posting` calls with `emit(tx, ...)`; PASS. Routes in `<module>.routes.ts` guarded by `requirePermission`, mounted in `apiMounts`.
-3. **Web port:** copy components with the port rules, write the `api.ts` adapter, keep pages under `app/(app)/...` thin, add the sidebar entry in the manifest, copy component tests where HR has them.
+1. **Contracts and schema:** manifest (`permissions`, `nav`, `events`, `deps`), `schemas.ts`, `types.ts` (copied from HR-MNG-V1 `*.types.ts`), register in `registry.ts`; Prisma models ported from HR-MNG-V1 `schema.prisma` minus accounting columns; migration by the CLAUDE.md recipe; starter grants; `pnpm db:generate`.
+2. **API port, test first:** copy HR-MNG-V1 `*.test.ts` for the module, replace role fixtures with permission/scope fixtures, run and see FAIL; then copy the service/calc/validators, replace roles with `scopeFor`, `posting` calls with `emit(tx, ...)`; PASS. Routes in `<module>.routes.ts` guarded by `requirePermission`, mounted in `apiMounts`.
+3. **Web port:** copy components with the port rules, write the `api.ts` adapter, keep pages under `app/(app)/...` thin, add the sidebar entry in the manifest, copy component tests where HR-MNG-V1 has them.
 4. **Browser check** on 3100/4100 as the admin and as a seeded Employee-role user: every page loads, one create-edit-decide round trip works, console clean.
 5. **Commit** per task.
 
@@ -85,51 +85,51 @@ Inputs the spec implies but the main flows do not exercise. Each has a named tes
 
 - [ ] **Step 1: Failing tests.** `html-to-pdf.test.ts`: `htmlToPdf('<p>hi</p>')` returns a buffer starting with `%PDF`. Route test: `GET /api/attendance/report?format=pdf&from=2026-08-01&to=2026-08-01` returns 200, `Content-Type: application/pdf`, filename `attendance-summary-2026-08-01-to-2026-08-01.pdf`, and writes one `EXPORT` audit row.
 - [ ] **Step 2:** Run both; expect FAIL (501 and missing package).
-- [ ] **Step 3:** Add `puppeteer` 25.3.0 to `@erp/pdf`; copy HR `attendance.report.pdf.ts` as `reportToHtml(report: AttendanceReport): string` (the single-day layout differs, as in HR); replace the 501 branch.
+- [ ] **Step 3:** Add `puppeteer` 25.3.0 to `@erp/pdf`; copy HR-MNG-V1 `attendance.report.pdf.ts` as `reportToHtml(report: AttendanceReport): string` (the single-day layout differs, as in HR-MNG-V1); replace the 501 branch.
 - [ ] **Step 4:** Run; expect PASS. Download the PDF in the browser and open it.
 - [ ] **Step 5:** Commit `feat(pdf): shared html-to-pdf kit and attendance pdf report`.
 
 ### Task A2: Employee attendance (`/me/attendance`)
 
-**Files:** copy the HR `components/attendance` pieces used by `app/(dashboard)/employee/attendance/page.tsx` (punch card, own month, regularise dialog, history) into `apps/web/modules/attendance/components/`; page `apps/web/app/(app)/me/attendance/page.tsx`; manifest nav item under `Workspace`, no permission.
+**Files:** copy the HR-MNG-V1 `components/attendance` pieces used by `app/(dashboard)/employee/attendance/page.tsx` (punch card, own month, regularise dialog, history) into `apps/web/modules/attendance/components/`; page `apps/web/app/(app)/me/attendance/page.tsx`; manifest nav item under `Workspace`, no permission.
 
-**Interfaces:** Consumes the Plan 3 adapter (`getEmployeeAttendance` and the punch and regularise calls in `api.ts`); add any missing adapter function with HR's signature.
+**Interfaces:** Consumes the Plan 3 adapter (`getEmployeeAttendance` and the punch and regularise calls in `api.ts`); add any missing adapter function with the original's signature.
 
-- [ ] **Step 1: Failing tests** (copied from HR if present): punch-in shows the check-out button; a regularise request posts `{date, checkIn, checkOut, reason}`; a day before go-live renders as not tracked.
+- [ ] **Step 1: Failing tests** (copied from HR-MNG-V1 if present): punch-in shows the check-out button; a regularise request posts `{date, checkIn, checkOut, reason}`; a day before go-live renders as not tracked.
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Copy components and page; add the adapter functions.
 - [ ] **Step 4:** Run; expect PASS. Browser check as the Employee-role user: punch in, punch out, regularise, then see it on the admin approvals page.
-- [ ] **Step 5:** Commit `feat(attendance): exact HR employee attendance page`.
+- [ ] **Step 5:** Commit `feat(attendance): exact HR-MNG-V1 employee attendance page`.
 
 ### Task A3: Leave, admin side (collapsible)
 
-**Files:** copy the HR `components/leave` sections used by `app/(dashboard)/admin/leave/page.tsx`; pages `app/(app)/leave/<section>/page.tsx`; update `packages/contracts/src/leave/manifest.ts` nav to one collapsible `Leave` item whose children are the original page's sections in their original order. Read the HR page first and name the children after its sections; the Plan 3 table is superseded.
+**Files:** copy the HR-MNG-V1 `components/leave` sections used by `app/(dashboard)/admin/leave/page.tsx`; pages `app/(app)/leave/<section>/page.tsx`; update `packages/contracts/src/leave/manifest.ts` nav to one collapsible `Leave` item whose children are the original page's sections in their original order. Read the HR-MNG-V1 page first and name the children after its sections; the Plan 3 table is superseded.
 
-**Interfaces:** Adapter `apps/web/modules/leave/api.ts` keeps the signatures of HR `lib/api/leave.ts`. Server routes exist from Plan 3; add the ones HR calls that ERP lacks and list them in the commit body.
+**Interfaces:** Adapter `apps/web/modules/leave/api.ts` keeps the signatures of HR-MNG-V1 `lib/api/leave.ts`. Server routes exist from Plan 3; add the ones HR-MNG-V1 calls that ERP lacks and list them in the commit body.
 
-- [ ] **Step 1: Failing tests:** component tests copied from HR `components/leave`; API tests for each added route (a team manager sees only direct reports; admin sees all).
+- [ ] **Step 1: Failing tests:** component tests copied from HR-MNG-V1 `components/leave`; API tests for each added route (a team manager sees only direct reports; admin sees all).
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Copy components; add missing routes under `leave.read`/`leave.approve`. The leave types panel moves to Settings (Task A6).
 - [ ] **Step 4:** Run; expect PASS. Browser check each child page.
-- [ ] **Step 5:** Commit `feat(leave): exact HR leave sections as collapsible pages`.
+- [ ] **Step 5:** Commit `feat(leave): exact HR-MNG-V1 leave sections as collapsible pages`.
 
 ### Task A4: Leave, employee side (`/me/leave`)
 
-**Files:** copy HR `employee/leave` page components; `app/(app)/me/leave/page.tsx`; nav item under `Workspace`.
+**Files:** copy HR-MNG-V1 `employee/leave` page components; `app/(app)/me/leave/page.tsx`; nav item under `Workspace`.
 
 - [ ] **Step 1: Failing tests:** balance card; apply dialog honours the half-day window; cancel own pending request.
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Copy and adapt imports; delete the Plan 3 fresh leave components and tests the copies replace.
 - [ ] **Step 4:** Run; expect PASS. Browser check apply, cancel, balance.
-- [ ] **Step 5:** Commit `feat(leave): exact HR employee leave page`.
+- [ ] **Step 5:** Commit `feat(leave): exact HR-MNG-V1 employee leave page`.
 
 ### Task A5: Employee point of view: Profile and Directory (done), admin employees (moved)
 
-Only two points of view exist (see the ledger), so HR's `manager/team` is not ported: a manager is anyone holding `employee.read:team`, and the admin list already covers that scope. Departments are a Settings panel in HR, so they move to A6.
+Only two points of view exist (see the ledger), so the original's `manager/team` is not ported: a manager is anyone holding `employee.read:team`, and the admin list already covers that scope. Departments are a Settings panel in HR-MNG-V1, so they move to A6.
 
-**Done:** `/me` is HR's `MyProfilePage` (staff) or `AccountProfile` (account with no employee record), `/me/directory` is HR's `DirectoryPage` with `ColleagueDialog`. Data layer: `apps/web/modules/employee/profile-api.ts` (HR signatures over ERP's endpoints), session and account calls in `modules/settings/api.ts`, `GET /auth/account`, `PATCH /auth/display-name` (null clears), own avatar endpoints, `SignedDocumentUrl.expiresAt`. The account-only panel "What X can do" lists the account's real permissions from the manifests (`summarizeGrants`) or "Every permission" for admin levels.
+**Done:** `/me` is the original's `MyProfilePage` (staff) or `AccountProfile` (account with no employee record), `/me/directory` is the original's `DirectoryPage` with `ColleagueDialog`. Data layer: `apps/web/modules/employee/profile-api.ts` (HR-MNG-V1 signatures over ERP's endpoints), session and account calls in `modules/settings/api.ts`, `GET /auth/account`, `PATCH /auth/display-name` (null clears), own avatar endpoints, `SignedDocumentUrl.expiresAt`. The account-only panel "What X can do" lists the account's real permissions from the manifests (`summarizeGrants`) or "Every permission" for admin levels.
 
-**Moved to later parts, not dropped:** admin employees list, detail and add (HR `employees-page`, `employee-detail-page`, `edit-card-dialog`, `shift-dialog`, `exit-details-dialog`, `salary-structure-dialog`, `leave-balance-card`) join Part C with salary structure; `profile-insights` and the "What you've done" feed join Part D; self change-email, the pending-email notice and HR's change-email dialog join C3 with `@erp/mail`.
+**Moved to later parts, not dropped:** admin employees list, detail and add (HR-MNG-V1 `employees-page`, `employee-detail-page`, `edit-card-dialog`, `shift-dialog`, `exit-details-dialog`, `salary-structure-dialog`, `leave-balance-card`) join Part C with salary structure; `profile-insights` and the "What you've done" feed join Part D; self change-email, the pending-email notice and the original's change-email dialog join C3 with `@erp/mail`.
 
 - [x] **Step 1:** Failing tests first for the permission summary, clearing the display name, and the document-URL expiry; component test for the account panel.
 - [x] **Step 2:** Run; RED for each.
@@ -139,15 +139,15 @@ Only two points of view exist (see the ledger), so HR's `manager/team` is not po
 
 ### Task A6: Settings (collapsible panels) and Users (done), Activity (moved to D)
 
-Settings is one sidebar item whose children are pages; modules add their own children and same-label expandable items merge (`mergeNavGroups`). Done: `SettingsPage` shell, Departments, Shifts, Leave types panels, HR's Users page over ERP's level-and-role model. Roles stays ERP's own page. Activity is HR's events feed, so it ships with events in Part D; Resend-password ships with mail in C3. Each later module adds its Settings child with its own task: asset categories (B4), cost categories (B5), exchange rates and payroll settings (C1).
+Settings is one sidebar item whose children are pages; modules add their own children and same-label expandable items merge (`mergeNavGroups`). Done: `SettingsPage` shell, Departments, Shifts, Leave types panels, the original's Users page over ERP's level-and-role model. Roles stays ERP's own page. Activity is the original's events feed, so it ships with events in Part D; Resend-password ships with mail in C3. Each later module adds its Settings child with its own task: asset categories (B4), cost categories (B5), exchange rates and payroll settings (C1).
 
-Server changes this needed, each test-first: shift update returns `{ shift, impact }`, the General shift is seeded and cannot be renamed or deleted, leave type update is partial and keeps HR's statutory floor, the users list carries `createdAt` and the linked employee.
+Server changes this needed, each test-first: shift update returns `{ shift, impact }`, the General shift is seeded and cannot be renamed or deleted, leave type update is partial and keeps the original's statutory floor, the users list carries `createdAt` and the linked employee.
 
 - [x] **Steps 1-5** done; committed as `feat(settings): HR shifts and leave types panels as settings pages`, `feat(settings): HR settings shell and departments panel as a page` and the Users commit.
 
 ### Task A7: Cleanup and ledger (partly moved)
 
-Done in Part A: removed the fresh department, shifts, leave types, users, manual-entry and My Team pages, their helpers and tests; ledger updated. **Moved:** deleting `packages/ui/src/page/**` waits for the last fresh screens that use it (admin employees list, detail and add in Part C; dashboard, Roles and Activity in D), so the check `rg "@erp/ui/page" apps packages` becomes the closing step of Part D. The leave accrual move out of `attendance.grid.ts` is left as is: the grid's output is not HR's `derive` output, and unifying them is a behaviour change, not cleanup.
+Done in Part A: removed the fresh department, shifts, leave types, users, manual-entry and My Team pages, their helpers and tests; ledger updated. **Moved:** deleting `packages/ui/src/page/**` waits for the last fresh screens that use it (admin employees list, detail and add in Part C; dashboard, Roles and Activity in D), so the check `rg "@erp/ui/page" apps packages` becomes the closing step of Part D. The leave accrual move out of `attendance.grid.ts` is left as is: the grid's output is not the original's `derive` output, and unifying them is a behaviour change, not cleanup.
 
 - [x] Verified: `pnpm typecheck && pnpm lint && pnpm test` pass; Part A PR opened from `feat/exact-port-people`.
 
@@ -173,13 +173,13 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 ### Task B2: Expense UI (`/expenses`, `/me/expenses`) and report
 
-**Files:** copy `components/expense` (4 files) and the `lib/api/expenses.ts` closure; pages `app/(app)/expenses/page.tsx` (collapsible only if the original admin page stacks sections; read it first), `app/(app)/me/expenses/page.tsx`; report PDF through `@erp/pdf` from HR `expense.report.pdf.ts`. Nav: `Employee expenses` under `Payroll & finance`, `Expenses` under `Workspace`.
+**Files:** copy `components/expense` (4 files) and the `lib/api/expenses.ts` closure; pages `app/(app)/expenses/page.tsx` (collapsible only if the original admin page stacks sections; read it first), `app/(app)/me/expenses/page.tsx`; report PDF through `@erp/pdf` from HR-MNG-V1 `expense.report.pdf.ts`. Nav: `Employee expenses` under `Payroll & finance`, `Expenses` under `Workspace`.
 
 - [ ] **Step 1: Failing tests:** copied component tests; the report route returns `application/pdf` and one `EXPORT` audit row.
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Copy and wire.
 - [ ] **Step 4:** Run; expect PASS. Browser check submit, approve, reimburse, report download.
-- [ ] **Step 5:** Commit `feat(expense): exact HR expense screens and pdf report`.
+- [ ] **Step 5:** Commit `feat(expense): exact HR-MNG-V1 expense screens and pdf report`.
 
 ### Task B3: Asset backend
 
@@ -201,11 +201,11 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 **Files:** copy `components/asset` (20 files); pages `app/(app)/assets/**` (children per section of the original `admin/assets` page; read it first), `app/(app)/me/assets/page.tsx`; the import wizard uses the existing `components/import` copies over the `@erp/export` import kit; Settings child `Asset categories`.
 
-- [ ] **Step 1: Failing tests:** copied component tests; the adapter maps HR `assets.ts` calls to ERP routes.
+- [ ] **Step 1: Failing tests:** copied component tests; the adapter maps HR-MNG-V1 `assets.ts` calls to ERP routes.
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Copy and wire.
 - [ ] **Step 4:** Run; expect PASS. Browser check create, assign, return, request, repair, recovery.
-- [ ] **Step 5:** Commit `feat(asset): exact HR asset screens`.
+- [ ] **Step 5:** Commit `feat(asset): exact HR-MNG-V1 asset screens`.
 
 ### Task B5: Cost backend and UI
 
@@ -270,7 +270,7 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 - [ ] **Step 1: Failing tests:** `GET /payroll/payslips/:id` for another employee's payslip is 404 (Review Focus 2); the owner downloads a PDF starting `%PDF`; `sendMail` without SMTP writes one `SKIPPED` row.
 - [ ] **Step 2:** Run; expect FAIL.
-- [ ] **Step 3:** Implement; add `nodemailer` at HR's version without the caret; optional `SMTP_*` in `.env.example`.
+- [ ] **Step 3:** Implement; add `nodemailer` at the original's version without the caret; optional `SMTP_*` in `.env.example`.
 - [ ] **Step 4:** Run; expect PASS. Browser check as Employee: own payslip list, detail, PDF.
 - [ ] **Step 5:** Commit `feat(payroll): payslips with pdf and mail kit`.
 
@@ -283,7 +283,7 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 - Uses `exitChecklist` (B3), approved-claim data (B1) and pending salary (C2) through service functions only.
 - Freeze: the employee service exports `setExitFrozen(employeeId: string, frozen: boolean, tx?: Tx)`; settlement calls it on approve and on reject or delete; the employee edit path answers 409 while set.
 
-- [ ] **Step 1: Failing tests** (ported): gratuity per the BD Labour Act using HR's fixtures; notice-pay shortfall; pending salary pro-rated; approving freezes exit fields and editing them is 409; rejecting unfreezes (Review Focus 5); a non-admin approving their own settlement is 403; another employee's settlement by id is 404 (Review Focus 2).
+- [ ] **Step 1: Failing tests** (ported): gratuity per the BD Labour Act using the original's fixtures; notice-pay shortfall; pending salary pro-rated; approving freezes exit fields and editing them is 409; rejecting unfreezes (Review Focus 5); a non-admin approving their own settlement is 403; another employee's settlement by id is 404 (Review Focus 2).
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Implement per the recipe and the freeze interface.
 - [ ] **Step 4:** Run; expect PASS.
@@ -309,7 +309,7 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 **Files:** `packages/contracts/src/event/**`; `packages/db/prisma/schema/event.prisma` (`Event`); `apps/api/src/modules/event/{event.service,event.emit,event.routes,event.types,event.validators}.ts` ported.
 
-**Interfaces:** `readEvents(actor, { limit?, cursor? }): Promise<EventPage>` is the only list function; there is no unfiltered one (HR rule). `recordEvent(tx, input)` lets modules write feed entries.
+**Interfaces:** `readEvents(actor, { limit?, cursor? }): Promise<EventPage>` is the only list function; there is no unfiltered one (HR-MNG-V1 rule). `recordEvent(tx, input)` lets modules write feed entries.
 
 - [ ] **Step 1: Failing tests:** an employee cannot see a leave rejection addressed to someone else; limit is capped at 50; audience rules are resolved at read time.
 - [ ] **Step 2:** Run; expect FAIL.
@@ -357,11 +357,11 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 ### Task E2: Scheduled jobs
 
-**Files:** `apps/worker/src/jobs/{index,attendance-autoclose,attendance-digest,attendance-report-email,payslip-email,asset-sweep,expense-sweep,exit-deactivation}.job.ts` ported from HR `src/jobs` (sales jobs excluded), plus the Plan 2 follow-up: deactivate an employee on their last working day.
+**Files:** `apps/worker/src/jobs/{index,attendance-autoclose,attendance-digest,attendance-report-email,payslip-email,asset-sweep,expense-sweep,exit-deactivation}.job.ts` ported from HR-MNG-V1 `src/jobs` (sales jobs excluded), plus the Plan 2 follow-up: deactivate an employee on their last working day.
 
-**Interfaces:** Each job exports `run<Name>(): Promise<number>` (count affected); `startJobs()` schedules them with `node-cron` and `{ timezone: env.APP_TIMEZONE }`, wrapped in a `guard` that logs instead of throwing. Auto-close `5 0 * * *`; digest nudge `30 9 * * *` (HR's times).
+**Interfaces:** Each job exports `run<Name>(): Promise<number>` (count affected); `startJobs()` schedules them with `node-cron` and `{ timezone: env.APP_TIMEZONE }`, wrapped in a `guard` that logs instead of throwing. Auto-close `5 0 * * *`; digest nudge `30 9 * * *` (the original's times).
 
-- [ ] **Step 1: Failing tests** (ported from HR job tests): auto-close closes only finished days; the digest nudges once per day; exit deactivation runs for a last working day of today and not for tomorrow.
+- [ ] **Step 1: Failing tests** (ported from HR-MNG-V1 job tests): auto-close closes only finished days; the digest nudges once per day; exit deactivation runs for a last working day of today and not for tomorrow.
 - [ ] **Step 2:** Run; expect FAIL.
 - [ ] **Step 3:** Port the jobs onto module service functions (`closeOpenDays` from attendance).
 - [ ] **Step 4:** Run; expect PASS.
@@ -371,7 +371,7 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 **Files:** `apps/worker/src/handlers/{leave,expense,payroll,settlement,asset}.handler.ts`.
 
-**Interfaces:** Handlers turn events into `@erp/notifications` rows and, where HR emailed, `sendMail` (payslip on `payroll.run.finalized`, decision emails). Accounting is not a subscriber. Notification email delivery (a Plan 3 follow-up) lands here.
+**Interfaces:** Handlers turn events into `@erp/notifications` rows and, where HR-MNG-V1 emailed, `sendMail` (payslip on `payroll.run.finalized`, decision emails). Accounting is not a subscriber. Notification email delivery (a Plan 3 follow-up) lands here.
 
 - [ ] **Step 1: Failing tests:** `payroll.run.finalized` queues one payslip email per employee; `expense.claim.approved` notifies the claimant; a replay does neither twice.
 - [ ] **Step 2:** Run; expect FAIL.
@@ -387,7 +387,7 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 - [ ] **Step 1:** Failing test for the mount-coverage rule.
 - [ ] **Step 2:** Run; expect FAIL.
-- [ ] **Step 3:** Port HR's `apiDocs` structure; document each module's routes, using the contracts' Zod schemas for request and response bodies where possible.
+- [ ] **Step 3:** Port the original's `apiDocs` structure; document each module's routes, using the contracts' Zod schemas for request and response bodies where possible.
 - [ ] **Step 4:** Run; expect PASS.
 - [ ] **Step 5:** Commit `feat(api): openapi docs from module contributions`.
 
@@ -409,6 +409,6 @@ Done in Part A: removed the fresh department, shifts, leave types, users, manual
 
 - [ ] **Step 1: Failing check:** `rg "planned and not yet present" CLAUDE.md` finds the worker note.
 - [ ] **Step 2:** Run; expect a hit (FAIL).
-- [ ] **Step 3:** Update the docs, then walk every in-scope HR route against its ERP page and list any left unmatched in the PR body.
+- [ ] **Step 3:** Update the docs, then walk every in-scope HR-MNG-V1 route against its ERP page and list any left unmatched in the PR body.
 - [ ] **Step 4:** `pnpm typecheck && pnpm lint && pnpm build && pnpm test`; expect PASS.
 - [ ] **Step 5:** Commit `docs: close the exact-port ledger and update agent notes`. Push to both remotes and open the PR for Part E.

@@ -519,7 +519,7 @@ function EmployeeDaysDialog({
       { tag: STATUS_LABEL[day.status], tone: STATUS_TONE[day.status] },
       {
         text: day.approval ? APPROVAL_LABEL[day.approval] : "Not raised",
-        sub: day.corrected ? "Corrected by HR" : day.regularised ? "Employee amended" : undefined,
+        sub: day.corrected ? "Corrected by an administrator" : day.regularised ? "Employee amended" : undefined,
       },
       // Only a day with a stored record can be corrected. A derived absence
       // has nothing to edit, which is why the action is absent rather than
@@ -578,7 +578,7 @@ function EmployeeDaysDialog({
               {employee.fullName}, {formatMonthLabel(month, year)}
             </DialogTitle>
             <DialogDescription>
-              A correction settles the record immediately. HR outranks the manager in this chain,
+              A correction settles the record immediately. An administrator outranks the manager in this chain,
               and every change is kept in the record&apos;s history.
             </DialogDescription>
           </DialogHeader>
