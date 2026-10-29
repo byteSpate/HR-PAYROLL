@@ -67,6 +67,6 @@ export const reportQuery = z.object({
   to: dateOnly,
   employeeId: z.string().min(1).optional(),
   status: z.enum(expenseStatuses).optional(),
-  format: z.enum(['json', 'csv', 'pdf']).default('json'),
+  format: z.enum(['json', 'csv']).default('json'),
 });
 export type ReportQuery = z.infer<typeof reportQuery>;

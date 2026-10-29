@@ -1,4 +1,5 @@
 import { createClaimBody, hasRoute, updateClaimBody, type ClaimQuery, type ExpenseClaim } from '@erp/contracts/expense';
+import { getStorage } from '@erp/attachments';
 import { writeAudit } from '@erp/audit';
 import { dec, prisma } from '@erp/db';
 import { emit } from '@erp/events';
@@ -137,6 +138,10 @@ export async function updateClaim(viewer: Viewer, id: string, input: unknown): P
 /** A hard delete: a pending claim nobody has acted on has no history worth a fifth status, and the audit row records that it existed. */
 export async function deleteClaim(viewer: Viewer, id: string): Promise<void> {
   const claim = await ownPendingClaim(viewer, id);
+  // The attachment rows cascade with the claim, which would leave their files behind with nothing pointing at them.
+  // Removed first and outside the transaction: a file removed for a claim that then fails to delete is recoverable, the reverse is not.
+  const receipts = await prisma.expenseAttachment.findMany({ where: { claimId: id }, select: { publicId: true } });
+  for (const receipt of receipts) await getStorage()?.remove(receipt.publicId);
   await prisma.$transaction(async (tx) => {
     await writeAudit(tx, { entity: 'EXPENSE_CLAIM', entityId: id, action: 'DELETE', changedBy: viewer.sub, before: { name: claim.name, amount: claim.amount.toFixed(2), currency: claim.currency, expenseDate: formatDateOnly(claim.expenseDate) } });
     await tx.expenseClaim.delete({ where: { id } });

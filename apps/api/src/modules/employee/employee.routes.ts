@@ -1,7 +1,7 @@
 /// <reference types="multer" />
 // req.file comes from multer, applied by uploadSingle in @erp/attachments.
-import { Router, type Request, type RequestHandler } from 'express';
-import { requireStorage, uploadSingle } from '@erp/attachments';
+import { Router, type Request } from 'express';
+import { storageReady, uploadSingle } from '@erp/attachments';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
 import type { Viewer } from './employee.access.js';
@@ -84,11 +84,6 @@ employeeRouter.patch('/:id/account', requirePermission('employee.update:departme
   res.json(await setAccountActive(viewer(req), String(req.params['id']), req.body));
 });
 
-// Storage is checked before multer buffers the upload, so an unconfigured server answers 503 at once.
-const storageReady: RequestHandler = (_req, _res, next) => {
-  requireStorage();
-  next();
-};
 const documentFile = uploadSingle('file', { maxBytes: 10 * 1024 * 1024, mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
 const avatarFile = uploadSingle('file', { maxBytes: 2 * 1024 * 1024, mimeTypes: ['image/jpeg', 'image/png', 'image/webp'] });
 const id = (req: Request) => String(req.params['id']);
