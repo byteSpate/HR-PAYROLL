@@ -97,6 +97,9 @@ assetRouter.post('/recoveries', requirePermission('asset.manage'), async (req, r
 assetRouter.patch('/recoveries/:id', requirePermission('asset.manage'), async (req, res) => {
   res.json(await recoveries.updateRecovery(req.user!, id(req), updateRecoveryBody.parse(req.body)));
 });
+assetRouter.post('/recoveries/:id/recover-from-payroll', requirePermission('asset.manage'), async (req, res) => {
+  res.json(await recoveries.recoverFromPayroll(req.user!, id(req)));
+});
 assetRouter.post('/recoveries/:id/waive', requirePermission('asset.manage'), async (req, res) => {
   res.json(await recoveries.waiveRecovery(req.user!, id(req), waiveRecoveryBody.parse(req.body)));
 });

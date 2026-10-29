@@ -63,6 +63,7 @@ export interface EmployeeRecord {
   reportingManager: { id: string; fullName: string } | null;
   user: { email: string; isActive: boolean; mustChangePassword: boolean };
   shift: { id: string; name: string } | null;
+  salaryStructure: { id: string; name: string; currency: 'BDT' | 'USD' } | null;
   phone: string | null;
   profilePicture: string | null;
   employmentType: EmploymentType;
@@ -70,6 +71,7 @@ export interface EmployeeRecord {
   joiningDate: Date;
   officeLocation: string | null;
   shiftId: string | null;
+  salaryStructureId: string | null;
   lastWorkingDay: Date | null;
   exitReason: string | null;
   exitNote: string | null;
@@ -91,6 +93,7 @@ export const EMPLOYEE_INCLUDE = {
   department: { select: { id: true, name: true } },
   reportingManager: { select: { id: true, fullName: true } },
   shift: { select: { id: true, name: true } },
+  salaryStructure: { select: { id: true, name: true, currency: true } },
   user: { select: { email: true, isActive: true, mustChangePassword: true } },
 } as const;
 
@@ -154,8 +157,7 @@ export function projectEmployee(
     };
   }
   if (tier === 'SELF' || tier === 'FULL' || tier === 'FINANCE') {
-    // No payroll module yet, so there is no salary structure to show.
-    view.payroll = { salaryStructure: null, bankAccountNumber: e.bankAccountNumber, bankName: e.bankName, bankRoutingNumber: e.bankRoutingNumber };
+    view.payroll = { salaryStructure: e.salaryStructure, bankAccountNumber: e.bankAccountNumber, bankName: e.bankName, bankRoutingNumber: e.bankRoutingNumber };
     view.exit = e.lastWorkingDay && e.exitReason ? { lastWorkingDay: dateOnly(e.lastWorkingDay)!, exitReason: e.exitReason, exitNote: e.exitNote } : null;
   }
   if (extras.documents !== undefined) view.documents = extras.documents;

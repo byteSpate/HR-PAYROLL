@@ -1,0 +1,158 @@
+// Ported from HR-MNG-V1 without the accounting columns and the activeKey workaround: a partial unique
+// index (see the migration) keeps one live run per month instead.
+
+enum ComponentKind {
+  EARNING
+  DEDUCTION
+}
+
+enum ComponentCalc {
+  FIXED
+  PERCENT_OF_BASIC
+}
+
+enum PayrollStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  DISBURSED
+}
+
+model SalaryStructure {
+  id         String            @id @default(uuid())
+  name       String            @unique
+  /// The currency `basic` and every FIXED component is denominated in. Immutable after creation.
+  currency   Currency          @default(BDT)
+  basic      Decimal           @db.Decimal(14, 2)
+  isActive   Boolean           @default(true)
+  components SalaryComponent[]
+  employees  Employee[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+model SalaryComponent {
+  id                String          @id @default(uuid())
+  salaryStructureId String
+  salaryStructure   SalaryStructure @relation(fields: [salaryStructureId], references: [id], onDelete: Cascade)
+  /// Stable machine key. Payslip breakdowns reference this, never `label`.
+  code              String
+  label             String
+  kind              ComponentKind
+  calc              ComponentCalc
+  /// FIXED: an amount in the structure's currency. PERCENT_OF_BASIC: percentage points.
+  value             Decimal         @db.Decimal(10, 2)
+  sortOrder         Int             @default(0)
+  /// Leave pay and the gratuity base. False for bonus and overtime.
+  countsAsWages     Boolean         @default(true)
+
+  @@unique([salaryStructureId, code])
+}
+
+model PayrollRun {
+  id                      String        @id @default(uuid())
+  month                   Int
+  year                    Int
+  status                  PayrollStatus @default(DRAFT)
+  /// The USD to BDT rate in force at month-end, stamped at process.
+  fxRateToBdt             Decimal?      @db.Decimal(18, 6)
+  /// The rate when it was actually disbursed, if different.
+  disbursementFxRateToBdt Decimal?      @db.Decimal(18, 6)
+  processedBy             String?
+  processedAt             DateTime?
+  submittedBy             String?
+  submittedAt             DateTime?
+  approvedBy              String?
+  approvedAt              DateTime?
+  disbursedBy             String?
+  disbursedAt             DateTime?
+  rejectionNote           String?
+  emailStartedAt          DateTime?
+  notes                   String?
+  payslips                Payslip[]
+  createdAt               DateTime      @default(now())
+  /// Soft delete, for a DRAFT run only; frees the month for a new run.
+  deletedAt               DateTime?
+  deletedBy               String?
+  /// Employees left out of this run, applied when it is processed again.
+  excludedEmployeeIds     String[]      @default([])
+
+  @@index([month, year])
+}
+
+model Payslip {
+  id           String     @id @default(uuid())
+  /// "BS-PAY-00123", from IdCounter series PAY.
+  payslipNo    String     @unique
+  payrollRunId String
+  payrollRun   PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee   @relation(fields: [employeeId], references: [id])
+
+  calendarDays Int
+  lopDays      Decimal @db.Decimal(5, 2)
+  payableDays  Decimal @db.Decimal(5, 2)
+
+  currency        Currency
+  basic           Decimal  @db.Decimal(14, 2)
+  grossFull       Decimal  @db.Decimal(14, 2)
+  grossPay        Decimal  @db.Decimal(14, 2)
+  totalDeductions Decimal  @db.Decimal(14, 2)
+  netPay          Decimal  @db.Decimal(14, 2)
+  /// Outside grossPay: a reimbursement returns money already spent, so it is not wages.
+  reimbursements  Decimal  @default(0) @db.Decimal(14, 2)
+  netPayable      Decimal  @db.Decimal(14, 2)
+
+  /// Exactly 1 when currency is BDT. The BDT twins are part of the snapshot.
+  fxRateToBdt        Decimal @db.Decimal(18, 6)
+  grossPayBdt        Decimal @db.Decimal(14, 2)
+  totalDeductionsBdt Decimal @db.Decimal(14, 2)
+  netPayBdt          Decimal @db.Decimal(14, 2)
+  netPayableBdt      Decimal @db.Decimal(14, 2)
+
+  breakdown Json
+
+  /// Storage id of the cached PDF, never a URL.
+  pdfUrl     String?
+  emailedAt  DateTime?
+  emailError String?
+
+  claims      ExpenseClaim[]
+  adjustments PayrollAdjustment[]
+
+  @@unique([payrollRunId, employeeId])
+  @@index([employeeId])
+}
+
+model PayrollAdjustment {
+  id         String        @id @default(uuid())
+  employeeId String
+  employee   Employee      @relation(fields: [employeeId], references: [id])
+  month      Int
+  year       Int
+  kind       ComponentKind
+  code       String
+  label      String
+  currency   Currency      @default(BDT)
+  amount     Decimal       @db.Decimal(14, 2)
+  reason     String
+  createdBy  String
+  createdAt  DateTime      @default(now())
+  /// Set when a run consumes it, so an adjustment cannot be paid twice; released when the run is reprocessed.
+  payslipId  String?
+  payslip    Payslip?      @relation(fields: [payslipId], references: [id])
+
+  assetRecovery AssetRecovery?
+
+  @@index([employeeId, year, month])
+  @@index([year, month, payslipId])
+}
+
+/// One row keyed "payroll". A missing row means every default.
+model PayrollSetting {
+  id                      String   @id @default("payroll")
+  deductLossOfPay         Boolean  @default(true)
+  recoverAssetsFromSalary Boolean  @default(true)
+  updatedBy               String?
+  updatedAt               DateTime @updatedAt
+}

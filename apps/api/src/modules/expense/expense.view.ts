@@ -5,6 +5,7 @@ import { formatDateOnly } from '@erp/export';
 export const CLAIM_INCLUDE = {
   employee: { select: { id: true, fullName: true, employeeCode: true } },
   category: { select: { id: true, code: true, name: true } },
+  payslip: { select: { id: true, payslipNo: true, payrollRunId: true } },
 } as const;
 
 export type ClaimRow = Prisma.ExpenseClaimGetPayload<{ include: typeof CLAIM_INCLUDE }>;
@@ -31,6 +32,7 @@ export function claimView(row: ClaimRow): ExpenseClaim {
     payslipId: row.payslipId,
     settlementId: row.settlementId,
     createdAt: row.createdAt.toISOString(),
+    payslip: row.payslip,
     employee: row.employee,
   };
 }

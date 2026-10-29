@@ -85,6 +85,9 @@ model Employee {
   updatedAt          DateTime         @updatedAt
 
   // The shift this person works. Null falls back to the built-in default (09:00-18:00, Friday off).
+  salaryStructureId String?
+  salaryStructure   SalaryStructure? @relation(fields: [salaryStructureId], references: [id])
+
   shiftId String?
   shift   Shift?  @relation(fields: [shiftId], references: [id], onDelete: SetNull)
 
@@ -97,6 +100,9 @@ model Employee {
   assetRequests    AssetRequest[]
   assetRecoveries  AssetRecovery[]
   leaveBalances    LeaveBalance[]
+  payslips         Payslip[]
+  adjustments      PayrollAdjustment[]
+  settlements      Settlement[]
 
   @@index([shiftId])
   @@index([reportingManagerId])

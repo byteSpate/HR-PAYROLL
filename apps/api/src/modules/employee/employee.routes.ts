@@ -6,6 +6,7 @@ import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 import { requireAuth } from '../../middleware/require-auth.js';
 import { requirePermission } from '../../middleware/require-permission.js';
+import { setSalaryStructure } from './employee.salary.js';
 import { resendCredentials } from '../users/users.service.js';
 import type { Viewer } from './employee.access.js';
 import * as changes from './employee.changerequest.js';
@@ -39,6 +40,10 @@ employeeRouter.get(
 );
 
 // Literal paths before '/:id' so they are never read as an id.
+employeeRouter.put('/:id/salary-structure', requirePermission('employee.update'), async (req, res) => {
+  res.json(await setSalaryStructure(viewer(req), String(req.params['id']), req.body));
+});
+
 employeeRouter.post('/:id/resend-invite', requirePermission('user.manage'), async (req, res) => {
   const employee = await prisma.employee.findUnique({ where: { id: String(req.params['id']) }, select: { userId: true } });
   if (!employee) throw new AppError(404, 'Employee not found');

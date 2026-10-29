@@ -58,6 +58,7 @@ export async function getExpenseReport(viewer: Viewer, input: Omit<ReportQuery, 
     include: {
       employee: { select: { id: true, fullName: true, employeeCode: true } },
       category: { select: { code: true, name: true } },
+      payslip: { select: { payslipNo: true } },
       _count: { select: { attachments: true } },
     },
     // Date then person, so a range reads as a diary rather than one person's history interleaved with everyone's.
@@ -92,8 +93,7 @@ export async function getExpenseReport(viewer: Viewer, input: Omit<ReportQuery, 
       travelFrom: claim.travelFrom,
       travelTo: claim.travelTo,
       receipts: claim._count.attachments,
-      // Which payslip paid it: filled in when payroll arrives and the payslip can be named.
-      paidOn: null,
+      paidOn: claim.payslip?.payslipNo ?? null,
       submittedOn: formatDateOnly(claim.createdAt),
       // A BDT claim has nothing to convert, and a foreign one has a rate only once approved: a pending claim shows none rather than a guess.
       fxRateToBdt: foreign ? claim.fxRateToBdt!.toFixed(6) : null,

@@ -69,6 +69,18 @@ export async function rosterFor(viewer: Viewer, permission: string): Promise<Ros
   })
 }
 
+/**
+ * Everyone still on the books, with no viewer's scope applied: payroll prices the whole company, and the person
+ * running it need not hold attendance access to all of it.
+ */
+export async function payrollRoster(): Promise<RosterEmployee[]> {
+  return prisma.employee.findMany({
+    where: { employmentStatus: { in: ["ACTIVE", "ON_LEAVE"] } },
+    select: ROSTER_SELECT,
+    orderBy: { fullName: "asc" },
+  })
+}
+
 export async function getDailySummary(
   viewer: Viewer,
   date?: string
@@ -446,5 +458,18 @@ export async function getMonthlySummary(
 
   return roster.map((employee) =>
     summariseDays(toRef(employee), grid.get(employee.id) ?? [], targetMonth, targetYear)
+  )
+}
+
+/** The month's attendance for the whole company, for payroll. Same figures as `getMonthlySummary`, unscoped. */
+export async function getPayrollMonthlySummary(
+  month: number,
+  year: number
+): Promise<MonthlyAttendanceSummary[]> {
+  const { from, to } = monthRange(year, month)
+  const roster = await payrollRoster()
+  const grid = await buildDayGrid(roster.map(toGridEmployee), from, to)
+  return roster.map((employee) =>
+    summariseDays(toRef(employee), grid.get(employee.id) ?? [], month, year)
   )
 }
