@@ -8,7 +8,6 @@ const KEY = ['employees'] as const;
 export const useEmployees = (q: string) => useQuery({ queryKey: [...KEY, 'list', q], queryFn: () => api.listEmployees(q) });
 export const useDirectory = (q: string, departmentId: string) =>
   useQuery({ queryKey: [...KEY, 'directory', q, departmentId], queryFn: () => api.directory(q, departmentId || undefined) });
-export const useMyTeam = () => useQuery({ queryKey: [...KEY, 'team'], queryFn: api.myTeam });
 export const useMe = () => useQuery({ queryKey: [...KEY, 'me'], queryFn: api.getMe, retry: false });
 export const useEmployee = (id: string) => useQuery({ queryKey: [...KEY, id], queryFn: () => api.getEmployee(id) });
 export const useDocuments = (id: string, enabled = true) =>

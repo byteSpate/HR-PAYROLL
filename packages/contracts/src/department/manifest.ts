@@ -10,18 +10,15 @@ export const department = defineModule({
   },
   nav: [
     {
-      label: 'Overview',
-      order: 10,
+      label: 'Administration',
+      order: 900,
       items: [
         {
-          label: 'Departments',
-          href: '/departments',
-          icon: 'RiBuilding2Line',
+          label: 'Settings',
+          href: '/settings/departments',
+          icon: 'RiSettingsLine',
           permission: null,
-          children: [
-            { label: 'Department List', href: '/departments', permission: 'department.read' },
-            { label: 'Import Departments', href: '/departments/import', permission: 'department.import' },
-          ],
+          children: [{ label: 'Departments', href: '/settings/departments', permission: 'department.manage', icon: 'RiBuilding2Line' }],
         },
       ],
     },

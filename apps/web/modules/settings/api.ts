@@ -1,4 +1,4 @@
-import type { PublicUser } from '@erp/contracts/core';
+import type { AccountView, PublicUser, SessionView, UserAccountView } from '@erp/contracts/core';
 import { api } from '@/lib/api-client';
 
 export type Scope = 'own' | 'team' | 'department' | 'all';
@@ -28,7 +28,7 @@ export interface RoleInput {
   permissions: RoleGrant[];
 }
 
-export const listUsers = (q: string) => api.request<PublicUser[]>(`/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
+export const listUsers = (q: string) => api.request<UserAccountView[]>(`/users${q ? `?q=${encodeURIComponent(q)}` : ''}`);
 
 export const createUser = (body: { email: string; displayName: string; roleId: string | null }) =>
   api.request<{ user: PublicUser; temporaryPassword: string }>('/users', { method: 'POST', body });
@@ -67,3 +67,22 @@ export interface AuditRow {
 
 export const listAudit = (cursor: string | null) =>
   api.request<{ items: AuditRow[]; nextCursor: string | null }>(`/audit${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`);
+
+// The account-only profile and the sessions card were written against HR's token-threading client;
+// the shared client already attaches the token, so these keep HR's signatures and ignore the first argument.
+const avatarForm = (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  return form;
+};
+
+export const getAccount = () => api.request<AccountView>('/auth/account');
+export const listSessions = (_accessToken: string) => api.request<SessionView[]>('/auth/sessions');
+export const revokeSession = (_accessToken: string, sessionId: string) =>
+  api.request<void>(`/auth/sessions/${sessionId}`, { method: 'DELETE' });
+export const logoutEverywhere = (_accessToken: string) => api.request<void>('/auth/logout-everywhere', { method: 'POST' });
+export const setDisplayName = (_accessToken: string, displayName: string | null) =>
+  api.request<AccountView>('/auth/display-name', { method: 'PATCH', body: { displayName } });
+export const uploadOwnAvatar = (_accessToken: string, file: File) =>
+  api.request<AccountView>('/auth/avatar', { method: 'PATCH', body: avatarForm(file) });
+export const clearOwnAvatar = (_accessToken: string) => api.request<AccountView>('/auth/avatar', { method: 'DELETE' });

@@ -49,7 +49,7 @@ export const EXCEPTION_LABEL: Record<ExceptionCode, string> = {
   LEAVE_CONFLICT: "On approved leave",
   WORKED_OFF_DAY: "Worked an off day",
   REGULARISED: "Employee amended",
-  MANUAL_ENTRY: "Entered by HR",
+  MANUAL_ENTRY: "Entered by an administrator",
   AUTO_CHECK_OUT: "Closed at shift end",
 }
 

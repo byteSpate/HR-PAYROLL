@@ -47,6 +47,10 @@ describe('employee documents', () => {
 
     const url = await request(app).get(`/api/employees/${e.id}/documents/${up.body.id}/url`).set(e.as);
     expect(url.body.url).toContain('memory://');
+    // The page shows how long the link lives; HR's wire shape carries it.
+    const lifetime = new Date(url.body.expiresAt).getTime() - Date.now();
+    expect(lifetime).toBeGreaterThan(280_000);
+    expect(lifetime).toBeLessThanOrEqual(300_000);
 
     expect((await request(app).delete(`/api/employees/${e.id}/documents/${up.body.id}`).set(hr)).status).toBe(204);
     expect(await prisma.document.count({ where: { employeeId: e.id } })).toBe(0);

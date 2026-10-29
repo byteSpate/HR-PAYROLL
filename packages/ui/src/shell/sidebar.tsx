@@ -204,7 +204,7 @@ export function Sidebar({
   navGroups,
   rootHref,
   profileHref,
-  systemLabel = "HR & Payroll",
+  systemLabel = "ERP",
   brand,
   identity,
   onSignOut,

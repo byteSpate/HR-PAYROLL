@@ -10,3 +10,4 @@ export {
   type UploadFile,
 } from './storage.js';
 export { uploadSingle, type UploadLimits } from './upload.js';
+export { avatarUrlFor, packAvatar, publicIdOfAvatar } from './avatar.js';

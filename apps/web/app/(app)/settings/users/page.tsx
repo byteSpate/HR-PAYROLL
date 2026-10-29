@@ -1,12 +1,10 @@
-import { PageHeader } from '@erp/ui/page';
 import { RequirePermission } from '@/modules/settings/components/require-permission';
-import { UsersTable } from '@/modules/settings/components/users-table';
+import { UsersPage } from '@/modules/settings/components/users-page';
 
-export default function UsersPage() {
+export default function Page() {
   return (
     <RequirePermission permission="user.manage">
-      <PageHeader kicker="Settings" title="Users" />
-      <UsersTable />
+      <UsersPage />
     </RequirePermission>
   );
 }

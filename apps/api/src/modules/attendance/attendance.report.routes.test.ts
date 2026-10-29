@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { prisma } from '@erp/db';
+import { closePdfBrowser } from '@erp/pdf';
 import { createApp } from '../../app.js';
 import { cleanActors, makeActor } from '../../test-utils/access.js';
 
@@ -51,6 +52,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await closePdfBrowser();
   await prisma.auditLog.deleteMany({ where: { changedBy: { in: [admin.user.id, manager.user.id] }, action: 'EXPORT' } });
   await prisma.attendance.deleteMany({ where: { employeeId: { in: Object.values(emp) } } });
   await prisma.employee.updateMany({ where: { id: { in: Object.values(emp) } }, data: { reportingManagerId: null } });
@@ -115,9 +117,24 @@ describe('GET /api/attendance/report', () => {
     expect(await prisma.auditLog.count({ where: { changedBy: manager.user.id, action: 'EXPORT' } })).toBe(1);
   });
 
-  it('says plainly that the PDF is not available yet', async () => {
-    const res = await get(`${MARCH}&format=pdf`);
-    expect(res.status).toBe(501);
-    expect(res.body.error).toMatch(/pdf/i);
+  it('downloads a real pdf, named for its range, and audits exactly one export', async () => {
+    const res = await request(app)
+      .get('/api/attendance/report?from=2026-03-04&to=2026-03-04&format=pdf')
+      .set(admin.header)
+      .buffer(true)
+      .parse((r, done) => {
+        const chunks: Buffer[] = [];
+        r.on('data', (c: Buffer) => chunks.push(c));
+        r.on('end', () => done(null, Buffer.concat(chunks)));
+      });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toContain('attendance-summary-2026-03-04-to-2026-03-04.pdf');
+    expect((res.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
+    expect(await prisma.auditLog.count({ where: { changedBy: admin.user.id, action: 'EXPORT' } })).toBe(1);
+  }, 30_000);
+
+  it('needs attendance.report for the pdf too', async () => {
+    expect((await get(`${MARCH}&format=pdf`, plain)).status).toBe(403);
   });
 });

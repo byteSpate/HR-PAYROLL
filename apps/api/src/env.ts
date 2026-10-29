@@ -32,6 +32,7 @@ export const envSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'ATTENDANCE_GO_LIVE must be a YYYY-MM-DD date')
     .default('2000-01-01'),
   COMPANY_NAME: z.string().default('Byte Spate'),
+  COMPANY_ADDRESS: z.string().default(''),
   // Optional: without them uploads return 503 and avatars fall back to initials. A partial set is a
   // typo, so it fails startup instead of silently turning storage off.
   CLOUDINARY_CLOUD_NAME: optionalSetting,

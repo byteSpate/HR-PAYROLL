@@ -83,7 +83,9 @@ describe('projectEmployee', () => {
     designation: 'Engineer',
     department: { id: 'dep-a', name: 'Engineering' },
     reportingManager: null,
-    user: { email: 'r@example.com' },
+    user: { email: 'r@example.com', isActive: true, mustChangePassword: false },
+    shift: null,
+    exitNote: null,
     phone: '017',
     profilePicture: null,
     employmentType: 'FULL_TIME',
@@ -107,29 +109,51 @@ describe('projectEmployee', () => {
 
   it('omits every hidden section for a colleague (absent keys, not nulls)', () => {
     const view = projectEmployee(record, 'COLLEAGUE', new Set(), null);
-    expect(Object.keys(view).sort()).toEqual(['editableFields', 'employeeCode', 'id', 'work']);
+    expect(Object.keys(view).sort()).toEqual(['editableFields', 'id', 'work']);
     expect(JSON.stringify(view)).not.toContain('999');
     expect(JSON.stringify(view)).not.toContain('123');
   });
 
-  it('shows money but not personal details to finance', () => {
+  it('shows the payroll group but not personal details to finance', () => {
     const view = projectEmployee(record, 'FINANCE', new Set(), null);
-    expect(view.money?.bankAccountNumber).toBe('999');
-    expect(view.employment?.joiningDate).toBe('2026-01-05');
-    expect('personal' in view).toBe(false);
+    expect(view.payroll).toMatchObject({ salaryStructure: null, bankAccountNumber: '999' });
+    expect(view.employment).toMatchObject({ employeeCode: 'EMP-0001', joiningDate: '2026-01-05', accountActive: true, shift: null });
+    expect(view.exit).toBeNull();
+    expect('personal' in view || 'contact' in view).toBe(false);
   });
 
-  it('shows employment but no personal or money to a manager', () => {
+  it('shows employment but no personal, contact or payroll to a manager', () => {
     const view = projectEmployee(record, 'MANAGER', new Set(), null);
     expect(view.employment).toBeDefined();
-    expect('personal' in view || 'money' in view).toBe(false);
+    expect('personal' in view || 'contact' in view || 'payroll' in view || 'exit' in view).toBe(false);
   });
 
   it('shows everything to the employee and lists their editable fields', () => {
     const view = projectEmployee(record, 'SELF', new Set(['phone']), 'https://img');
-    expect(view.personal?.nationalId).toBe('123');
-    expect(view.money?.bankName).toBe('Bank');
+    expect(view.personal).toMatchObject({ nationalId: '123', nationalIdChangeRequest: null });
+    expect(view.contact).toMatchObject({ emergencyContact: null });
+    expect(view.payroll?.bankName).toBe('Bank');
     expect(view.editableFields).toEqual(['phone']);
     expect(view.work.avatarUrl).toBe('https://img');
+    expect(view.employment && 'passwordPending' in view.employment).toBe(false);
+  });
+
+  it('tells HR whether the person still has to choose a password, and shows a finished exit', () => {
+    const leaver = { ...record, lastWorkingDay: new Date('2026-09-30T00:00:00Z'), exitReason: 'RESIGNATION', exitNote: 'Moving abroad' };
+    const view = projectEmployee(leaver, 'FULL', new Set(), null);
+    expect(view.employment?.passwordPending).toBe(false);
+    expect(view.exit).toEqual({ lastWorkingDay: '2026-09-30', exitReason: 'RESIGNATION', exitNote: 'Moving abroad' });
+  });
+
+  it('carries documents, blockers and a pending national-id request when given', () => {
+    const request = { id: 'r1', newValue: '999', requestedAt: '2026-10-01T00:00:00.000Z' };
+    const view = projectEmployee(record, 'FULL', new Set(), null, {
+      documents: [{ id: 'd1', type: 'NID', fileName: 'nid.pdf', bytes: 10, format: 'pdf', uploadedAt: '2026-10-01T00:00:00.000Z' }],
+      blockers: [{ field: 'bankAccountNumber', blocks: 'payroll' }],
+      nationalIdChangeRequest: request,
+    });
+    expect(view.documents).toHaveLength(1);
+    expect(view.blockers).toEqual([{ field: 'bankAccountNumber', blocks: 'payroll' }]);
+    expect(view.personal?.nationalIdChangeRequest).toEqual(request);
   });
 });

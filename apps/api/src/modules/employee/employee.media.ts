@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { documentTypes, type EmployeeView } from '@erp/contracts/employee';
-import { getStorage, requireStorage, type UploadFile } from '@erp/attachments';
+import { documentTypes, type EmployeeView, type SignedDocumentUrl } from '@erp/contracts/employee';
+import { DEFAULT_URL_TTL_SECONDS, getStorage, packAvatar, publicIdOfAvatar, requireStorage, type UploadFile } from '@erp/attachments';
 import { writeAudit } from '@erp/audit';
 import { prisma, type Db } from '@erp/db';
 import { AppError } from '@erp/utils';
@@ -73,11 +73,12 @@ export async function uploadDocument(viewer: Viewer, id: string, body: unknown, 
   return toItem(doc);
 }
 
-export async function documentUrl(viewer: Viewer, id: string, docId: string): Promise<{ url: string }> {
+export async function documentUrl(viewer: Viewer, id: string, docId: string): Promise<SignedDocumentUrl> {
   await assertCanSee(viewer, id);
   const doc = await prisma.document.findFirst({ where: { id: docId, employeeId: id } });
   if (!doc) throw new AppError(404, 'Document not found');
-  return { url: requireStorage().signedUrl(doc.publicId, { format: doc.format }) };
+  const url = requireStorage().signedUrl(doc.publicId, { format: doc.format, expiresInSeconds: DEFAULT_URL_TTL_SECONDS });
+  return { url, expiresAt: new Date(Date.now() + DEFAULT_URL_TTL_SECONDS * 1000).toISOString() };
 }
 
 export async function deleteDocument(viewer: Viewer, id: string, docId: string): Promise<void> {
@@ -99,8 +100,8 @@ async function assertCanEditAvatar(viewer: Viewer, id: string) {
   throw new AppError(403, 'Forbidden');
 }
 
-export const packAvatar = (publicId: string, version: number) => `${publicId}:${version}`;
-const publicIdOf = (packed: string) => packed.split(':')[0]!;
+export { packAvatar };
+const publicIdOf = publicIdOfAvatar;
 
 export async function setAvatar(viewer: Viewer, id: string, file: UploadFile | undefined): Promise<EmployeeView> {
   const subject = await assertCanEditAvatar(viewer, id);

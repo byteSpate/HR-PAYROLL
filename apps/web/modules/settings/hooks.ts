@@ -4,12 +4,9 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import * as api from './api';
 
 // Role changes alter what users show, so both lists are refreshed together.
-const KEYS = { users: ['users'], roles: ['roles'], roleOptions: ['roles', 'options'], permissions: ['permissions'] } as const;
+const KEYS = { users: ['users'], roles: ['roles'], permissions: ['permissions'] } as const;
 
-export const useUsers = (q: string) => useQuery({ queryKey: [...KEYS.users, q], queryFn: () => api.listUsers(q) });
 export const useRoles = () => useQuery({ queryKey: KEYS.roles, queryFn: api.listRoles, retry: false });
-export const useRoleOptions = () =>
-  useQuery({ queryKey: KEYS.roleOptions, queryFn: api.listRoleOptions, retry: false });
 export const useAudit = () =>
   useInfiniteQuery({
     queryKey: ['audit'],
@@ -28,16 +25,6 @@ function useInvalidating<TArgs, TResult>(fn: (args: TArgs) => Promise<TResult>, 
   });
 }
 
-export const useCreateUser = () => useInvalidating(api.createUser, [KEYS.users]);
-export const useSetUserRole = () =>
-  useInvalidating(({ id, roleId }: { id: string; roleId: string | null }) => api.setUserRole(id, roleId), [KEYS.users]);
-export const useSetUserStatus = () =>
-  useInvalidating(({ id, isActive }: { id: string; isActive: boolean }) => api.setUserStatus(id, isActive), [KEYS.users]);
-export const useSetUserAccessLevel = () =>
-  useInvalidating(
-    ({ id, accessLevel }: { id: string; accessLevel: 'ADMIN' | 'STANDARD' }) => api.setUserAccessLevel(id, accessLevel),
-    [KEYS.users],
-  );
 export const useCreateRole = () => useInvalidating(api.createRole, [KEYS.roles, KEYS.users]);
 export const useUpdateRole = () =>
   useInvalidating(({ id, ...body }: api.RoleInput & { id: string }) => api.updateRole(id, body), [KEYS.roles, KEYS.users]);

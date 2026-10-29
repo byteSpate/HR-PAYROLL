@@ -59,6 +59,19 @@ export interface ShiftView {
   employeeCount: number;
 }
 
+/** Who a change to a shift's weekly days off re-classifies: those days are derived on every read, so past days move too. */
+export interface ShiftImpact {
+  affectedEmployees: number;
+  /** Earliest attendance date among them; null when none exists yet. */
+  earliestAffectedDate: string | null;
+}
+
+export interface ShiftWriteResult {
+  shift: ShiftView;
+  /** Present only when the weekly days off actually changed. */
+  impact?: ShiftImpact;
+}
+
 export interface HolidayView {
   id: string;
   name: string;

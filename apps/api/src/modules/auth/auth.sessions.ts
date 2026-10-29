@@ -1,15 +1,7 @@
 import { hashToken } from '@erp/auth';
+import type { SessionView } from '@erp/contracts/core';
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
-
-export interface SessionView {
-  sessionId: string;
-  device: string;
-  ipAddress: string | null;
-  startedAt: string;
-  lastUsedAt: string;
-  current: boolean;
-}
 
 // Order matters: Edge and Opera include "Chrome" in their user agents, and every
 // iOS browser includes "Safari", so the more specific token is tested first.

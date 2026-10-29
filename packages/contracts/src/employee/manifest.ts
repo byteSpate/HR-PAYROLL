@@ -40,7 +40,6 @@ export const employee = defineModule({
               permission: ['employee.read:department', 'employee.read.financial'],
             },
             { label: 'Add Employee', href: '/employees/new', permission: 'employee.create' },
-            { label: 'My Team', href: '/employees/team', permission: 'employee.read:team' },
             {
               label: 'ID Change Requests',
               href: '/employees/id-requests',

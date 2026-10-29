@@ -1,2 +1,5 @@
-import { MyAttendance } from '@/modules/attendance/components/my-attendance';
-export default function Page() { return <MyAttendance />; }
+import { AttendancePage } from '@/modules/attendance/components/attendance-page';
+
+export default function Page() {
+  return <AttendancePage />;
+}

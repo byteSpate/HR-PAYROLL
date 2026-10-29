@@ -5,7 +5,7 @@ import {
   type EmployeeView,
   type UpdateEmployeeInput,
 } from '@erp/contracts/employee';
-import { getStorage } from '@erp/attachments';
+import { avatarUrlFor } from '@erp/attachments';
 import { can, scopeFor } from '@erp/auth';
 import { diffFields, writeAudit } from '@erp/audit';
 import { prisma, type Db, type Prisma, type Tx } from '@erp/db';
@@ -14,6 +14,7 @@ import { AppError } from '@erp/utils';
 import { departmentExists } from '../department/department.service.js';
 import { loadActor } from '../users/actor.js';
 import { insertStandardUser } from '../users/users.service.js';
+import { computeBlockers } from './employee.blockers.js';
 import {
   EMPLOYEE_INCLUDE,
   projectEmployee,
@@ -21,6 +22,7 @@ import {
   visibilityTier,
   writableFieldsFor,
   type EmployeeRecord,
+  type ProjectionExtras,
   type Tier,
   type Viewer,
   type ViewerEmployee,
@@ -36,20 +38,32 @@ export async function employeeIdForUser(db: Db, userId: string): Promise<string 
 export const viewerEmployeeOf = (db: Db, userId: string): Promise<ViewerEmployee | null> =>
   db.employee.findUnique({ where: { userId }, select: { id: true, departmentId: true } });
 
-// Stored as "publicId:version"; storage being unconfigured degrades to initials, never an error.
-export function avatarUrlFor(profilePicture: string | null): string | null {
-  const storage = getStorage();
-  if (!profilePicture || !storage) return null;
-  const [publicId, version] = profilePicture.split(':');
-  return storage.signedUrl(publicId!, version ? { version: Number(version) } : {});
-}
+export { avatarUrlFor };
 
 type Row = EmployeeRecord & { userId: string; departmentId: string; reportingManagerId: string | null };
 
-export function viewFor(viewer: Viewer, viewerEmployee: ViewerEmployee | null, row: Row, tierOverride?: Tier): EmployeeView {
+export function viewFor(viewer: Viewer, viewerEmployee: ViewerEmployee | null, row: Row, tierOverride?: Tier, extras?: ProjectionExtras): EmployeeView {
   const tier = tierOverride ?? visibilityTier(viewer, viewerEmployee, row);
   const canUpdate = reaches(viewer, viewerEmployee, row, 'employee.update');
-  return projectEmployee(row, tier, writableFieldsFor(tier, canUpdate), avatarUrlFor(row.profilePicture));
+  return projectEmployee(row, tier, writableFieldsFor(tier, canUpdate), avatarUrlFor(row.profilePicture), extras);
+}
+
+/**
+ * One person's full record: the projection plus what only a detail read loads. Documents and
+ * blockers are for the owner and HR only, because a blocker names an operational gap in someone's file.
+ */
+async function detailFor(viewer: Viewer, viewerEmployee: ViewerEmployee | null, row: Row, tierOverride?: Tier): Promise<EmployeeView> {
+  const tier = tierOverride ?? visibilityTier(viewer, viewerEmployee, row);
+  if (tier !== 'SELF' && tier !== 'FULL') return viewFor(viewer, viewerEmployee, row, tier);
+  const [documents, pending] = await Promise.all([
+    prisma.document.findMany({ where: { employeeId: row.id }, orderBy: { uploadedAt: 'desc' } }),
+    prisma.employeeChangeRequest.findFirst({ where: { employeeId: row.id, field: 'NATIONAL_ID', status: 'PENDING' } }),
+  ]);
+  return viewFor(viewer, viewerEmployee, row, tier, {
+    documents: documents.map((d) => ({ id: d.id, type: d.type, fileName: d.fileName, bytes: d.bytes, format: d.format, uploadedAt: d.uploadedAt.toISOString() })),
+    blockers: computeBlockers(row, documents.map((d) => d.type)),
+    nationalIdChangeRequest: pending ? { id: pending.id, newValue: pending.newValue, requestedAt: pending.createdAt.toISOString() } : null,
+  });
 }
 
 async function loadRow(db: Db, id: string): Promise<Row> {
@@ -184,7 +198,7 @@ export async function listEmployees(viewer: Viewer, f: ListFilter): Promise<Empl
 export async function getMyEmployee(viewer: Viewer): Promise<EmployeeView> {
   const row = await prisma.employee.findUnique({ where: { userId: viewer.sub }, include: EMPLOYEE_INCLUDE });
   if (!row) throw new AppError(404, 'No employee profile is linked to this account');
-  return viewFor(viewer, row, row);
+  return detailFor(viewer, row, row);
 }
 
 export async function directory(viewer: Viewer, f: ListFilter): Promise<EmployeeView[]> {
@@ -198,7 +212,7 @@ export async function directory(viewer: Viewer, f: ListFilter): Promise<Employee
 }
 
 export async function getEmployee(viewer: Viewer, id: string): Promise<EmployeeView> {
-  return viewFor(viewer, await viewerEmployeeOf(prisma, viewer.sub), await loadRow(prisma, id));
+  return detailFor(viewer, await viewerEmployeeOf(prisma, viewer.sub), await loadRow(prisma, id));
 }
 
 const DATE_FIELDS = new Set(['dateOfBirth', 'joiningDate']);

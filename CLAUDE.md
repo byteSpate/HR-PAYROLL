@@ -103,6 +103,7 @@ The API must be served from the same host as the web app (or proxied under a pat
 
 ## Attendance and leave
 
+- `db:seed` also creates the General default shift (attendance falls back to it by name; it cannot be renamed or deleted).
 - Attendance and leave use office-local calendar dates (Asia/Dhaka) stored as UTC-midnight `@db.Date` values. Punches are instants; use attendance time helpers to convert them.
 - The UI is an exact copy of HR-MNG-V1 (see `docs/superpowers/plans/2026-10-29-exact-port-ledger.md`): copy its files, changing only import paths and the data layer, never its markup or props. The sidebar is its own `Sidebar`, so a manifest `nav` entry is `{ label, order, items }` where a heading's label (`Overview`, `Workspace`, `Administration`) is shared across modules, and an item with `children` expands into one page per original section.
 - Manifest navigation groups with the same label merge in `apps/web/lib/nav.ts`. Attendance exposes a leave-day lookup injection so it never imports the leave module.

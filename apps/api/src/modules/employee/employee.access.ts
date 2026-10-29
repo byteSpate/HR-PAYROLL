@@ -1,7 +1,17 @@
 // The single implementation of who sees and edits which employee fields, ported from HR-MNG-V1
 // employee.access.ts and made permission-based. Every read and write of an employee goes through
 // here, so two call sites can never disagree about, say, whether Finance may see a national ID.
-import { BANK_FIELDS, HR_EDITABLE_FIELDS, SELF_EDITABLE_FIELDS, type EmployeeView } from '@erp/contracts/employee';
+import {
+  BANK_FIELDS,
+  HR_EDITABLE_FIELDS,
+  SELF_EDITABLE_FIELDS,
+  type Blocker,
+  type DocumentItem,
+  type EmployeeView,
+  type EmploymentStatus,
+  type EmploymentType,
+  type PendingNationalIdChangeRequest,
+} from '@erp/contracts/employee';
 import { can, scopeFor, type AccessContext } from '@erp/auth';
 
 export type Tier = 'SELF' | 'FULL' | 'FINANCE' | 'MANAGER' | 'COLLEAGUE';
@@ -51,16 +61,18 @@ export interface EmployeeRecord {
   designation: string;
   department: { id: string; name: string };
   reportingManager: { id: string; fullName: string } | null;
-  user: { email: string };
+  user: { email: string; isActive: boolean; mustChangePassword: boolean };
+  shift: { id: string; name: string } | null;
   phone: string | null;
   profilePicture: string | null;
-  employmentType: string;
-  employmentStatus: string;
+  employmentType: EmploymentType;
+  employmentStatus: EmploymentStatus;
   joiningDate: Date;
   officeLocation: string | null;
   shiftId: string | null;
   lastWorkingDay: Date | null;
   exitReason: string | null;
+  exitNote: string | null;
   dateOfBirth: Date | null;
   gender: string | null;
   nationalId: string | null;
@@ -78,21 +90,29 @@ export interface EmployeeRecord {
 export const EMPLOYEE_INCLUDE = {
   department: { select: { id: true, name: true } },
   reportingManager: { select: { id: true, fullName: true } },
-  user: { select: { email: true } },
+  shift: { select: { id: true, name: true } },
+  user: { select: { email: true, isActive: true, mustChangePassword: true } },
 } as const;
 
 // Date-only columns are stored at UTC midnight; the wire format is YYYY-MM-DD.
 const dateOnly = (d: Date | null) => (d === null ? null : d.toISOString().slice(0, 10));
+
+/** What only the detail read loads: the rest of the projection comes straight off the row. */
+export interface ProjectionExtras {
+  documents?: DocumentItem[];
+  blockers?: Blocker[];
+  nationalIdChangeRequest?: PendingNationalIdChangeRequest | null;
+}
 
 export function projectEmployee(
   e: EmployeeRecord,
   tier: Tier,
   editable: ReadonlySet<string>,
   avatarUrl: string | null,
+  extras: ProjectionExtras = {},
 ): EmployeeView {
   const view: EmployeeView = {
     id: e.id,
-    employeeCode: e.employeeCode,
     work: {
       fullName: e.fullName,
       designation: e.designation,
@@ -104,17 +124,6 @@ export function projectEmployee(
     },
     editableFields: [...editable],
   };
-  if (tier !== 'COLLEAGUE') {
-    view.employment = {
-      employmentType: e.employmentType,
-      employmentStatus: e.employmentStatus,
-      joiningDate: dateOnly(e.joiningDate)!,
-      officeLocation: e.officeLocation,
-      shiftId: e.shiftId,
-      lastWorkingDay: dateOnly(e.lastWorkingDay),
-      exitReason: e.exitReason,
-    };
-  }
   if (tier === 'SELF' || tier === 'FULL') {
     view.personal = {
       dateOfBirth: dateOnly(e.dateOfBirth),
@@ -122,13 +131,34 @@ export function projectEmployee(
       nationalId: e.nationalId,
       bloodGroup: e.bloodGroup,
       maritalStatus: e.maritalStatus,
+      nationalIdChangeRequest: extras.nationalIdChangeRequest ?? null,
+    };
+    view.contact = {
       presentAddress: e.presentAddress,
       permanentAddress: e.permanentAddress,
       emergencyContact: e.emergencyContact,
     };
   }
-  if (tier === 'SELF' || tier === 'FULL' || tier === 'FINANCE') {
-    view.money = { bankAccountNumber: e.bankAccountNumber, bankName: e.bankName, bankRoutingNumber: e.bankRoutingNumber };
+  if (tier !== 'COLLEAGUE') {
+    view.employment = {
+      employeeCode: e.employeeCode,
+      employmentType: e.employmentType,
+      employmentStatus: e.employmentStatus,
+      joiningDate: dateOnly(e.joiningDate)!,
+      officeLocation: e.officeLocation,
+      shift: e.shift,
+      // Behind the employment tier on purpose: who is locked out is not directory information.
+      accountActive: e.user.isActive,
+      // Only to HR-level viewers, deciding whether "Resend password" is shown.
+      ...(tier === 'FULL' ? { passwordPending: e.user.mustChangePassword } : {}),
+    };
   }
+  if (tier === 'SELF' || tier === 'FULL' || tier === 'FINANCE') {
+    // No payroll module yet, so there is no salary structure to show.
+    view.payroll = { salaryStructure: null, bankAccountNumber: e.bankAccountNumber, bankName: e.bankName, bankRoutingNumber: e.bankRoutingNumber };
+    view.exit = e.lastWorkingDay && e.exitReason ? { lastWorkingDay: dateOnly(e.lastWorkingDay)!, exitReason: e.exitReason, exitNote: e.exitNote } : null;
+  }
+  if (extras.documents !== undefined) view.documents = extras.documents;
+  if (extras.blockers !== undefined) view.blockers = extras.blockers;
   return view;
 }

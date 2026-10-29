@@ -20,6 +20,23 @@ describe('mergeNavGroups', () => {
     expect(merged.map((g) => g.label)).toEqual(['Shared', 'Late']);
   });
 
+  it('folds expandable items that share a label, so modules each add their own pages to one Settings', () => {
+    const settings = (child: string): NavGroup => ({
+      label: 'Administration',
+      order: 900,
+      items: [{ label: 'Settings', href: `/settings/${child}`, icon: 'RiSettingsLine', permission: null, children: [{ label: child, href: `/settings/${child}`, permission: null }] }],
+    });
+    const merged = mergeNavGroups([settings('departments'), settings('shifts')]);
+    expect(merged[0]?.items).toHaveLength(1);
+    expect(merged[0]?.items[0]?.href).toBe('/settings/departments');
+    expect(merged[0]?.items[0]?.children?.map((c) => c.href)).toEqual(['/settings/departments', '/settings/shifts']);
+  });
+
+  it('keeps plain items that happen to share a label apart', () => {
+    const merged = mergeNavGroups([group('Shared', 1, 'a'), group('Shared', 2, 'a')]);
+    expect(merged[0]?.items).toHaveLength(2);
+  });
+
   it('does not mutate the manifests it was given', () => {
     const a = group('Shared', 1, 'a');
     mergeNavGroups([a, group('Shared', 2, 'b')]);

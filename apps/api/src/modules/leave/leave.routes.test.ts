@@ -41,10 +41,9 @@ describe('leave routes', () => {
     expect(preview.body.chargedDays).toBe(1);
     const res = await request(app).post('/api/leave/requests').set(user.header).send({ leaveTypeId: typeId, startDate: '2027-01-04', endDate: '2027-01-04' });
     expect(res.status).toBe(201); requestId = res.body.id;
-    expect((await request(app).get('/api/leave/requests?scope=mine').set(user.header)).body).toHaveLength(1);
+    expect((await request(app).get('/api/leave/requests').set(user.header)).body).toHaveLength(1);
     expect((await request(app).get('/api/leave/balances/me').set(user.header)).body).toHaveLength(1);
-    expect((await request(app).get('/api/leave/requests?scope=team').set(user.header)).status).toBe(403);
-    expect((await request(app).get('/api/leave/requests?scope=approvals').set(bearer(user.user.id, 'STANDARD', ['leave.approve:all']))).status).toBe(200);
+    expect((await request(app).get('/api/leave/requests').set(bearer(user.user.id, 'STANDARD', ['leave.read:all']))).body).toHaveLength(1);
   });
   it('shows approved leave today only to a viewer with leave read access', async () => {
     const today = officeToday();
@@ -53,13 +52,13 @@ describe('leave routes', () => {
       expect((await request(app).get('/api/leave/team-status').set(user.header)).status).toBe(403);
       const result = await request(app).get('/api/leave/team-status').set(admin.header);
       expect(result.status).toBe(200);
-      expect(result.body.map((item: { id: string }) => item.id)).toContain(row.id);
+      expect(result.body.find((item: { id: string }) => item.id === employeeId)).toMatchObject({ status: 'ON_LEAVE' });
     } finally { await prisma.leaveRequest.delete({ where: { id: row.id } }); }
   });
   it('allows an admin to approve, list, and cancel an approved future request', async () => {
     expect((await request(app).post(`/api/leave/requests/${requestId}/approve`).set(user.header)).status).toBe(403);
     expect((await request(app).post(`/api/leave/requests/${requestId}/approve`).set(admin.header)).status).toBe(200);
-    expect((await request(app).get('/api/leave/requests?scope=team').set(admin.header)).body).toHaveLength(1);
+    expect((await request(app).get('/api/leave/requests').set(admin.header)).body).toHaveLength(1);
     expect((await request(app).post(`/api/leave/requests/${requestId}/cancel`).set(admin.header)).status).toBe(200);
   });
 });

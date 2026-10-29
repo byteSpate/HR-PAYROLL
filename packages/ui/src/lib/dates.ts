@@ -25,3 +25,91 @@ export function parseDateString(value: string): Date {
 export function isWeeklyOff(date: Date): boolean {
   return date.getDay() === WEEKLY_OFF_DAY
 }
+
+type LeaveSession = "FIRST_HALF" | "SECOND_HALF"
+
+/**
+ * The gazetted calendar, as the day-count preview needs it. Mirrors
+ * `LeaveCalendar` on the server; both are built from the same Holiday rows.
+ */
+export interface LeaveCalendar {
+  /** YYYY-MM-DD dates that carry a holiday taking the day off. */
+  holidayDates: Set<string>
+  /** YYYY-MM-DD dates where a WORKING_DAY order cancels the weekly off. */
+  workingOverrides: Set<string>
+}
+
+export const EMPTY_LEAVE_CALENDAR: LeaveCalendar = {
+  holidayDates: new Set(),
+  workingOverrides: new Set(),
+}
+
+/** True when a date is neither a working day nor chargeable as leave. */
+export function isNonWorkingDay(
+  date: Date,
+  calendar: LeaveCalendar = EMPTY_LEAVE_CALENDAR
+): boolean {
+  const key = toDateString(date)
+  if (calendar.holidayDates.has(key)) return true
+  return isWeeklyOff(date) && !calendar.workingOverrides.has(key)
+}
+
+/** Inclusive calendar-day span, ignoring which days are working days. */
+export function countCalendarDays(start: Date, end: Date): number {
+  let count = 0
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+  while (cursor.getTime() <= end.getTime()) {
+    count++
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return count
+}
+
+/**
+ * Mirrors the server's `countLeaveDays` so the UI preview matches what is
+ * charged — including the §117 split, where a holiday-counting type charges
+ * every calendar day and every other type skips the days off.
+ */
+export function countLeaveDays(
+  start: Date,
+  end: Date,
+  options: { countsHolidays?: boolean; calendar?: LeaveCalendar } = {}
+): number {
+  if (options.countsHolidays) return countCalendarDays(start, end)
+
+  const calendar = options.calendar ?? EMPTY_LEAVE_CALENDAR
+  let count = 0
+  const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate())
+  while (cursor.getTime() <= end.getTime()) {
+    if (!isNonWorkingDay(cursor, calendar)) count++
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  return count
+}
+
+/**
+ * Charged days including the half-day adjustment. Mirrors the server's
+ * `countChargedDays` in `apps/api/src/modules/leave/leave.dates.ts`; keep the two in step.
+ *
+ * Each half only subtracts when its boundary date was actually charged: a
+ * half landing on a Friday or a gazetted holiday must not charge negative.
+ */
+export function countChargedDays(
+  start: Date,
+  end: Date,
+  startSession: LeaveSession,
+  endSession: LeaveSession,
+  options: { countsHolidays?: boolean; calendar?: LeaveCalendar } = {}
+): number {
+  const base = countLeaveDays(start, end, options)
+  if (base === 0) return 0
+
+  const chargeable = (date: Date) =>
+    options.countsHolidays === true ||
+    !isNonWorkingDay(date, options.calendar ?? EMPTY_LEAVE_CALENDAR)
+
+  let days = base
+  if (startSession === "SECOND_HALF" && chargeable(start)) days -= 0.5
+  if (endSession === "FIRST_HALF" && chargeable(end)) days -= 0.5
+  return days
+}

@@ -26,6 +26,8 @@ The attendance page alone pulls in 48 files and about 12,000 lines (lib/api 4706
 
 Employee and admin sides are separate pages, as in the original (`/employee/attendance` is the punch card and own month; `/admin/attendance` is the org view).
 
+**Two points of view only (owner, 2026-10-29).** HR-MNG-V1 had fixed roles, so each role (HR, finance, manager, employee) saw its own pages. Here there is the **employee** (`/me/...`) and one **admin** (module routes) who sees every route those roles had, combined. The `hr`, `finance` and `manager` variants are not ported (for example `manager/team`). Permissions are not curated yet: the roles and permissions already built stay as they are, and the admin hands them out later.
+
 ## Collapsible mapping
 
 The original `/admin/attendance` page stacks: my attendance, Attendance approvals, Today (live board), Monthly summary with corrections, Holiday calendar, Reports. Admin sidebar group **Attendance** becomes: Attendance Approvals, Today's Attendance, Reports, Holiday Calendar (children copied from `approvals-section`, `DailyBoard`, `AttendanceReports`, `HolidaySection`). Leave and the other stacked pages follow the same rule once their sections are read.
@@ -43,6 +45,26 @@ The original screens call HR-MNG-V1's own API through `lib/api/*` with its respo
 4. Dashboard, employees, directory, profile.
 5. Settings, users, reports, activity, announcements, notification bell.
 6. Modules with no ERP backend yet.
+
+Stages 2 to 5 for the already-built modules and stage 6 are scheduled in `2026-10-29-erp-plan-4-remaining-work.md` (Part A, then Parts B and C).
+
+## Progress (Plan 4, Part A, branch `feat/exact-port-people`)
+
+Done, tested (unit, API over HTTP, browser) and pushed:
+
+- A1 `@erp/pdf` (the original's own renderer and limiter) and the attendance PDF report (was 501).
+- A2 Employee attendance `/me/attendance`: the original's page, punch card and calendar, with `/attendance/today`, a derived `/attendance/me`, `/attendance/summary/me` and `PATCH /attendance/me/:id/regularise`. A punch returns the original's `PunchResult` and judges a half-day leave against the half actually worked.
+- A3 and A4 Leave: the original's `LeavePage` as three section pages (`mine`, `requests`, `team`), the original's apply dialog and detail sheet, and the original's wire shapes (`days`, `decidedBy`, balances with `entitlement` and `pending`, team status, half-day window). Leave Types stays a fresh page until Settings (A6).
+- A5, API half: the employee API now returns the original's `EmployeeView` (`work`, `personal` with `nationalIdChangeRequest`, `contact`, `employment` with `employeeCode`, `shift`, `accountActive`, `passwordPending`, `payroll`, `exit`, `documents`, `blockers`). The old employee screens were patched to read it.
+- A5, employee point of view: `/me` (the original's `MyProfilePage`, or `AccountProfile` for an account with no employee record, whose permissions panel lists the real grants) and `/me/directory`, with `profile-api.ts`, account and session endpoints, own avatar, display name that can be cleared, and `expiresAt` on document links. Moved on: admin employees list, detail and add, with salary structure, to Part C; insights and the activity feed to Part D; self change-email to C3.
+
+- A6 Settings: one sidebar item whose children are pages, each rendering the original's panel inside the original's tab strip (the strip is built from the same nav entries, so page and sidebar cannot disagree). Done: Departments (no cost nature, accounting is out of scope), Shifts (with the weekly-off impact notice and the undeletable General default, now a seeded row), Leave types (the original's statutory floor, partial update). Users is the original's page with ERP's data model: an account's level plus an administrator-made role instead of five fixed roles, and only the super admin may appoint an admin. Roles & Permissions stays ERP's own page, since roles are made by administrators here.
+- A7 cleanup: removed the fresh department, shifts, leave types, users, manual-entry and My Team pages and the helpers behind them.
+
+Moved to later parts, not dropped:
+
+- Activity (the original's events feed) with the events module in Part D. Resend-password with `@erp/mail` in C3. Asset categories (B), cost categories (B), exchange rates and payroll settings (C): each adds its own Settings child.
+- The `@erp/ui/page` kit stays until the last fresh screens that use it are replaced: admin employees list, detail and add (C), dashboard (D), Roles and Activity pages.
 
 ## Plan 3 code that deviates and will be replaced
 

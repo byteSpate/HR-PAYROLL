@@ -34,7 +34,7 @@ describe('POST /api/employees', () => {
   it('creates the login and the employee together and returns a one-time password', async () => {
     const { body, userId } = await hireOne();
     expect(body.temporaryPassword.length).toBeGreaterThanOrEqual(12);
-    expect(body.employee.employeeCode).toMatch(/^EMP-\d{4}$/);
+    expect(body.employee.employment.employeeCode).toMatch(/^EMP-\d{4}$/);
     const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
     expect(user).toMatchObject({ accessLevel: 'STANDARD', mustChangePassword: true });
     expect(await prisma.outboxEvent.count({ where: { type: 'employee.joined' } })).toBe(1);
@@ -74,15 +74,32 @@ describe('reading employees', () => {
     const b = await hireOne();
     const res = await request(app).get(`/api/employees/${b.id}`).set(a.as);
     expect(res.status).toBe(200);
-    expect(Object.keys(res.body).sort()).toEqual(['editableFields', 'employeeCode', 'id', 'work']);
+    expect(Object.keys(res.body).sort()).toEqual(['editableFields', 'id', 'work']);
   });
 
   it('shows finance the bank details but not personal details', async () => {
     const a = await hireOne();
     await request(app).patch(`/api/employees/${a.id}`).set(hr).send({ bankAccountNumber: '12345' });
     const res = await request(app).get(`/api/employees/${a.id}`).set(finance);
-    expect(res.body.money.bankAccountNumber).toBe('12345');
+    expect(res.body.payroll.bankAccountNumber).toBe('12345');
     expect(res.body.personal).toBeUndefined();
+  });
+
+  it('gives the owner and HR the documents, blockers and a pending id request, and nobody else', async () => {
+    const a = await hireOne();
+    const b = await hireOne();
+    const mine = (await request(app).get('/api/employees/me').set(a.as)).body;
+    expect(mine.documents).toEqual([]);
+    expect(mine.blockers.map((x: { field: string }) => x.field)).toEqual(['bankAccountNumber', 'bankRoutingNumber', 'CONTRACT', 'nationalId', 'emergencyContact']);
+    expect(mine.personal.nationalIdChangeRequest).toBeNull();
+    await request(app).post('/api/employees/national-id-requests').set(a.as).send({ newValue: '1234567890' });
+    const pending = (await request(app).get('/api/employees/me').set(a.as)).body.personal.nationalIdChangeRequest;
+    expect(pending).toMatchObject({ newValue: '1234567890' });
+    expect(typeof pending.id).toBe('string');
+    const forHr = (await request(app).get(`/api/employees/${a.id}`).set(hr)).body;
+    expect(forHr.blockers).toHaveLength(5);
+    expect((await request(app).get(`/api/employees/${b.id}`).set(a.as)).body.blockers).toBeUndefined();
+    expect((await request(app).get(`/api/employees/${a.id}`).set(finance)).body.documents).toBeUndefined();
   });
 
   it('returns the own record from /me and 404 for an account with no employee record', async () => {

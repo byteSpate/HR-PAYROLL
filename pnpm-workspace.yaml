@@ -13,5 +13,6 @@ allowBuilds:
   bcrypt: true
   esbuild: false
   prisma: true
+  puppeteer: true
   sharp: false
   unrs-resolver: false
