@@ -11,6 +11,17 @@ export const expense = defineModule({
     'expense.config': { label: 'Manage expense categories' },
     'expense.report': { label: 'Run expense reports', scopes: ['department', 'all'] },
   },
-  nav: [],
+  nav: [
+    {
+      label: 'Payroll & finance',
+      order: 15,
+      items: [{ label: 'Employee expenses', href: '/expenses', icon: 'RiReceiptLine', permission: ['expense.read', 'expense.approve'] }],
+    },
+    {
+      label: 'Workspace',
+      order: 20,
+      items: [{ label: 'Expenses', href: '/me/expenses', icon: 'RiReceiptLine', permission: null }],
+    },
+  ],
   events: EXPENSE_EVENTS,
 });

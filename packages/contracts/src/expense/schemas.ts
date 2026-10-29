@@ -8,8 +8,8 @@ const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected a YYYY-MM-DD 
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 
 /** Category codes whose claims describe a journey, and so carry a From and a To. */
-export const ROUTE_CATEGORY_CODES = ['TRAVEL', 'CONVEYANCE'] as const;
-export const hasRoute = (code: string): boolean => (ROUTE_CATEGORY_CODES as readonly string[]).includes(code.toUpperCase());
+export const ROUTE_CATEGORY_CODES: readonly string[] = ['TRAVEL', 'CONVEYANCE'];
+export const hasRoute = (code: string): boolean => ROUTE_CATEGORY_CODES.includes(code.toUpperCase());
 
 export const createClaimBody = z.object({
   name: z.string().trim().min(1, 'Give the expense a name').max(200),
@@ -67,6 +67,6 @@ export const reportQuery = z.object({
   to: dateOnly,
   employeeId: z.string().min(1).optional(),
   status: z.enum(expenseStatuses).optional(),
-  format: z.enum(['json', 'csv']).default('json'),
+  format: z.enum(['json', 'csv', 'pdf']).default('json'),
 });
 export type ReportQuery = z.infer<typeof reportQuery>;

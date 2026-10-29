@@ -30,9 +30,9 @@ export function resolveRange(from: string, to: string): { start: Date; end: Date
  * rows and naming someone outside that scope is a 403 too.
  */
 async function reachFor(viewer: Viewer, employeeId: string | undefined) {
-  const self = await employeeOf(viewer.sub);
   const scope = await scopeForViewer(viewer, 'expense.report').catch(() => null);
   if (scope === null) {
+    const self = await employeeOf(viewer.sub);
     if (employeeId && employeeId !== self.id) throw new AppError(403, 'You may only report on your own expense claims');
     return { employee: { id: self.id }, named: self.id };
   }

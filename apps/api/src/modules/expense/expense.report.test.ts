@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { prisma } from '@erp/db';
+import { closePdfBrowser } from '@erp/pdf';
 import { parseDateOnly } from '@erp/export';
 import { createApp } from '../../app.js';
 import { makeActor } from '../../test-utils/access.js';
@@ -34,6 +35,7 @@ beforeAll(async () => {
   rateId = (await prisma.exchangeRate.create({ data: { base: 'USD', quote: 'BDT', rate: 122.5, effectiveFrom: parseDateOnly(daysAgo(80)), createdBy: config.user.id } })).id;
 });
 afterAll(async () => {
+  await closePdfBrowser();
   await prisma.exchangeRate.deleteMany({ where: { id: rateId } });
   await prisma.auditLog.deleteMany({ where: { entity: 'EXPENSE_REPORT', changedBy: { in: [alice.user.id, reporter.user.id, manager.user.id] } } });
   await cleanExpenseData(prefix, [departmentId, otherDepartmentId]);
@@ -92,6 +94,14 @@ describe('the expense report', () => {
     expect(narrowed.body.rows.every((r: { status: string }) => r.status === 'APPROVED')).toBe(true);
   });
 
+  it('works for an administrator with no employee record of their own', async () => {
+    const owner = await makeActor(prefix, 'ADMIN');
+    const res = await report(owner);
+    expect(res.status).toBe(200);
+    expect(res.body.employee).toBeNull();
+    expect(res.body.rows.length).toBeGreaterThan(0);
+  });
+
   it('counts the receipts behind each claim', async () => {
     const made = await file(alice, { name: 'No receipt yet' });
     const res = await report(alice);
@@ -114,6 +124,22 @@ describe('the expense report', () => {
     expect(res.text.startsWith('﻿Date,EmployeeCode,Employee,Expense')).toBe(true);
     expect(await prisma.auditLog.count({ where: { entity: 'EXPENSE_REPORT', action: 'EXPORT', changedBy: alice.user.id } })).toBe(before + 1);
   });
+});
+
+describe('the expense report as a PDF', () => {
+  it('answers application/pdf and records one export audit row', async () => {
+    const before = await prisma.auditLog.count({ where: { entity: 'EXPENSE_REPORT', action: 'EXPORT', changedBy: alice.user.id } });
+    const res = await report(alice, { format: 'pdf' }).buffer(true).parse((r, done) => {
+      const chunks: Buffer[] = [];
+      r.on('data', (c: Buffer) => chunks.push(c));
+      r.on('end', () => done(null, Buffer.concat(chunks)));
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(res.headers['content-disposition']).toMatch(/expenses-.*\.pdf/);
+    expect((res.body as Buffer).subarray(0, 4).toString()).toBe('%PDF');
+    expect(await prisma.auditLog.count({ where: { entity: 'EXPENSE_REPORT', action: 'EXPORT', changedBy: alice.user.id } })).toBe(before + 1);
+  }, 60_000);
 });
 
 describe('what is still owed in reimbursements', () => {

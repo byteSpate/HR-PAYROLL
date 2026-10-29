@@ -12,11 +12,12 @@ import * as decisions from './expense.decisions.js';
 import * as media from './expense.media.js';
 import { getOutstandingReimbursements } from './expense.outstanding.js';
 import { getExpenseReport, parseReportQuery, reportFilename, reportToCsv } from './expense.report.js';
+import { renderExpenseReportPdf } from './expense.report.pdf.js';
 import * as service from './expense.service.js';
 
 export const expenseRouter = Router();
 
-const receiptFile = uploadSingle('file', { maxBytes: 10 * 1024 * 1024, mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
+const receiptFile = uploadSingle('file', { maxBytes: 15 * 1024 * 1024, mimeTypes: ['application/pdf', 'image/jpeg', 'image/png'] });
 
 expenseRouter.use(requireAuth);
 
@@ -47,6 +48,13 @@ expenseRouter.get('/report', async (req, res) => {
   await prisma.$transaction((tx) =>
     writeAudit(tx, { entity: 'EXPENSE_REPORT', entityId: `${report.from}..${report.to}`, action: 'EXPORT', changedBy: req.user!.sub, after: { rows: report.rows.length, status: report.status } }),
   );
+  if (format === 'pdf') {
+    const pdf = await renderExpenseReportPdf(report);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${reportFilename(report, 'pdf')}"`);
+    res.status(200).send(pdf);
+    return;
+  }
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${reportFilename(report, 'csv')}"`);
   // A byte order mark, so Excel opens the file as UTF-8 instead of showing every Bengali name as garbage.

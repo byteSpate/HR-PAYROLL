@@ -17,6 +17,7 @@ let finance: Awaited<ReturnType<typeof hireActor>>;
 let config: Awaited<ReturnType<typeof makeActor>>;
 let plain: Awaited<ReturnType<typeof hireActor>>;
 let travel: string;
+let madeTravel = false;
 let stationery: string;
 
 beforeAll(async () => {
@@ -30,12 +31,14 @@ beforeAll(async () => {
   finance = await hireActor(prefix, otherDepartmentId, ['expense.read:all']);
   config = await makeActor(prefix, 'STANDARD', ['expense.config']);
   const make = (code: string, name: string) => request(app).post('/api/expenses/categories').set(config.header).send({ code, name });
-  // The route rule keys on the exact code TRAVEL, so this one cannot carry the test prefix.
-  travel = (await make('TRAVEL', `${prefix} Travel`)).body.id;
+  // The route rule keys on the exact code TRAVEL, so this one cannot carry the test prefix; the seed may already have made it.
+  const seeded = (await request(app).get('/api/expenses/categories').set(config.header)).body.find((c: { code: string }) => c.code === 'TRAVEL');
+  madeTravel = !seeded;
+  travel = seeded?.id ?? (await make('TRAVEL', `${prefix} Travel`)).body.id;
   stationery = (await make(`${prefix}_STATIONERY`, `${prefix} Stationery`)).body.id;
 });
 afterAll(async () => {
-  await cleanExpenseData(prefix, [departmentId, otherDepartmentId], [travel]);
+  await cleanExpenseData(prefix, [departmentId, otherDepartmentId], madeTravel ? [travel] : []);
 });
 
 const claim = (over: object = {}) => ({ name: 'Taxi to Motijheel', amount: 450, categoryId: stationery, currency: 'BDT', expenseDate: daysAgo(2), ...over });

@@ -31,6 +31,21 @@ export interface ExpenseClaim {
   settlementId: string | null;
   createdAt: string;
   employee?: { id: string; fullName: string; employeeCode: string };
+  /** Which payslip paid it. Joined once payroll exists; until then no claim can have one. */
+  payslip?: { id: string; payslipNo: string; payrollRunId: string } | null;
+}
+
+export interface ExpenseClaimInput {
+  /** Required. A category alone cannot tell two claims apart. */
+  name: string;
+  amount: number;
+  categoryId: string;
+  currency: Currency;
+  expenseDate: string;
+  description?: string;
+  /** Only travel and conveyance claims carry a route; the server drops these for any other category. */
+  travelFrom?: string;
+  travelTo?: string;
 }
 
 export interface BatchApproveResult {
