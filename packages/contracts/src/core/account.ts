@@ -14,3 +14,15 @@ export interface AccountView {
   displayName: string | null;
   avatarUrl: string | null;
 }
+
+/** One live sign-in. `sessionId` survives token rotation; the raw token never leaves the cookie. */
+export interface SessionView {
+  sessionId: string;
+  /** "Chrome on Windows", or "Unknown device". Derived server-side from the user agent. */
+  device: string;
+  ipAddress: string | null;
+  startedAt: string;
+  lastUsedAt: string;
+  /** The session reading this list. The server refuses to revoke it. */
+  current: boolean;
+}

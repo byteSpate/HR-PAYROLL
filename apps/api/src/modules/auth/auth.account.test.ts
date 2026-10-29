@@ -54,6 +54,13 @@ describe('PATCH /api/auth/display-name', () => {
     expect((await request(app).patch('/api/auth/display-name').set(plain.header).send({ displayName: '   ' })).status).toBe(400);
   });
 
+  it('clears the name on null, so the heading falls back to the email', async () => {
+    const res = await request(app).patch('/api/auth/display-name').set(plain.header).send({ displayName: null });
+    expect(res.status).toBe(200);
+    expect(res.body.displayName).toBeNull();
+    expect((await request(app).get('/api/auth/me').set(plain.header)).body.displayName).toBe(plain.user.email);
+  });
+
   it('leaves staff to edit their name on their employee profile', async () => {
     expect((await request(app).patch('/api/auth/display-name').set(staff.header).send({ displayName: 'Someone Else' })).status).toBe(409);
   });

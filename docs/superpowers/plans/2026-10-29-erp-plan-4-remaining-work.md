@@ -123,17 +123,19 @@ Inputs the spec implies but the main flows do not exercise. Each has a named tes
 - [ ] **Step 4:** Run; expect PASS. Browser check apply, cancel, balance.
 - [ ] **Step 5:** Commit `feat(leave): exact HR employee leave page`.
 
-### Task A5: Employees, My Team, Directory, Profile, Departments
+### Task A5: Employee point of view: Profile and Directory (done), admin employees (moved)
 
-**Files:** copy `components/{employees,directory,profile}` (profile is 18 files); replace Plan 2's fresh employee and department pages under `app/(app)/{employees,departments,me}`; `app/(app)/me/directory/page.tsx`; `app/(app)/employees/team/page.tsx` (HR `manager/team`, shown to anyone with direct reports through the derived `:team` grant).
+Only two points of view exist (see the ledger), so HR's `manager/team` is not ported: a manager is anyone holding `employee.read:team`, and the admin list already covers that scope. Departments are a Settings panel in HR, so they move to A6.
 
-**Interfaces:** Adapter `apps/web/modules/employee/api.ts` over Plan 2's endpoints. Where HR reads a field ERP's employee API lacks, extend the API and its test, not the component.
+**Done:** `/me` is HR's `MyProfilePage` (staff) or `AccountProfile` (account with no employee record), `/me/directory` is HR's `DirectoryPage` with `ColleagueDialog`. Data layer: `apps/web/modules/employee/profile-api.ts` (HR signatures over ERP's endpoints), session and account calls in `modules/settings/api.ts`, `GET /auth/account`, `PATCH /auth/display-name` (null clears), own avatar endpoints, `SignedDocumentUrl.expiresAt`. The account-only panel "What X can do" lists the account's real permissions from the manifests (`summarizeGrants`) or "Every permission" for admin levels.
 
-- [ ] **Step 1: Failing tests:** copied component tests; API tests for each added field or route; `GET /employees/:id` outside the caller's scope returns 404.
-- [ ] **Step 2:** Run; expect FAIL.
-- [ ] **Step 3:** Copy and wire; delete the fresh Plan 2 UI the copies replace (keep their API tests).
-- [ ] **Step 4:** Run; expect PASS. Browser check list, detail, add employee, profile edit, document upload, directory search.
-- [ ] **Step 5:** Commit `feat(employee): exact HR employee, profile and directory screens`.
+**Moved to later parts, not dropped:** admin employees list, detail and add (HR `employees-page`, `employee-detail-page`, `edit-card-dialog`, `shift-dialog`, `exit-details-dialog`, `salary-structure-dialog`, `leave-balance-card`) join Part C with salary structure; `profile-insights` and the "What you've done" feed join Part D; self change-email, the pending-email notice and HR's change-email dialog join C3 with `@erp/mail`.
+
+- [x] **Step 1:** Failing tests first for the permission summary, clearing the display name, and the document-URL expiry; component test for the account panel.
+- [x] **Step 2:** Run; RED for each.
+- [x] **Step 3:** Copy, adapt imports, wire pages.
+- [x] **Step 4:** Run; GREEN. Browser check as admin (account profile, edit name) and as staff (profile, edit details, directory, colleague card).
+- [x] **Step 5:** Commit `feat(employee): exact HR profile and directory for the employee view`.
 
 ### Task A6: Settings (collapsible panels), Users, Activity
 

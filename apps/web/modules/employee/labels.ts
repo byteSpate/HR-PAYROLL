@@ -38,3 +38,10 @@ export const STATUS_TONE: Record<string, Tone> = {
 
 /** FULL_TIME -> Full time */
 export const humanize = (value: string) => value.charAt(0) + value.slice(1).toLowerCase().replace(/_/g, ' ');
+
+export const EMPLOYMENT_TYPE_LABEL: Record<string, string> = {
+  FULL_TIME: 'Full-time',
+  PART_TIME: 'Part-time',
+  CONTRACT: 'Contract',
+  INTERN: 'Intern',
+};

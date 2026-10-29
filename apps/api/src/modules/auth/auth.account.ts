@@ -4,7 +4,8 @@ import { avatarUrlFor, getStorage, packAvatar, publicIdOfAvatar, requireStorage,
 import { prisma } from '@erp/db';
 import { AppError } from '@erp/utils';
 
-const displayNameSchema = z.object({ displayName: z.string().trim().min(1).max(100) });
+// null clears the name; a blank string is a mistake, not a request to clear.
+const displayNameSchema = z.object({ displayName: z.string().trim().min(1).max(100).nullable() });
 
 export async function getAccount(userId: string): Promise<AccountView> {
   const user = await prisma.user.findUnique({ where: { id: userId }, include: { role: { select: { id: true, name: true } } } });
@@ -27,7 +28,7 @@ export async function getAccount(userId: string): Promise<AccountView> {
   };
 }
 
-/** Staff keep their name on the employee record, so this is only for accounts that have none. */
+/** Staff keep their name on the employee record, so this is only for accounts that have none. Null falls back to the email. */
 export async function setDisplayName(userId: string, input: unknown): Promise<AccountView> {
   const { displayName } = displayNameSchema.parse(input);
   if (await prisma.employee.count({ where: { userId } })) throw new AppError(409, 'Edit your name on your employee profile');
