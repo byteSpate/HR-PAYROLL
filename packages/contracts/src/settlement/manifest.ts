@@ -3,7 +3,7 @@ import { SETTLEMENT_EVENTS } from './events.js';
 
 export const settlement = defineModule({
   name: 'settlement',
-  deps: ['core', 'employee', 'payroll', 'expense', 'asset', 'exchange', 'notification'],
+  deps: ['core', 'employee', 'attendance', 'payroll', 'expense', 'asset', 'exchange', 'notification'],
   permissions: {
     'settlement.read': { label: 'View final settlements', scopes: ['department', 'all'] },
     'settlement.create': {

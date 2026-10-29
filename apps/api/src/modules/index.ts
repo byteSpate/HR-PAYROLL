@@ -12,6 +12,7 @@ import { employeeRouter } from './employee/employee.routes.js';
 import { exchangeRouter } from './exchange/exchange.routes.js';
 import { expenseRouter } from './expense/expense.routes.js';
 import { leaveRouter } from './leave/leave.routes.js';
+import { settlementRouter } from './settlement/settlement.routes.js';
 import { payrollRouter } from './payroll/payroll.routes.js';
 import { notificationRouter } from './notification/notification.routes.js';
 import { rolesRouter } from './users/roles.routes.js';
@@ -33,6 +34,7 @@ export const apiMounts: [prefix: string, router: Router][] = [
   ['/expenses', expenseRouter],
   ['/notifications', notificationRouter],
   ['/payroll', payrollRouter],
+  ['/settlements', settlementRouter],
   ['/leave', leaveRouter],
   ['/attendance', attendanceMineRouter],
   ['/attendance', attendanceConfigRouter],
