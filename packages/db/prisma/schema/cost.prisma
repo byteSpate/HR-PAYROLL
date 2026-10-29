@@ -1,0 +1,83 @@
+enum CostStatus {
+  PENDING
+  PAID
+}
+
+model CostCategory {
+  id          String           @id @default(uuid())
+  /// Stable machine key. Rules key off this, never off `name`.
+  code        String           @unique
+  name        String           @unique
+  costs       OperatingCost[]
+  commitments CostCommitment[]
+}
+
+/// A standing obligation (rent, wifi, a cleaner). Never deleted: it ended, and the bills it explains still exist.
+model CostCommitment {
+  id         String          @id @default(uuid())
+  categoryId String
+  category   CostCategory    @relation(fields: [categoryId], references: [id])
+  label      String
+  /// The landlord, the provider, the person. A string: vendor management is a different module.
+  payee      String
+  /// Null on purpose: rent is fixed, electricity is not, and a fixed figure on a variable bill is wrong eleven months a year.
+  amount     Decimal?        @db.Decimal(14, 2)
+  currency   Currency        @default(BDT)
+  /// Day of month, 1-31.
+  dueDay     Int?
+  startedOn  DateTime        @db.Date
+  /// Null means still running.
+  endedOn    DateTime?       @db.Date
+  notes      String?
+  costs      OperatingCost[]
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([categoryId])
+}
+
+model OperatingCost {
+  id           String           @id @default(uuid())
+  categoryId   String
+  category     CostCategory     @relation(fields: [categoryId], references: [id])
+  commitmentId String?
+  commitment   CostCommitment?  @relation(fields: [commitmentId], references: [id])
+  label        String
+  payee        String
+  /// The month this bill is FOR, distinct from when it was paid: July's electricity paid in August is a July cost.
+  periodMonth  Int
+  periodYear   Int
+  amount       Decimal          @db.Decimal(14, 2)
+  currency     Currency         @default(BDT)
+  dueDate      DateTime?        @db.Date
+  status       CostStatus       @default(PENDING)
+  paidAt       DateTime?
+  paidBy       String?
+  /// Cheque number, bank reference, bKash id: a payment nobody can trace to a statement is one nobody can verify.
+  paymentRef   String?
+  notes        String?
+  attachments  CostAttachment[]
+  createdBy    String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  /// One January rent, not two. Binds commitment-linked bills only, since Postgres allows many nulls.
+  @@unique([commitmentId, periodYear, periodMonth])
+  @@index([periodYear, periodMonth])
+  @@index([status])
+  @@index([categoryId])
+}
+
+model CostAttachment {
+  id         String        @id @default(uuid())
+  costId     String
+  cost       OperatingCost @relation(fields: [costId], references: [id], onDelete: Cascade)
+  publicId   String        @unique
+  fileName   String
+  bytes      Int
+  format     String
+  uploadedBy String?
+  uploadedAt DateTime      @default(now())
+
+  @@index([costId, uploadedAt])
+}
