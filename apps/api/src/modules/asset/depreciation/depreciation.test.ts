@@ -114,6 +114,12 @@ describe('depreciation runs', () => {
     });
   });
 
+  it('refuse an earlier month once a later one stands, so no month is charged twice', async () => {
+    const res = await draft(YEAR, 6);
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already covers a later month/);
+  });
+
   it('build on what is posted: the next month is charged on the same opening value', async () => {
     const next = await draft(YEAR, 8);
     expect(next.status).toBe(201);
@@ -196,6 +202,35 @@ describe('asset value', () => {
       .set(valuer.header);
     expect(before.body.rows.find((r: { assetId: string }) => r.assetId === asset.id)).toMatchObject(
       { accumulated: '0.00', bookValue: '120000.00' },
+    );
+  });
+
+  it('reads the register as it stood: not yet capitalised is not valued, and a disposal removes the asset after its date', async () => {
+    const early = await request(app)
+      .get('/api/assets/value')
+      .query({ asOf: '2020-01-01' })
+      .set(valuer.header);
+    expect(early.body.rows.find((r: { assetId: string }) => r.assetId === asset.id)).toMatchObject({
+      status: 'NOT_CAPITALISED',
+      bookValue: null,
+    });
+    const gone = await makeAsset(app, hr.header, category.id, {
+      purchaseCost: '500',
+      purchaseDate: `${YEAR}-07-01`,
+    });
+    await request(app).post(`/api/assets/${gone.id}/capitalise`).set(finance.header);
+    await request(app).post(`/api/assets/${gone.id}/dispose`).set(finance.header).send({});
+    const ids = (r: { body: { rows: { assetId: string }[] } }) => r.body.rows.map((x) => x.assetId);
+    expect(
+      ids(
+        await request(app)
+          .get('/api/assets/value')
+          .query({ asOf: '2020-01-01' })
+          .set(valuer.header),
+      ),
+    ).toContain(gone.id);
+    expect(ids(await request(app).get('/api/assets/value').set(valuer.header))).not.toContain(
+      gone.id,
     );
   });
 

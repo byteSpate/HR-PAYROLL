@@ -38,9 +38,13 @@ const id = (req: { params: Record<string, unknown> }) => String(req.params['id']
 costRouter.use(requireAuth);
 
 // Literal paths before '/:id' so they are never read as an id.
-costRouter.get('/categories', read, async (_req, res) => {
-  res.json(await service.listCategories());
-});
+costRouter.get(
+  '/categories',
+  requirePermission(['cost.read', 'cost.manage', 'cost.config']),
+  async (_req, res) => {
+    res.json(await service.listCategories());
+  },
+);
 costRouter.post('/categories', config, async (req, res) => {
   res.status(201).json(await service.createCategory(req.user!.sub, req.body));
 });

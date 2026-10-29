@@ -1,5 +1,6 @@
 import { can, scopeFor } from '@erp/auth';
 import { prisma, type Prisma } from '@erp/db';
+import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
 
 /** Cost, vendor and the frozen BDT figures go to people who manage, capitalise or value assets, and to nobody else. */
@@ -45,3 +46,20 @@ export async function assetScope(
 export const readableAssets = (viewer: Viewer) => assetScope(viewer, 'asset.read', { own: true });
 export const manageableAssets = (viewer: Viewer) =>
   assetScope(viewer, 'asset.manage', { own: false });
+
+/**
+ * A department-scoped manager may only put assets into their own department; the same goes for moving one.
+ * Without it the scope would stop at reading, and a manager could file assets where they cannot then see them.
+ */
+export async function assertDepartmentReach(
+  viewer: Viewer,
+  departmentId: string | null | undefined,
+): Promise<void> {
+  if (scopeFor(viewer, 'asset.manage') === 'all') return;
+  const me = await prisma.employee.findUnique({
+    where: { userId: viewer.sub },
+    select: { departmentId: true },
+  });
+  if (!me || departmentId !== me.departmentId)
+    throw new AppError(403, 'You can only manage assets in your own department');
+}

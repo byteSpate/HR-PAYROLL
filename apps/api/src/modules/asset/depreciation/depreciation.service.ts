@@ -88,6 +88,8 @@ export async function draftRun(
 ): Promise<DepreciationRunDetail> {
   return prisma
     .$transaction(async (tx) => {
+      // Drafts are ordered against each other, so two being made at once must take turns.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('depreciation-run'))`;
       const existing = await tx.depreciationRun.findFirst({
         where: { year: body.year, month: body.month, status: { not: 'REVERSED' } },
         select: { id: true, runNo: true, status: true },
@@ -221,6 +223,21 @@ export async function postRun(viewer: Viewer, id: string): Promise<DepreciationR
       throw new AppError(
         409,
         `${run.runNo} is ${run.status.toLowerCase()}; only a draft can be posted. Reverse it to free the month.`,
+      );
+    // The charges were worked out from what was posted at draft time; any run that has landed since makes them stale.
+    const target = run.year * 12 + run.month;
+    const others = await tx.depreciationRun.findMany({
+      where: { id: { not: id }, status: { not: 'REVERSED' } },
+      select: { runNo: true, year: true, month: true, status: true },
+    });
+    const clash = others.find(
+      (o) =>
+        o.year * 12 + o.month > target || (o.status === 'DRAFT' && o.year * 12 + o.month < target),
+    );
+    if (clash)
+      throw new AppError(
+        409,
+        `${clash.runNo} for ${clash.month}/${clash.year} overlaps this run's months. Settle it first so nothing is charged twice.`,
       );
     const charges = await tx.assetDepreciation.findMany({
       where: { runId: id },

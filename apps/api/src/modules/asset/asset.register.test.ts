@@ -51,6 +51,32 @@ const assign = (assetId: string, who: { employee: { id: string } }, by = hr) =>
     .set(by.header)
     .send({ employeeId: who.employee.id, conditionOut: 'GOOD' });
 
+describe('a department-scoped manager', () => {
+  const make = (departmentId?: string) => ({
+    name: 'Desk',
+    categoryId: chair.id,
+    ...(departmentId ? { departmentId } : {}),
+  });
+  it('registers assets only into their own department', async () => {
+    const post = (body: object) =>
+      request(app).post('/api/assets').set(deptManager.header).send(body);
+    expect((await post(make(otherDepartmentId))).status).toBe(403);
+    expect((await post(make())).status).toBe(403);
+    expect((await post(make(departmentId))).status).toBe(201);
+  });
+
+  it('cannot move an asset out to another department', async () => {
+    const own = (
+      await request(app).post('/api/assets').set(deptManager.header).send(make(departmentId))
+    ).body;
+    const res = await request(app)
+      .patch(`/api/assets/${own.id}`)
+      .set(deptManager.header)
+      .send({ departmentId: otherDepartmentId });
+    expect(res.status).toBe(403);
+  });
+});
+
 describe('asset categories', () => {
   it('lets any signed-in person list them, but only asset.config create, change or delete', async () => {
     expect((await request(app).get('/api/assets/categories').set(alice.header)).status).toBe(200);

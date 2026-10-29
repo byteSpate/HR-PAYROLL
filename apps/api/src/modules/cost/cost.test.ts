@@ -11,6 +11,7 @@ const app = createApp();
 let finance: Awaited<ReturnType<typeof makeActor>>;
 let reader: Awaited<ReturnType<typeof makeActor>>;
 let config: Awaited<ReturnType<typeof makeActor>>;
+let configOnly: Awaited<ReturnType<typeof makeActor>>;
 let nobody: Awaited<ReturnType<typeof makeActor>>;
 let category: { id: string };
 
@@ -18,6 +19,7 @@ beforeAll(async () => {
   finance = await makeActor(prefix, 'STANDARD', ['cost.read', 'cost.manage']);
   reader = await makeActor(prefix, 'STANDARD', ['cost.read']);
   config = await makeActor(prefix, 'STANDARD', ['cost.read', 'cost.config']);
+  configOnly = await makeActor(prefix, 'STANDARD', ['cost.config']);
   nobody = await makeActor(prefix, 'STANDARD', []);
   category = (
     await request(app)
@@ -62,6 +64,15 @@ const bill = (over: object = {}) => ({
 });
 const make = (over: object = {}) =>
   request(app).post('/api/costs').set(finance.header).send(bill(over));
+
+describe('cost categories', () => {
+  it('load for a person who holds only the configuration permission', async () => {
+    expect((await request(app).get('/api/costs/categories').set(configOnly.header)).status).toBe(
+      200,
+    );
+    expect((await request(app).get('/api/costs/categories').set(nobody.header)).status).toBe(403);
+  });
+});
 
 describe('operating costs', () => {
   it('goes PENDING then PAID, once, emitting an event at each step', async () => {
@@ -144,16 +155,13 @@ describe('operating costs', () => {
     expect((await make({ amount: '10.005' })).status).toBe(400);
     expect((await make({ currency: 'USD' })).status).toBe(400);
     const commitment = (
-      await request(app)
-        .post('/api/costs/commitments')
-        .set(finance.header)
-        .send({
-          categoryId: category.id,
-          label: 'Rent',
-          payee: 'Landlord',
-          amount: '1000',
-          startedOn: '2026-01-01',
-        })
+      await request(app).post('/api/costs/commitments').set(finance.header).send({
+        categoryId: category.id,
+        label: 'Rent',
+        payee: 'Landlord',
+        amount: '1000',
+        startedOn: '2026-01-01',
+      })
     ).body;
     expect((await make({ commitmentId: commitment.id, periodMonth: 1 })).status).toBe(201);
     expect((await make({ commitmentId: commitment.id, periodMonth: 1 })).status).toBe(409);

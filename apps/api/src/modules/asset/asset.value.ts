@@ -14,8 +14,13 @@ export async function assetValueReport(query: {
 }): Promise<AssetValueReport> {
   const asOf = query.asOf ?? formatDateOnly(officeToday());
   const asOfIndex = Number(asOf.slice(0, 4)) * 12 + Number(asOf.slice(5, 7)) - 1;
+  const dayAfter = new Date(Date.parse(`${asOf}T00:00:00Z`) + 86_400_000);
   const assets = await prisma.asset.findMany({
-    where: query.categoryId ? { categoryId: query.categoryId } : undefined,
+    // Gone before the date asked for means off the register that day: neither retired nor lost assets keep a value.
+    where: {
+      ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+      OR: [{ retiredAt: null }, { retiredAt: { gte: dayAfter } }],
+    },
     orderBy: { assetTag: 'asc' },
     select: {
       id: true,
@@ -48,7 +53,7 @@ export async function assetValueReport(query: {
       categoryName: a.category.name,
       currency: a.currency,
     };
-    if (!a.capitalisedAt)
+    if (!a.capitalisedAt || a.capitalisedAt >= dayAfter)
       return {
         ...base,
         purchaseCost: null,

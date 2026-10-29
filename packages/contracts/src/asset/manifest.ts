@@ -33,6 +33,12 @@ export const asset = defineModule({
           href: '/assets',
           icon: 'RiComputerLine',
           permission: ['asset.read', 'asset.approve'],
+          children: [
+            { label: 'Register', href: '/assets', permission: ['asset.read', 'asset.approve'] },
+            { label: 'Asset ledger', href: '/assets/ledger', permission: 'asset.capitalise' },
+            { label: 'Depreciation', href: '/assets/depreciation', permission: 'asset.capitalise' },
+            { label: 'Asset value', href: '/assets/value', permission: 'asset.value' },
+          ],
         },
       ],
     },
@@ -40,6 +46,26 @@ export const asset = defineModule({
       label: 'Workspace',
       order: 20,
       items: [{ label: 'Assets', href: '/me/assets', icon: 'RiComputerLine', permission: null }],
+    },
+    {
+      label: 'Administration',
+      order: 900,
+      items: [
+        {
+          label: 'Settings',
+          href: '/settings/asset-categories',
+          icon: 'RiSettingsLine',
+          permission: null,
+          children: [
+            {
+              label: 'Asset categories',
+              href: '/settings/asset-categories',
+              permission: 'asset.config',
+              icon: 'RiComputerLine',
+            },
+          ],
+        },
+      ],
     },
   ],
   events: ASSET_EVENTS,

@@ -206,6 +206,17 @@ describe('disposing of an asset', () => {
     expect((await post('dispose', held.id)).status).toBe(409);
   });
 
+  it('will not retire a capitalised asset the ordinary way, so a disposal is never skipped', async () => {
+    const asset = await costly({ purchaseCost: '400' });
+    await post('capitalise', asset.id);
+    const res = await post('retire', asset.id, hr, { note: 'bin it' });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/dispose/i);
+    expect((await prisma.asset.findUniqueOrThrow({ where: { id: asset.id } })).lifecycle).not.toBe(
+      'RETIRED',
+    );
+  });
+
   it('retires the asset and emits the cost, depreciation to date, proceeds and the gain or loss', async () => {
     const asset = await costly({ purchaseCost: '1000' });
     await post('capitalise', asset.id);

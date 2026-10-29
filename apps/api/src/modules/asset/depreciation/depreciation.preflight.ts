@@ -17,15 +17,23 @@ export async function depreciationPreflight(
   const target = monthIndexOf(query.year, query.month);
 
   // Each month's charge builds on the ones before it, so a draft left behind would be charged over again by the next run.
-  const drafts = await db.depreciationRun.findMany({
-    where: { status: 'DRAFT' },
-    select: { runNo: true, year: true, month: true },
+  const live = await db.depreciationRun.findMany({
+    where: { status: { not: 'REVERSED' } },
+    select: { runNo: true, year: true, month: true, status: true },
   });
-  for (const draft of drafts.filter((d) => monthIndexOf(d.year, d.month) < target)) {
-    blockers.push({
-      code: 'EARLIER_UNPOSTED',
-      message: `${draft.runNo} for ${draft.month}/${draft.year} is still a draft. Post or delete it before running a later month.`,
-    });
+  for (const run of live) {
+    const index = monthIndexOf(run.year, run.month);
+    if (index < target && run.status === 'DRAFT')
+      blockers.push({
+        code: 'EARLIER_UNPOSTED',
+        message: `${run.runNo} for ${run.month}/${run.year} is still a draft. Post or delete it before running a later month.`,
+      });
+    // A later run already charged these months; drafting beneath it would charge them a second time.
+    if (index > target)
+      blockers.push({
+        code: 'LATER_RUN_EXISTS',
+        message: `${run.runNo} for ${run.month}/${run.year} already covers a later month. Reverse or delete it before running an earlier one.`,
+      });
   }
 
   const assets = await db.asset.findMany({

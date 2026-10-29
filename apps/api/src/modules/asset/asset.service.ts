@@ -10,7 +10,12 @@ import { emit } from '@erp/events';
 import { formatDateOnly, parseDateOnly } from '@erp/export';
 import { AppError } from '@erp/utils';
 import type { Viewer } from '../employee/employee.access.js';
-import { canSeeCosts, manageableAssets, readableAssets } from './asset.access.js';
+import {
+  assertDepartmentReach,
+  canSeeCosts,
+  manageableAssets,
+  readableAssets,
+} from './asset.access.js';
 import { lockAsset } from './asset.lock.js';
 import { createRecoveryIn } from './asset.recoveries.js';
 import {
@@ -54,6 +59,7 @@ const OPEN_HOLDER = {
 } as const;
 
 export async function createAsset(viewer: Viewer, body: CreateAssetBody) {
+  await assertDepartmentReach(viewer, body.departmentId);
   return prisma.$transaction(async (tx) => {
     const category = await tx.assetCategory.findUnique({ where: { id: body.categoryId } });
     if (!category) throw new AppError(400, 'Asset category not found');
@@ -117,6 +123,12 @@ export async function retireAsset(viewer: Viewer, id: string, body: LifecycleBod
       throw new AppError(409, 'This asset has already been marked lost');
     if ((await tx.assetAssignment.count({ where: { assetId: id, returnedAt: null } })) > 0)
       throw new AppError(409, 'Take the asset back before retiring it');
+    // Retiring quietly would leave its cost and depreciation on the books; disposal tells them the figures.
+    if (asset.capitalisedAt)
+      throw new AppError(
+        409,
+        `${asset.assetTag} is capitalised, so dispose of it instead: that reports its cost, depreciation and proceeds to the books.`,
+      );
 
     await tx.asset.update({
       where: { id },
@@ -300,6 +312,7 @@ export async function getAsset(viewer: Viewer, id: string) {
 /** Only the fields that actually changed land in the update and the audit row. */
 export async function updateAsset(viewer: Viewer, id: string, body: UpdateAssetBody) {
   await assertManageable(viewer, id);
+  if (body.departmentId !== undefined) await assertDepartmentReach(viewer, body.departmentId);
   return prisma.$transaction(async (tx) => {
     const existing = await lockAsset(tx, id);
 
