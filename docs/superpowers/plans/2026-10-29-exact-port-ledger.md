@@ -26,6 +26,8 @@ The attendance page alone pulls in 48 files and about 12,000 lines (lib/api 4706
 
 Employee and admin sides are separate pages, as in the original (`/employee/attendance` is the punch card and own month; `/admin/attendance` is the org view).
 
+**Two points of view only (owner, 2026-10-29).** HR-MNG-V1 had fixed roles, so each role had its own pages. ERP is permission-based: port the **employee** pages (`/me/...`) and the **admin** pages (module routes), and show them by permission. The `hr`, `finance` and `manager` variants are not ported (for example `manager/team`); admins create roles with permissions later.
+
 ## Collapsible mapping
 
 The original `/admin/attendance` page stacks: my attendance, Attendance approvals, Today (live board), Monthly summary with corrections, Holiday calendar, Reports. Admin sidebar group **Attendance** becomes: Attendance Approvals, Today's Attendance, Reports, Holiday Calendar (children copied from `approvals-section`, `DailyBoard`, `AttendanceReports`, `HolidaySection`). Leave and the other stacked pages follow the same rule once their sections are read.
