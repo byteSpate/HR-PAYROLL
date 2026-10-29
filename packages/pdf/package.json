@@ -1,0 +1,27 @@
+{
+  "name": "@erp/pdf",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@erp/utils": "workspace:*",
+    "puppeteer": "25.3.0"
+  },
+  "devDependencies": {
+    "@erp/config-eslint": "workspace:*",
+    "@erp/config-typescript": "workspace:*",
+    "@types/node": "26.1.1"
+  }
+}

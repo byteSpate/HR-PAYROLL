@@ -8,6 +8,7 @@ import { decideAttendance, listAttendance, scopeForViewer, toApprovalItem } from
 import { dateOnly } from '@erp/contracts/attendance';
 import { writeAudit } from '@erp/audit';
 import { getAttendanceReport, reportFilename, reportToCsv } from './attendance.report.js';
+import { renderAttendanceReportPdf } from './attendance.report.pdf.js';
 import { getAuditTrail, getEmployeeAttendance } from './attendance.history.js';
 import { getDailySummary, getMonthlySummary } from './attendance.summary.js';
 import { correctAttendance, manualAttendance, regulariseAttendance } from './attendance.edit.js';
@@ -24,10 +25,8 @@ const reportQuerySchema = z.object({
 });
 attendanceRouter.get('/report', requirePermission('attendance.report'), async (req, res) => {
   const { format, ...query } = reportQuerySchema.parse(req.query);
-  // HR-MNG-V1 renders the PDF in a headless browser; that dependency is not installed here yet.
-  if (format === 'pdf') throw new AppError(501, 'PDF export is not available yet. Download the CSV instead.');
   const report = await getAttendanceReport(req.user!, query);
-  if (format !== 'csv') {
+  if (format !== 'csv' && format !== 'pdf') {
     res.json(report);
     return;
   }
@@ -40,6 +39,13 @@ attendanceRouter.get('/report', requirePermission('attendance.report'), async (r
       after: { granularity: report.granularity, headcount: report.headcount },
     }),
   );
+  if (format === 'pdf') {
+    const pdf = await renderAttendanceReportPdf(report);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${reportFilename(report, 'pdf')}"`);
+    res.status(200).send(pdf);
+    return;
+  }
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${reportFilename(report, 'csv')}"`);
   // A BOM, so Excel opens the file as UTF-8: without it every Bengali name arrives as mojibake.

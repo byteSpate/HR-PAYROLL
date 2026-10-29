@@ -21,6 +21,7 @@
     "@erp/events": "workspace:*",
     "@erp/export": "workspace:*",
     "@erp/notifications": "workspace:*",
+    "@erp/pdf": "workspace:*",
     "@erp/utils": "workspace:*",
     "cookie-parser": "1.4.7",
     "cors": "2.8.6",

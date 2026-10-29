@@ -1,0 +1,3 @@
+{
+  "extends": "@erp/config-typescript/library.json"
+}
