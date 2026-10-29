@@ -1,6 +1,9 @@
 // Wire types for the leave screens, written once here and read by the API and the web app.
 // Ported from HR-MNG-V1, which mirrored them by hand on each side.
 
+import type { EmploymentType } from '../employee/types.js';
+export type { EmploymentType };
+
 export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export type TeamStatus = 'ACTIVE' | 'ON_LEAVE' | 'LEFT';
 export type LeaveAccrualBasis = 'PRO_RATED' | 'PER_EVENT' | 'EARNED' | 'NONE';
@@ -30,7 +33,7 @@ export interface LeaveType {
   carryForwardPct: number;
   maxConsecutive: number | null;
   allowsBackdating: boolean;
-  eligibleFor: string[];
+  eligibleFor: EmploymentType[];
   /** Granted by the Bangladesh Labour Act rather than by company policy. */
   statutory: boolean;
   /** Section 117(3): holidays inside an earned-leave period are part of the leave. */
@@ -108,3 +111,22 @@ export interface ApplyLeaveInput {
   endSession?: LeaveSession;
   reason?: string;
 }
+
+export interface CreateLeaveTypeInput {
+  code: string;
+  name: string;
+  annualQuota: number;
+  eligibleFor: EmploymentType[];
+  isPaid?: boolean;
+  carryForwardPct?: number;
+  maxConsecutive?: number | null;
+  allowsBackdating?: boolean;
+  countsHolidays?: boolean;
+  accrualBasis?: LeaveAccrualBasis;
+  minServiceMonths?: number;
+  maxAccrual?: number | null;
+  allowsHalfDay?: boolean;
+}
+
+/** `code` is immutable, and `statutory` is never settable through the API. */
+export type UpdateLeaveTypeInput = Partial<Omit<CreateLeaveTypeInput, 'code'>>;

@@ -33,8 +33,20 @@ export const leave = defineModule({
           children: [
             { label: 'Leave Requests', href: '/leave/requests', permission: 'leave.read:team' },
             { label: 'Team Status', href: '/leave/team', permission: 'leave.read:team' },
-            { label: 'Leave Types', href: '/leave/types', permission: 'leave.config' },
           ],
+        },
+      ],
+    },
+    {
+      label: 'Administration',
+      order: 900,
+      items: [
+        {
+          label: 'Settings',
+          href: '/settings/leave-types',
+          icon: 'RiSettingsLine',
+          permission: null,
+          children: [{ label: 'Leave types', href: '/settings/leave-types', permission: 'leave.config', icon: 'RiCalendarCheckLine' }],
         },
       ],
     },

@@ -47,8 +47,19 @@ describe('shift and holiday routes', () => {
     const clash = await request(app).post('/api/attendance/shifts').set(config).send({ ...shiftBody('R2'), effectiveFrom: '2026-03-20', effectiveTo: '2026-04-02' });
     expect(clash.status).toBe(409);
     const patched = await request(app).patch(`/api/attendance/shifts/${a.body.id}`).set(config).send({ ...shiftBody('R1'), startTime: '10:00', effectiveFrom: '2026-03-01', effectiveTo: '2026-03-30' });
-    expect(patched.body.startTime).toBe('10:00');
+    expect(patched.body.shift.startTime).toBe('10:00');
+    expect(patched.body.impact).toBeUndefined();
     expect((await request(app).delete(`/api/attendance/shifts/${a.body.id}`).set(config)).status).toBe(204);
+  });
+
+  it('reports who is affected only when the weekly days off change, since those are re-derived on every read', async () => {
+    const created = await request(app).post('/api/attendance/shifts').set(config).send(shiftBody('Off'));
+    const moved = await request(app).patch(`/api/attendance/shifts/${created.body.id}`).set(config).send({ ...shiftBody('Off'), weeklyOffDays: [5, 6] });
+    expect(moved.status).toBe(200);
+    expect(moved.body.shift.weeklyOffDays).toEqual([5, 6]);
+    expect(moved.body.impact).toEqual({ affectedEmployees: 0, earliestAffectedDate: null });
+    const same = await request(app).patch(`/api/attendance/shifts/${created.body.id}`).set(config).send({ ...shiftBody('Off'), weeklyOffDays: [6, 5] });
+    expect(same.body.impact).toBeUndefined();
   });
 
   it('exports holidays as csv and audits it', async () => {

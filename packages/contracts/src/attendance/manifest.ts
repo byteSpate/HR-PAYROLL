@@ -35,6 +35,19 @@ export const attendance = defineModule({
         },
       ],
     },
+    {
+      label: 'Administration',
+      order: 900,
+      items: [
+        {
+          label: 'Settings',
+          href: '/settings/shifts',
+          icon: 'RiSettingsLine',
+          permission: null,
+          children: [{ label: 'Shifts', href: '/settings/shifts', permission: 'attendance.config', icon: 'RiTimeLine' }],
+        },
+      ],
+    },
   ],
   events: ATTENDANCE_EVENTS,
 });

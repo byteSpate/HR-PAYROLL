@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { prisma } from '@erp/db';
+import { DEFAULT_SHIFT_NAME, prisma, seedDefaultShift } from '@erp/db';
 import { DEFAULT_SHIFT, createShift, deleteShift, effectiveShift, updateShift } from './shift.service.js';
 
 const PREFIX = 'zzshift';
@@ -77,6 +77,30 @@ describe('deleteShift', () => {
       await prisma.employee.delete({ where: { id: emp.id } });
       await prisma.user.delete({ where: { id: user.id } });
       await prisma.department.delete({ where: { id: dept.id } });
+    }
+  });
+});
+
+describe('the company default shift', () => {
+  const general = async () => {
+    await seedDefaultShift(prisma);
+    return prisma.shift.findFirstOrThrow({ where: { name: DEFAULT_SHIFT_NAME } });
+  };
+
+  it('cannot be renamed or deleted, since attendance resolves it by name', async () => {
+    const row = await general();
+    expect(await status(updateShift(row.id, { ...base, name: 'Renamed' }, 'u-test'))).toBe(409);
+    expect(await status(deleteShift(row.id, 'u-test'))).toBe(409);
+    expect(await prisma.shift.count({ where: { id: row.id, name: DEFAULT_SHIFT_NAME } })).toBe(1);
+  });
+
+  it('can have its hours changed, which is how HR moves the whole company', async () => {
+    const row = await general();
+    try {
+      const { shift } = await updateShift(row.id, { ...base, name: DEFAULT_SHIFT_NAME, startTime: '08:30' }, 'u-test');
+      expect(shift.startTime).toBe('08:30');
+    } finally {
+      await prisma.shift.update({ where: { id: row.id }, data: { startTime: row.startTime } });
     }
   });
 });
