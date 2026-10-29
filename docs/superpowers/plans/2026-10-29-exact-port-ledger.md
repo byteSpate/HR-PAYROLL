@@ -46,6 +46,20 @@ The original screens call HR-MNG-V1's own API through `lib/api/*` with its respo
 
 Stages 2 to 5 for the already-built modules and stage 6 are scheduled in `2026-10-29-erp-plan-4-remaining-work.md` (Part A, then Parts B and C).
 
+## Progress (Plan 4, Part A, branch `feat/exact-port-people`)
+
+Done, tested (unit, API over HTTP, browser) and pushed:
+
+- A1 `@erp/pdf` (HR's own renderer and limiter) and the attendance PDF report (was 501).
+- A2 Employee attendance `/me/attendance`: HR's page, punch card and calendar, with `/attendance/today`, a derived `/attendance/me`, `/attendance/summary/me` and `PATCH /attendance/me/:id/regularise`. A punch returns HR's `PunchResult` and judges a half-day leave against the half actually worked.
+- A3 and A4 Leave: HR's `LeavePage` as three section pages (`mine`, `requests`, `team`), HR's apply dialog and detail sheet, and HR's wire shapes (`days`, `decidedBy`, balances with `entitlement` and `pending`, team status, half-day window). Leave Types stays a fresh page until Settings (A6).
+- A5, API half: the employee API now returns HR's `EmployeeView` (`work`, `personal` with `nationalIdChangeRequest`, `contact`, `employment` with `employeeCode`, `shift`, `accountActive`, `passwordPending`, `payroll`, `exit`, `documents`, `blockers`). The old employee screens were patched to read it.
+
+Still open in Part A, with what the next cycle needs:
+
+- A5, web half. HR's `employees`, `directory`, `profile` and `manager/team` components (about 5,400 lines) do not compile yet against ERP's data layer. Needs: adapter calls (`getMyProfile`, `getEmployeeInsights`, `getLeaveBalancesFor`, `uploadAvatar`/`deleteAvatar`, `getDocumentUrl`, national-ID request calls, `setExitDetails`, `setAccountActive`, `createStaffAccount`), endpoints ERP lacks (insights, live sessions list and revoke, change email, resend invite), `@erp/ui` pieces (`ResendPasswordDialog`, `file-upload`), and the cards that arrive with later parts (payslips, asset holdings, salary structure). Drop the Sales role and the device user id (out of scope). Salary-structure blocker and dialog join in Part C.
+- A6 Settings, Users, Activity. A7 cleanup of `@erp/ui/page`.
+
 ## Plan 3 code that deviates and will be replaced
 
 `apps/web/modules/attendance`, `apps/web/modules/leave`, the `@erp/ui/page` kit (signatures differ from the original `StatCard`, `PageHeader`), the employee and department pages from Plan 2, and the nav manifests for attendance and leave.

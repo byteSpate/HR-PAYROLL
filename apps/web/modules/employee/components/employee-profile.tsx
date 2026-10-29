@@ -40,16 +40,18 @@ function sectionsOf(e: EmployeeView): { title: string; fields: Field[] }[] {
         { name: 'employmentStatus', value: humanize(e.employment.employmentStatus) },
         { name: 'joiningDate', value: e.employment.joiningDate },
         { name: 'officeLocation', value: e.employment.officeLocation },
-        { name: 'lastWorkingDay', value: e.employment.lastWorkingDay },
-        { name: 'exitReason', value: e.employment.exitReason ? humanize(e.employment.exitReason) : null },
+        { name: 'lastWorkingDay', value: e.exit?.lastWorkingDay ?? null },
+        { name: 'exitReason', value: e.exit ? humanize(e.exit.exitReason) : null },
       ],
     });
   }
   if (e.personal) {
-    sections.push({ title: 'Personal', fields: Object.entries(e.personal).map(([name, value]) => ({ name, value })) });
+    const { nationalIdChangeRequest: _pending, ...personal } = e.personal;
+    sections.push({ title: 'Personal', fields: Object.entries({ ...personal, ...e.contact }).map(([name, value]) => ({ name, value })) });
   }
-  if (e.money) {
-    sections.push({ title: 'Bank', fields: Object.entries(e.money).map(([name, value]) => ({ name, value })) });
+  if (e.payroll) {
+    const { bankAccountNumber, bankName, bankRoutingNumber } = e.payroll;
+    sections.push({ title: 'Bank', fields: Object.entries({ bankAccountNumber, bankName, bankRoutingNumber }).map(([name, value]) => ({ name, value })) });
   }
   return sections;
 }
@@ -95,7 +97,7 @@ export function EmployeeProfileView({
         <div>
           <p className="font-heading text-xl font-semibold">{employee.work.fullName}</p>
           <p className="text-sm text-muted-foreground">
-            {employee.work.designation} - {employee.employeeCode}
+            {employee.work.designation} - {employee.employment?.employeeCode}
           </p>
         </div>
       </div>

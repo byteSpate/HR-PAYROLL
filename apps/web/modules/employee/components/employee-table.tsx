@@ -19,7 +19,7 @@ const columns: DataColumn<EmployeeView>[] = [
       </Link>
     ),
   },
-  { key: 'code', header: 'Code', sortValue: (e) => e.employeeCode, cell: (e) => e.employeeCode },
+  { key: 'code', header: 'Code', sortValue: (e) => e.employment?.employeeCode, cell: (e) => e.employment?.employeeCode },
   { key: 'designation', header: 'Designation', sortValue: (e) => e.work.designation, cell: (e) => e.work.designation },
   { key: 'department', header: 'Department', sortValue: (e) => e.work.department.name, cell: (e) => e.work.department.name },
   {

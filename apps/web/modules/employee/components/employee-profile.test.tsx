@@ -15,11 +15,12 @@ const work: EmployeeView['work'] = {
 
 const full: EmployeeView = {
   id: 'e',
-  employeeCode: 'EMP-0001',
   work,
-  employment: { employmentType: 'FULL_TIME', employmentStatus: 'ACTIVE', joiningDate: '2026-01-05', officeLocation: null, shiftId: null, lastWorkingDay: null, exitReason: null },
-  personal: { dateOfBirth: null, gender: null, nationalId: '123', bloodGroup: null, maritalStatus: null, presentAddress: null, permanentAddress: null, emergencyContact: null },
-  money: { bankAccountNumber: '999', bankName: 'City', bankRoutingNumber: null },
+  employment: { employeeCode: 'EMP-0001', employmentType: 'FULL_TIME', employmentStatus: 'ACTIVE', joiningDate: '2026-01-05', officeLocation: null, shift: null, accountActive: true },
+  personal: { dateOfBirth: null, gender: null, nationalId: '123', bloodGroup: null, maritalStatus: null },
+  contact: { presentAddress: null, permanentAddress: null, emergencyContact: null },
+  payroll: { salaryStructure: null, bankAccountNumber: '999', bankName: 'City', bankRoutingNumber: null },
+  exit: null,
   editableFields: ['phone'],
 };
 
@@ -28,7 +29,7 @@ const render = (employee: EmployeeView) =>
 
 describe('EmployeeProfileView', () => {
   it('renders no personal, employment or bank sections for a colleague view', () => {
-    const html = render({ id: 'e', employeeCode: 'EMP-0001', work, editableFields: [] });
+    const html = render({ id: 'e', work, editableFields: [] });
     expect(html).toContain('Rahim Uddin');
     expect(html).not.toContain('Personal');
     expect(html).not.toContain('Bank');

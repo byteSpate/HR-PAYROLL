@@ -67,39 +67,3 @@ export const accountStatusSchema = z.object({ isActive: z.boolean() });
 
 export type CreateEmployeeInput = z.infer<typeof createEmployeeSchema>;
 export type UpdateEmployeeInput = z.infer<typeof updateEmployeeSchema>;
-
-export interface EmployeeView {
-  id: string;
-  employeeCode: string;
-  work: {
-    fullName: string;
-    designation: string;
-    department: { id: string; name: string };
-    reportingManager: { id: string; fullName: string } | null;
-    email: string;
-    phone: string | null;
-    avatarUrl: string | null;
-  };
-  // Present only for tiers allowed to see them; omitted (not null) otherwise.
-  employment?: {
-    employmentType: string;
-    employmentStatus: string;
-    joiningDate: string;
-    officeLocation: string | null;
-    shiftId: string | null;
-    lastWorkingDay: string | null;
-    exitReason: string | null;
-  };
-  personal?: {
-    dateOfBirth: string | null;
-    gender: string | null;
-    nationalId: string | null;
-    bloodGroup: string | null;
-    maritalStatus: string | null;
-    presentAddress: string | null;
-    permanentAddress: string | null;
-    emergencyContact: string | null;
-  };
-  money?: { bankAccountNumber: string | null; bankName: string | null; bankRoutingNumber: string | null };
-  editableFields: string[];
-}
